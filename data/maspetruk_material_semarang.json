@@ -1,0 +1,702 @@
+[
+    {
+        "name": "AC Cassete Kap :35.000 BTUH dan aksesoris",
+        "category": "material",
+        "sub_category": "AC",
+        "unit": "Unit",
+        "price": 39569000
+    },
+    {
+        "name": "AC Wall Mounted Kap: 12.000 BTUH dan aksesoris",
+        "category": "material",
+        "sub_category": "AC",
+        "unit": "Unit",
+        "price": 7089000
+    },
+    {
+        "name": "AC Wall Mounted Kap: 24.000 BTUH dan aksesoris",
+        "category": "material",
+        "sub_category": "AC",
+        "unit": "Unit",
+        "price": 10000000
+    },
+    {
+        "name": "AC Wall Mounted Kap: 5.000 BTUH dan aksesoris",
+        "category": "material",
+        "sub_category": "AC",
+        "unit": "Unit",
+        "price": 6189000
+    },
+    {
+        "name": "AC Wall Mounted Kap: 6.500 BTUH dan aksesoris",
+        "category": "material",
+        "sub_category": "AC",
+        "unit": "Unit",
+        "price": 5059000
+    },
+    {
+        "name": "AC Wall Mounted Kap: 7.000 BTUH dan aksesoris",
+        "category": "material",
+        "sub_category": "AC",
+        "unit": "Unit",
+        "price": 5049000
+    },
+    {
+        "name": "AC Wall Mounted Kap: 9.000 BTUH dan aksesoris",
+        "category": "material",
+        "sub_category": "AC",
+        "unit": "Unit",
+        "price": 6729000
+    },
+    {
+        "name": "Agregat",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 267143
+    },
+    {
+        "name": "Agregat 5-10 & 10-15",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 361905
+    },
+    {
+        "name": "Agregat 5-8 & 8-11",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 435715
+    },
+    {
+        "name": "Agregat 5-8 & 8-11 & 11-16",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 435715
+    },
+    {
+        "name": "Agregat Halus",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 366870
+    },
+    {
+        "name": "Agregat Halus",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "Kg",
+        "price": 300
+    },
+    {
+        "name": "Agregat Halus (Agregat Pch Mesin 0 - 5 mm)",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 327777
+    },
+    {
+        "name": "Agregat Halus Beton",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 231429
+    },
+    {
+        "name": "Agregat Kasar",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "Kg",
+        "price": 33
+    },
+    {
+        "name": "Agregat Kasar",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 450000
+    },
+    {
+        "name": "Agregat Kasar (Agregat Pch Mesin 5 - 10 & 10 - 15 mm)",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 435715
+    },
+    {
+        "name": "Agregat Kasar (Lolos screen2 ukuran ( 5 - 9,5))",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 435715
+    },
+    {
+        "name": "Agregat Kelas A",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 382857
+    },
+    {
+        "name": "Agregat Kelas B",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 340000
+    },
+    {
+        "name": "Agregat Kelas S",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 251500
+    },
+    {
+        "name": "Agregat Pch Mesin 0 - 5",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 360750
+    },
+    {
+        "name": "Agregat Pch Mesin 20-30",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 337500
+    },
+    {
+        "name": "Agregat Pch Mesin 5-10 & 10-15",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 388500
+    },
+    {
+        "name": "Agregat Pch Mesin 5-10 & 10-20",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 387000
+    },
+    {
+        "name": "Agregat Pch Mesin 5-8 & 8-11 & 11-15",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 386357
+    },
+    {
+        "name": "Agregat Pch Mesin 5-8 & 8-11 & 11-16 & 16-22",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 386357
+    },
+    {
+        "name": "Agregat Pengunci",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 284286
+    },
+    {
+        "name": "Agregat Penutup",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "Kg",
+        "price": 281
+    },
+    {
+        "name": "Agregat Penutup",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 315143
+    },
+    {
+        "name": "Agregat Pokok",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 392857
+    },
+    {
+        "name": "Agregat ukuran 14, 20, 28 mm",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 302143
+    },
+    {
+        "name": "Campuran Beton fc' 25 MPa, Slump (10 +- 2,5) cm, agregat maks 19 mm*)",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 900000
+    },
+    {
+        "name": "Kr: Kerikil / Agregat",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "Kg",
+        "price": 235
+    },
+    {
+        "name": "Kr: Kerikil / Agregat beton",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "Kg",
+        "price": 204
+    },
+    {
+        "name": "Kr: Kerikil / Agregat Kasar",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "Kg",
+        "price": 204
+    },
+    {
+        "name": "Lapis Fondasi AgregatKelas A",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 357000
+    },
+    {
+        "name": "Lapis FondasiAgregat Kelas B",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "m3",
+        "price": 357000
+    },
+    {
+        "name": "PB: Pasir Beton / Agregat Halus",
+        "category": "material",
+        "sub_category": "AGREGAT",
+        "unit": "Kg",
+        "price": 240
+    },
+    {
+        "name": "Alat penyambung balok dia. 12 atau 12 x 12 cm",
+        "category": "material",
+        "sub_category": "ALAT PENYAMBUNG",
+        "unit": "Buah",
+        "price": 3500
+    },
+    {
+        "name": "Alat penyambung balok dia. 15 atau 15 x 15 cm",
+        "category": "material",
+        "sub_category": "ALAT PENYAMBUNG",
+        "unit": "Buah",
+        "price": 4000
+    },
+    {
+        "name": "Alat penyambung balok dia. 20 atau 20 x 20 cm",
+        "category": "material",
+        "sub_category": "ALAT PENYAMBUNG",
+        "unit": "Buah",
+        "price": 4500
+    },
+    {
+        "name": "Alat penyambung balok dia. 25 atau 25 x 25 cm",
+        "category": "material",
+        "sub_category": "ALAT PENYAMBUNG",
+        "unit": "Buah",
+        "price": 4500
+    },
+    {
+        "name": "Alat penyambung balok dia. 30 atau 30 x 30 cm",
+        "category": "material",
+        "sub_category": "ALAT PENYAMBUNG",
+        "unit": "Buah",
+        "price": 4500
+    },
+    {
+        "name": "Alat penyambung balok dia. 35 atau 35 x 35 cm",
+        "category": "material",
+        "sub_category": "ALAT PENYAMBUNG",
+        "unit": "Buah",
+        "price": 4500
+    },
+    {
+        "name": "15 x 500mm Aluminium Air Rod dan aksesoris",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "Unit",
+        "price": 972750
+    },
+    {
+        "name": "25 x 3mm Bare Aluminium Tape dan aksesoris",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 171000
+    },
+    {
+        "name": "Aluminium Celling (Spandrel Model)",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m2",
+        "price": 601700
+    },
+    {
+        "name": "Aluminium Foil",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m2",
+        "price": 67250
+    },
+    {
+        "name": "Aluminium Foil Double Side Tebal 4 mm",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m2",
+        "price": 266666
+    },
+    {
+        "name": "Aluminium Gelombang Ukuran 95cmx180cm",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "lbr",
+        "price": 106200
+    },
+    {
+        "name": "Aluminium Spandrel 0.1 m x 6 m",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "lbr",
+        "price": 187000
+    },
+    {
+        "name": "Aluminium Strip",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 7750
+    },
+    {
+        "name": "Engsel",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "Buah",
+        "price": 12500
+    },
+    {
+        "name": "Frame Aluminium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 124334
+    },
+    {
+        "name": "Frame aluminium L.10.1",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "Kg",
+        "price": 45062
+    },
+    {
+        "name": "Grendel",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "Buah",
+        "price": 21500
+    },
+    {
+        "name": "Jalusi Aluminium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m2",
+        "price": 89250
+    },
+    {
+        "name": "Jendela Nako Rangka Aluminium (Rangka + Kaca 5 mm)",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m2",
+        "price": 391000
+    },
+    {
+        "name": "Kusen & Pintu PVC toilet",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "Unit",
+        "price": 269500
+    },
+    {
+        "name": "Kusen Almunium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 194000
+    },
+    {
+        "name": "Plat Aluminium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m2",
+        "price": 412396
+    },
+    {
+        "name": "Plat Aluminium Tebal 2 mm",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m2",
+        "price": 253125
+    },
+    {
+        "name": "Profil Aluminium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 37200
+    },
+    {
+        "name": "Profil Aluminium \"T\"",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m",
+        "price": 11250
+    },
+    {
+        "name": "Profil Aluminium 4 inch",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m",
+        "price": 136750
+    },
+    {
+        "name": "Profil Selimar Aluminium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 47656
+    },
+    {
+        "name": "Rangka Aluminium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 37200
+    },
+    {
+        "name": "Rangka Jendela Almunium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 259000
+    },
+    {
+        "name": "Rangka Pintu Almunium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m'",
+        "price": 264500
+    },
+    {
+        "name": "Selinder",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "Buah",
+        "price": 32500
+    },
+    {
+        "name": "Slot Tanam",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "Buah",
+        "price": 61250
+    },
+    {
+        "name": "Sunscreen Aluminium",
+        "category": "material",
+        "sub_category": "ALUMINIUM",
+        "unit": "m2",
+        "price": 625000
+    },
+    {
+        "name": "Anchorage",
+        "category": "material",
+        "sub_category": "ANCHORAGE",
+        "unit": "Buah",
+        "price": 1242375
+    },
+    {
+        "name": "Angkur",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Buah",
+        "price": 49500
+    },
+    {
+        "name": "Angkur Baja Full Drat ASTM 307 dia. 10 mm panjang 35 cm",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Buah",
+        "price": 36000
+    },
+    {
+        "name": "Angkur Baja Full Drat ASTM 307 dia. 10 mm panjang 65 cm",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Buah",
+        "price": 101500
+    },
+    {
+        "name": "Angkur dia 16 mm, L=400 mm",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Buah",
+        "price": 41000
+    },
+    {
+        "name": "Angkur Dia 22, L = 60",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Buah",
+        "price": 82200
+    },
+    {
+        "name": "Angkur dia 25 mm",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Buah",
+        "price": 34000
+    },
+    {
+        "name": "Angkur M16 panjang 50 cm",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Buah",
+        "price": 80250
+    },
+    {
+        "name": "Angkur Pin - Besi Ulir D16 (Per Titik = 50 Cm, Spacing 1 m x 1 m)",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "m2",
+        "price": 50000
+    },
+    {
+        "name": "Besi Angkur Diameter 8",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Kg",
+        "price": 74000
+    },
+    {
+        "name": "Kopel set, angkur",
+        "category": "material",
+        "sub_category": "ANGKUR",
+        "unit": "Buah",
+        "price": 117000
+    },
+    {
+        "name": "Aspal Emulsi",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Liter",
+        "price": 67275
+    },
+    {
+        "name": "Aspal Emulsi",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Kg",
+        "price": 12100
+    },
+    {
+        "name": "Aspal Emulsi (CSS-1h atau SS-1h)",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Liter",
+        "price": 17750
+    },
+    {
+        "name": "Aspal Emulsi CRS-1 atau RS-1",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Kg",
+        "price": 17500
+    },
+    {
+        "name": "Aspal Emulsi CSS-1 atau RS-1",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Liter",
+        "price": 18000
+    },
+    {
+        "name": "Aspal Emulsi CSS-1 atau SS-1",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Liter",
+        "price": 18000
+    },
+    {
+        "name": "Aspal Emulsi Modifikasi Polimer 1h",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Kg",
+        "price": 18500
+    },
+    {
+        "name": "Aspal Emulsi Modifikasi Polimer 2h",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Kg",
+        "price": 18250
+    },
+    {
+        "name": "Aspal Emulsi RS-1 Anionik",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Liter",
+        "price": 11750
+    },
+    {
+        "name": "Aspal Modifikasi",
+        "category": "material",
+        "sub_category": "ASPAL",
+        "unit": "Kg",
+        "price": 22500
+    },
+    {
+        "name": "Atap Metal Lembaran",
+        "category": "material",
+        "sub_category": "ATAP",
+        "unit": "m2",
+        "price": 65817
+    },
+    {
+        "name": "Atap Metal Menerus Tebal 0.4 mm",
+        "category": "material",
+        "sub_category": "ATAP",
+        "unit": "m2",
+        "price": 91597
+    },
+    {
+        "name": "Atap Seng Gelombang 105cm x 180cm",
+        "category": "material",
+        "sub_category": "ATAP",
+        "unit": "lbr",
+        "price": 12000
+    },
+    {
+        "name": "Atap Serat Semen Gelombang 105cm x 150cm x 5mm",
+        "category": "material",
+        "sub_category": "ATAP",
+        "unit": "lbr",
+        "price": 100000
+    },
+    {
+        "name": "Atap Serat Semen Gelombang 105cm x 210cm x 5mm",
+        "category": "material",
+        "sub_category": "ATAP",
+        "unit": "lbr",
+        "price": 84000
+    }
+]

@@ -1,545 +1,1045 @@
-import { supabase } from '../supabase';
+/**
+ * CREW API
+ * CRUD operations for crew members (field workers)
+ * This is separate from profiles/users (app users)
+ */
+
+import { supabase } from "@/lib/supabaseClient";
 import { 
-    CrewMember, 
-    Assignment, 
-    DailyLog, 
-    CrewRequest,
-    CrewRole,
-    CrewStatus,
-    RequestType,
-    RequestStatus
-} from '../../components/crew/mockData';
+    normalizeProjectCode, 
+    getProjectSuffix, 
+    getProjectNumber, 
+    formatProjectCode, 
+    isMatchingProjectCode 
+} from "@/lib/flow/utils/project-code";
 
-// Helper to determine if a string is a valid UUID
-function isUUID(str: string): boolean {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    return uuidRegex.test(str);
+export { 
+    normalizeProjectCode, 
+    getProjectSuffix, 
+    getProjectNumber, 
+    formatProjectCode, 
+    isMatchingProjectCode 
+};
+
+
+// ============================================
+// TYPES
+// ============================================
+
+export type CrewRole = "FOREMAN" | "LEADER" | "SKILLED" | "HELPER" | "OPERATOR" | "GENERAL";
+export type CrewStatus = "ACTIVE" | "INACTIVE";
+
+// Role labels (English with Indonesian in parentheses)
+export const CREW_ROLE_LABELS: Record<CrewRole, { en: string; id: string; display: string }> = {
+    FOREMAN: { en: "Foreman", id: "Mandor", display: "Foreman (Mandor)" },
+    LEADER: { en: "Leader", id: "Kepala Tukang", display: "Leader (Kepala Tukang)" },
+    SKILLED: { en: "Skilled Worker", id: "Tukang", display: "Skilled Worker (Tukang)" },
+    HELPER: { en: "Helper", id: "Kenek", display: "Helper (Kenek)" },
+    OPERATOR: { en: "Operator", id: "Operator", display: "Operator" },
+    GENERAL: { en: "General Worker", id: "Lain-lain", display: "General Worker (Lain-lain)" },
+};
+
+export const CREW_ROLE_OPTIONS = Object.entries(CREW_ROLE_LABELS).map(([value, labels]) => ({
+    value: value as CrewRole,
+    label: labels.display,
+}));
+
+// Skilled roles for statistics
+export const SKILLED_ROLES: CrewRole[] = ["FOREMAN", "LEADER", "SKILLED", "OPERATOR"];
+
+export interface CrewMember {
+    id: string;
+    workspaceId?: string;
+    name: string;
+    initials: string;
+    nik?: string;
+    phone?: string;
+    email?: string;
+    avatarUrl?: string;
+    role: CrewRole;
+    skillTags: string[];
+    status: CrewStatus;
+    joinDate?: string;
+    notes?: string;
+    baseDailyRate: number;
+    overtimeDailyRate: number;
+    otRate1: number;
+    otRate2: number;
+    otRate3: number;
+    bankName?: string;
+    bankAccount?: string;
+    currentProjectCode?: string;
+    createdAt: string;
+    updatedAt: string;
 }
 
-export function capitalizeEachWord(str: string): string {
-    if (!str) return '';
-    return str
-        .toLowerCase()
-        .split(/\s+/)
-        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-        .join(' ');
+export interface CrewProjectHistory {
+    id: string;
+    crewMemberId: string;
+    projectCode: string;
+    projectName?: string;
+    startDate: string;
+    endDate?: string;
+    status: "ongoing" | "completed" | "terminated";
+    createdAt: string;
 }
 
-// ---------------------------------------------------------
-// CREW MEMBERS API
-// ---------------------------------------------------------
+export interface CrewFilters {
+    status?: CrewStatus;
+    role?: CrewRole;
+    projectCode?: string;
+    search?: string;
+}
 
-export async function fetchCrewMembers(workspaceId: string): Promise<CrewMember[]> {
-    let query = supabase
-        .from('crew_members')
-        .select('*');
+export interface DailyLog {
+    id: string;
+    workspaceId: string;
+    crewId: string;
+    projectCode: string;
+    date: string; // YYYY-MM-DD
+    status: "PRESENT" | "ABSENT" | "HALF_DAY" | "CUTI";
+    regularHours: number;
+    ot1Hours: number;
+    ot2Hours: number;
+    ot3Hours: number;
+    rating?: number; // 1-5
+    createdAt: string;
+    updatedAt: string;
+}
 
-    if (workspaceId) {
-        query = query.or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
+// ============================================
+// MAPPERS
+// ============================================
+
+const getInitialsFallback = (name: string): string => {
+    const words = name.trim().split(/\s+/);
+    if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+    return words[0].substring(0, 2).toUpperCase();
+};
+
+function mapDbToCrewMember(row: any): CrewMember {
+    return {
+        id: row.id,
+        workspaceId: row.workspace_id,
+        name: row.name,
+        initials: row.initials || getInitialsFallback(row.name),
+        nik: row.nik,
+        phone: row.phone,
+        email: row.email,
+        avatarUrl: row.avatar_url,
+        role: row.role,
+        skillTags: row.skill_tags || [],
+        status: row.status,
+        joinDate: row.join_date,
+        notes: row.notes,
+        baseDailyRate: parseFloat(row.base_daily_rate) || 0,
+        overtimeDailyRate: parseFloat(row.overtime_daily_rate) || 0,
+        otRate1: parseFloat(row.ot_rate_1) || 0,
+        otRate2: parseFloat(row.ot_rate_2) || 0,
+        otRate3: parseFloat(row.ot_rate_3) || 0,
+        bankName: row.bank_name,
+        bankAccount: row.bank_account,
+        currentProjectCode: row.current_project_code,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+    };
+}
+
+function mapDbToProjectHistory(row: any): CrewProjectHistory {
+    return {
+        id: row.id,
+        crewMemberId: row.crew_member_id,
+        projectCode: row.project_code,
+        projectName: row.project_name,
+        startDate: row.start_date,
+        endDate: row.end_date,
+        status: row.status,
+        createdAt: row.created_at,
+    };
+}
+
+function mapDbToDailyLog(row: any): DailyLog {
+    return {
+        id: row.id,
+        workspaceId: row.workspace_id,
+        crewId: row.crew_id,
+        projectCode: row.project_code,
+        date: row.date,
+        status: row.status,
+        regularHours: parseFloat(row.regular_hours) || 0,
+        ot1Hours: parseFloat(row.ot1_hours) || 0,
+        ot2Hours: parseFloat(row.ot2_hours) || 0,
+        ot3Hours: parseFloat(row.ot3_hours) || 0,
+        rating: row.rating ? parseInt(row.rating) : undefined,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+    };
+}
+
+// ============================================
+// FETCH OPERATIONS
+// ============================================
+
+/**
+ * Fetch all crew members with optional filters
+ */
+export async function fetchCrewMembers(
+    workspaceId?: string,
+    filters?: CrewFilters
+): Promise<CrewMember[]> {
+    // NOTE: Removed workspaceId filter - this is a single-workspace app
+    // The filter was causing empty results when workspaceId fetch failed due to RLS
+    let query = supabase.from("crew_members").select("*");
+
+    if (filters?.status) {
+        query = query.eq("status", filters.status);
     }
 
-    const { data, error } = await query.order('name', { ascending: true });
+    if (filters?.role) {
+        query = query.eq("role", filters.role);
+    }
+
+    if (filters?.projectCode) {
+        query = query.eq("current_project_code", filters.projectCode);
+    }
+
+    if (filters?.search) {
+        query = query.ilike("name", `%${filters.search}%`);
+    }
+
+    query = query.order("name", { ascending: true });
+
+    const { data, error } = await query;
 
     if (error) {
-        console.warn('Crew members not available or error occurred:', error?.message);
+        console.error("❌ Error fetching crew members:", error);
         return [];
     }
 
-    return (data || []).map((m: any) => ({
-        id: m.id,
-        name: capitalizeEachWord(m.name),
-        initials: m.initials || m.name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2),
-        role: m.role as CrewRole,
-        status: m.status as CrewStatus,
-        skillTags: m.skill_tags || [],
-        projectCode: m.current_project_code || undefined,
-        baseDailyRate: Number(m.base_daily_rate) || 0,
-        overtimeDailyRate: Number(m.overtime_daily_rate) || 0,
-        otRate1: Number(m.ot_rate_1) || 0,
-        otRate2: Number(m.ot_rate_2) || 0,
-        otRate3: Number(m.ot_rate_3) || 0,
-        phone: m.phone || undefined,
-        email: m.email || undefined,
-        nik: m.nik || undefined,
-        notes: m.notes || undefined,
-        bankName: m.bank_name || undefined,
-        bankAccountNumber: m.bank_account || undefined,
-        documents: [] // Documents will be fetched separately or placeholders
+    return (data || []).map(mapDbToCrewMember);
+}
+
+/**
+ * Fetch single crew member by ID
+ */
+export async function fetchCrewMemberById(id: string): Promise<CrewMember | null> {
+    const { data, error } = await supabase
+        .from("crew_members")
+        .select("*")
+        .eq("id", id)
+        .single();
+
+    if (error) {
+        console.error("❌ Error fetching crew member:", error);
+        return null;
+    }
+
+    return data ? mapDbToCrewMember(data) : null;
+}
+
+/**
+ * Fetch project history for a crew member
+ */
+export async function fetchCrewProjectHistory(crewMemberId: string): Promise<CrewProjectHistory[]> {
+    const { data, error } = await supabase
+        .from("crew_project_history")
+        .select("*")
+        .eq("crew_member_id", crewMemberId)
+        .order("start_date", { ascending: false });
+
+    if (error) {
+        console.error("❌ Error fetching project history:", error);
+        return [];
+    }
+
+    return (data || []).map(mapDbToProjectHistory);
+}
+
+/**
+ * Fetch all project assignments with crew details joined
+ */
+export async function fetchCrewAssignments(status?: "ongoing" | "completed"): Promise<(CrewProjectHistory & { crewName: string, crewRole: CrewRole, crewStatus: CrewStatus })[]> {
+    let query = supabase
+        .from("crew_project_history")
+        .select(`
+            *,
+            crew:crew_member_id (name, role, status)
+        `);
+    
+    if (status) {
+        query = query.eq("status", status);
+    }
+
+    const { data, error } = await query.order("start_date", { ascending: false });
+
+    if (error) {
+        console.error("❌ Error fetching crew assignments:", error);
+        return [];
+    }
+
+    return (data || []).map((row: any) => ({
+        ...mapDbToProjectHistory(row),
+        crewName: row.crew?.name || "Unknown",
+        crewRole: row.crew?.role || "GENERAL",
+        crewStatus: row.crew?.status || "ACTIVE"
     }));
 }
 
-export async function saveCrewMember(member: CrewMember, workspaceId: string): Promise<CrewMember> {
-    const capitalizedName = capitalizeEachWord(member.name);
-    const generatedInitials = member.initials || capitalizedName.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
-    
-    const dbPayload = {
-        workspace_id: workspaceId,
-        name: capitalizedName,
-        initials: generatedInitials,
-        nik: member.nik || null,
-        phone: member.phone || null,
-        email: member.email || null,
-        avatar_url: member.photoUrl || null,
-        role: member.role,
-        skill_tags: member.skillTags || [],
-        status: member.status,
-        join_date: member.joinDate || null,
-        notes: member.notes || null,
-        base_daily_rate: member.baseDailyRate,
-        overtime_daily_rate: member.overtimeDailyRate,
-        ot_rate_1: member.otRate1,
-        ot_rate_2: member.otRate2,
-        ot_rate_3: member.otRate3,
-        bank_name: member.bankName || null,
-        bank_account: member.bankAccountNumber || null,
-        current_project_code: member.projectCode || null
-    };
+/**
+ * Fetch crew members assigned to a project on a specific date
+ */
+export async function fetchCrewByAssignment(projectSuffix: string, date: string): Promise<CrewMember[]> {
+    // 1. Fetch history records active on date
+    const { data: history, error: historyError } = await supabase
+        .from("crew_project_history")
+        .select("crew_member_id, project_code")
+        .lte("start_date", date)
+        .or(`end_date.gte.${date},end_date.is.null`);
 
-    if (isUUID(member.id)) {
-        // Update
-        const { data, error } = await supabase
-            .from('crew_members')
-            .update(dbPayload)
-            .eq('id', member.id)
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error updating crew member:', error);
-            throw error;
-        }
-
-        return {
-            ...member,
-            id: data.id,
-            name: capitalizedName,
-            initials: data.initials
-        };
-    } else {
-        // Insert (let Supabase auto-generate ID)
-        const { data, error } = await supabase
-            .from('crew_members')
-            .insert([dbPayload])
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error inserting crew member:', error);
-            throw error;
-        }
-
-        return {
-            ...member,
-            id: data.id,
-            name: capitalizedName,
-            initials: data.initials
-        };
+    if (historyError) {
+        console.error("❌ Error fetching assignment history:", historyError);
+        return [];
     }
-}
 
-export async function deleteCrewMember(memberId: string): Promise<void> {
-    const { error } = await supabase
-        .from('crew_members')
-        .delete()
-        .eq('id', memberId);
-
-    if (error) {
-        console.error('Error deleting crew member:', error);
-        throw error;
-    }
-}
-
-// ---------------------------------------------------------
-// ASSIGNMENTS API
-// ---------------------------------------------------------
-
-export async function fetchAssignments(workspaceId: string): Promise<Assignment[]> {
-    // Get all crew members for this workspace to filter project history
-    const { data: memberIdsData } = await supabase
-        .from('crew_members')
-        .select('id')
-        .eq('workspace_id', workspaceId);
-    
-    const memberIds = (memberIdsData || []).map(m => m.id);
+    // Match project codes flexibly (e.g. "039-RBH", "039 RBH", "RBH", "039")
+    const matchingHistories = (history || []).filter(h => isMatchingProjectCode(h.project_code, projectSuffix));
+    const memberIds = Array.from(new Set(matchingHistories.map(h => h.crew_member_id)));
     if (memberIds.length === 0) return [];
 
-    const { data, error } = await supabase
-        .from('crew_project_history')
-        .select(`
-            id,
-            crew_member_id,
-            project_code,
-            project_name,
-            start_date,
-            end_date,
-            status,
-            crew_members!crew_member_id (
-                name,
-                role
-            )
-        `)
-        .in('crew_member_id', memberIds)
-        .order('start_date', { ascending: false });
+    // 2. Fetch member details
+    const { data: members, error: membersError } = await supabase
+        .from("crew_members")
+        .select("*")
+        .in("id", memberIds);
 
-    if (error) {
-        console.error('Error fetching assignments:', error);
-        throw error;
+    if (membersError) {
+        console.error("❌ Error fetching crew details for assignment:", membersError);
+        return [];
     }
 
-    return (data || []).map((a: any) => {
-        const statusMap: Record<string, 'ACTIVE' | 'COMPLETED' | 'INACTIVE'> = {
-            ongoing: 'ACTIVE',
-            completed: 'COMPLETED',
-            terminated: 'INACTIVE'
-        };
-
-        let mappedStatus = statusMap[a.status] || 'INACTIVE';
-
-        // Override: if end_date has not passed yet (end_date >= today), mark as ACTIVE
-        if (mappedStatus === 'COMPLETED' && a.end_date) {
-            const todayStr = new Date().toISOString().split('T')[0];
-            if (a.end_date >= todayStr) {
-                mappedStatus = 'ACTIVE';
-            }
-        }
-
-        return {
-            id: a.id,
-            crewId: a.crew_member_id,
-            crewName: capitalizeEachWord(a.crew_members?.name || 'Unknown'),
-            crewRole: (a.crew_members?.role || 'HELPER') as CrewRole,
-            projectCode: a.project_code,
-            startDate: a.start_date,
-            endDate: a.end_date || undefined,
-            status: mappedStatus
-        };
-    });
+    return (members || []).map(mapDbToCrewMember);
 }
 
-export async function saveAssignment(assignment: Assignment, workspaceId: string): Promise<Assignment> {
-    const dbStatus = assignment.status === 'ACTIVE' ? 'ongoing' : (assignment.status === 'COMPLETED' ? 'completed' : 'terminated');
-    
-    const dbPayload = {
-        crew_member_id: assignment.crewId,
-        project_code: assignment.projectCode,
-        start_date: assignment.startDate,
-        end_date: assignment.endDate || null,
-        status: dbStatus
-    };
 
-    let savedId = assignment.id;
+/**
+ * Get crew statistics
+ */
+export async function fetchCrewStats(workspaceId?: string): Promise<{
+    total: number;
+    active: number;
+    skilled: number;
+    unskilled: number;
+}> {
+    // NOTE: Removed workspaceId filter - single-workspace app
+    const query = supabase.from("crew_members").select("id, status, role");
 
-    if (isUUID(assignment.id)) {
-        const { error } = await supabase
-            .from('crew_project_history')
-            .update(dbPayload)
-            .eq('id', assignment.id);
+    const { data, error } = await query;
 
-        if (error) {
-            console.error('Error updating assignment:', error);
-            throw error;
-        }
-    } else {
-        const { data, error } = await supabase
-            .from('crew_project_history')
-            .insert([dbPayload])
-            .select()
-            .single();
-
-        if (error) {
-            console.error('Error inserting assignment:', error);
-            throw error;
-        }
-        savedId = data.id;
-    }
-
-    // Sync crew member current project code
-    // If active assignment, set current_project_code, else clear it
-    const { error: syncError } = await supabase
-        .from('crew_members')
-        .update({
-            current_project_code: assignment.status === 'ACTIVE' ? assignment.projectCode : null
-        })
-        .eq('id', assignment.crewId);
-
-    if (syncError) {
-        console.error('Error syncing crew member current project code:', syncError);
+    if (error || !data) {
+        return { total: 0, active: 0, skilled: 0, unskilled: 0 };
     }
 
     return {
-        ...assignment,
-        id: savedId
+        total: data.length,
+        active: data.filter((c) => c.status === "ACTIVE").length,
+        skilled: data.filter((c) => SKILLED_ROLES.includes(c.role)).length,
+        unskilled: data.filter((c) => c.role === "HELPER" || c.role === "GENERAL").length,
     };
 }
 
-export async function deleteAssignment(assignmentId: string): Promise<void> {
-    // Get the assignment details to find the crew member ID before deletion
-    const { data: assignData } = await supabase
-        .from('crew_project_history')
-        .select('crew_member_id')
-        .eq('id', assignmentId)
+// ============================================
+// CREATE OPERATIONS
+// ============================================
+
+export interface CreateCrewMemberInput {
+    workspaceId?: string;
+    name: string;
+    initials?: string;
+    nik?: string;
+    phone?: string;
+    email?: string;
+    avatarUrl?: string;
+    role: CrewRole;
+    skillTags?: string[];
+    status?: CrewStatus;
+    joinDate?: string;
+    notes?: string;
+    baseDailyRate?: number;
+    overtimeDailyRate?: number;
+    otRate1?: number;
+    otRate2?: number;
+    otRate3?: number;
+    bankName?: string;
+    bankAccount?: string;
+    currentProjectCode?: string;
+}
+
+/**
+ * Create a new crew member
+ */
+export async function createCrewMember(input: CreateCrewMemberInput): Promise<CrewMember | null> {
+    const insertData = {
+        workspace_id: input.workspaceId || null,
+        name: input.name,
+        initials: input.initials || null,
+        nik: input.nik || null,
+        phone: input.phone || null,
+        email: input.email || null,
+        avatar_url: input.avatarUrl || null,
+        role: input.role,
+        skill_tags: input.skillTags || [],
+        status: input.status || "ACTIVE",
+        join_date: input.joinDate || null,
+        notes: input.notes || null,
+        base_daily_rate: input.baseDailyRate || 0,
+        overtime_daily_rate: input.overtimeDailyRate || 0,
+        ot_rate_1: input.otRate1 || 0,
+        ot_rate_2: input.otRate2 || 0,
+        ot_rate_3: input.otRate3 || 0,
+        bank_name: input.bankName || null,
+        bank_account: input.bankAccount || null,
+        current_project_code: input.currentProjectCode || null,
+    };
+
+    const { data, error } = await supabase
+        .from("crew_members")
+        .insert(insertData)
+        .select()
         .single();
 
-    const { error } = await supabase
-        .from('crew_project_history')
-        .delete()
-        .eq('id', assignmentId);
-
     if (error) {
-        console.error('Error deleting assignment:', error);
-        throw error;
+        console.error("❌ Error creating crew member:", error);
+        throw new Error(error.message);
     }
 
-    // Clear current project code on the crew member if they are assigned to it
-    if (assignData?.crew_member_id) {
-        await supabase
-            .from('crew_members')
-            .update({ current_project_code: null })
-            .eq('id', assignData.crew_member_id);
-    }
+    return mapDbToCrewMember(data);
 }
 
-// ---------------------------------------------------------
-// DAILY LOGS API
-// ---------------------------------------------------------
+// ============================================
+// UPDATE OPERATIONS
+// ============================================
 
-export async function fetchDailyLogs(workspaceId: string): Promise<DailyLog[]> {
-    // 1. Get exact total count first
-    const { count, error: countError } = await supabase
-        .from('crew_daily_logs')
-        .select('*', { count: 'exact', head: true })
-        .eq('workspace_id', workspaceId);
-
-    if (countError) {
-        console.warn('Daily logs not available or error occurred:', countError?.message);
-        return [];
-    }
-
-    const totalCount = count || 0;
-    if (totalCount === 0) return [];
-
-    const pageSize = 1000;
-    const numPages = Math.ceil(totalCount / pageSize);
-    const promises = [];
-
-    // 2. Fetch all pages in parallel
-    for (let i = 0; i < numPages; i++) {
-        const from = i * pageSize;
-        const to = from + pageSize - 1;
-        promises.push(
-            supabase
-                .from('crew_daily_logs')
-                .select('*')
-                .eq('workspace_id', workspaceId)
-                .range(from, to)
-        );
-    }
-
-    const results = await Promise.all(promises);
-    let allData: any[] = [];
-
-    for (const res of results) {
-        if (res.error) {
-            console.warn('Daily logs page error:', res.error?.message);
-            continue;
-        }
-        allData = allData.concat(res.data || []);
-    }
-
-    return allData.map((l: any) => ({
-        id: l.id,
-        crewId: l.crew_id,
-        projectCode: l.project_code,
-        date: l.date,
-        status: l.status,
-        regularHours: Number(l.regular_hours) || 0,
-        ot1Hours: Number(l.ot1_hours) || 0,
-        ot2Hours: Number(l.ot2_hours) || 0,
-        ot3Hours: Number(l.ot3_hours) || 0
-    }));
+export interface UpdateCrewMemberInput {
+    name?: string;
+    initials?: string;
+    nik?: string;
+    phone?: string;
+    email?: string;
+    avatarUrl?: string;
+    role?: CrewRole;
+    skillTags?: string[];
+    status?: CrewStatus;
+    joinDate?: string;
+    notes?: string;
+    baseDailyRate?: number;
+    overtimeDailyRate?: number;
+    otRate1?: number;
+    otRate2?: number;
+    otRate3?: number;
+    bankName?: string;
+    bankAccount?: string;
+    currentProjectCode?: string;
 }
 
-export async function saveDailyLogs(logs: DailyLog[], workspaceId: string): Promise<void> {
-    if (logs.length === 0) return;
+/**
+ * Update a crew member
+ */
+export async function updateCrewMember(
+    id: string,
+    input: UpdateCrewMemberInput
+): Promise<CrewMember | null> {
+    const updateData: Record<string, any> = {};
 
-    const dbLogs = logs.map(l => ({
-        workspace_id: workspaceId,
-        crew_id: l.crewId,
-        project_code: l.projectCode,
-        date: l.date,
-        status: l.status,
-        regular_hours: l.regularHours,
-        ot1_hours: l.ot1Hours,
-        ot2_hours: l.ot2Hours,
-        ot3_hours: l.ot3Hours
-    }));
+    if (input.name !== undefined) updateData.name = input.name;
+    if (input.initials !== undefined) updateData.initials = input.initials;
+    if (input.nik !== undefined) updateData.nik = input.nik;
+    if (input.phone !== undefined) updateData.phone = input.phone;
+    if (input.email !== undefined) updateData.email = input.email;
+    if (input.avatarUrl !== undefined) updateData.avatar_url = input.avatarUrl;
+    if (input.role !== undefined) updateData.role = input.role;
+    if (input.skillTags !== undefined) updateData.skill_tags = input.skillTags;
+    if (input.status !== undefined) updateData.status = input.status;
+    if (input.joinDate !== undefined) updateData.join_date = input.joinDate;
+    if (input.notes !== undefined) updateData.notes = input.notes;
+    if (input.baseDailyRate !== undefined) updateData.base_daily_rate = input.baseDailyRate;
+    if (input.overtimeDailyRate !== undefined) updateData.overtime_daily_rate = input.overtimeDailyRate;
+    if (input.otRate1 !== undefined) updateData.ot_rate_1 = input.otRate1;
+    if (input.otRate2 !== undefined) updateData.ot_rate_2 = input.otRate2;
+    if (input.otRate3 !== undefined) updateData.ot_rate_3 = input.otRate3;
+    if (input.bankName !== undefined) updateData.bank_name = input.bankName;
+    if (input.bankAccount !== undefined) updateData.bank_account = input.bankAccount;
+    if (input.currentProjectCode !== undefined) updateData.current_project_code = input.currentProjectCode;
 
-    const { error } = await supabase
-        .from('crew_daily_logs')
-        .upsert(dbLogs, { onConflict: 'crew_id,date,project_code' });
+    const { data, error } = await supabase
+        .from("crew_members")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
 
     if (error) {
-        console.error('Error upserting daily logs:', error);
-        throw error;
+        console.error("❌ Error updating crew member:", error);
+        throw new Error(error.message);
     }
+
+    return mapDbToCrewMember(data);
 }
 
-// ---------------------------------------------------------
-// CREW REQUESTS API
-// ---------------------------------------------------------
+// ============================================
+// DELETE OPERATIONS
+// ============================================
 
-export async function fetchCrewRequests(workspaceId: string): Promise<CrewRequest[]> {
-    const { data: requestRows, error } = await supabase
-        .from('crew_requests')
-        .select(`
-            id,
-            crew_id,
-            type,
-            amount,
-            start_date,
-            end_date,
-            reason,
-            proof_url,
-            status,
-            created_at,
-            created_by
-        `)
-        .eq('workspace_id', workspaceId)
-        .order('created_at', { ascending: false });
+/**
+ * Delete a crew member
+ */
+export async function deleteCrewMember(id: string): Promise<boolean> {
+    const { error } = await supabase.from("crew_members").delete().eq("id", id);
 
     if (error) {
-        console.warn('Crew requests not available or error occurred:', error?.message);
-        return [];
+        console.error("❌ Error deleting crew member:", error);
+        throw new Error(error.message);
     }
 
-    if (!requestRows || requestRows.length === 0) {
-        return [];
-    }
+    return true;
+}
 
-    // Fetch associated crew members safely without requiring PostgREST schema cache FK
-    const crewIds = Array.from(new Set(requestRows.map((r: any) => r.crew_id).filter(Boolean)));
-    let memberMap: Record<string, any> = {};
-    if (crewIds.length > 0) {
-        const { data: members } = await supabase
-            .from('crew_members')
-            .select('id, name, role, current_project_code')
-            .in('id', crewIds);
-        
-        if (members) {
-            members.forEach((m: any) => {
-                memberMap[m.id] = m;
+// ============================================
+// PROJECT ASSIGNMENT OPERATIONS
+// ============================================
+
+export async function assignCrewToProject(
+    crewMemberId: string,
+    projectCode: string,
+    projectName?: string,
+    startDate?: string,
+    endDate?: string,
+    assignmentId?: string
+): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (assignmentId) {
+            // Edit existing assignment
+            const { error: updateHistoryError } = await supabase
+                .from("crew_project_history")
+                .update({
+                    crew_member_id: crewMemberId,
+                    project_code: projectCode,
+                    project_name: projectName || null,
+                    start_date: startDate || new Date().toISOString().split("T")[0],
+                    end_date: endDate || null,
+                    status: endDate ? "completed" : "ongoing",
+                })
+                .eq("id", assignmentId);
+
+            if (updateHistoryError) return { success: false, error: "Update History Failed: " + updateHistoryError.message };
+
+            // Synchronize the current_project_code on crew_members if this is the active assignment
+            if (!endDate) {
+                const { error: memberError } = await supabase
+                    .from("crew_members")
+                    .update({ current_project_code: projectCode })
+                    .eq("id", crewMemberId);
+                if (memberError) return { success: false, error: "Member Data Sync Failed: " + memberError.message };
+            }
+
+            return { success: true };
+        } else {
+            // Create New Assignment
+            // End any ongoing assignments first
+            await supabase
+                .from("crew_project_history")
+                .update({ status: "completed", end_date: startDate || new Date().toISOString().split("T")[0] })
+                .eq("crew_member_id", crewMemberId)
+                .eq("status", "ongoing");
+
+            // Create new assignment
+            const { error: historyError } = await supabase.from("crew_project_history").insert({
+                crew_member_id: crewMemberId,
+                project_code: projectCode,
+                project_name: projectName || null,
+                start_date: startDate || new Date().toISOString().split("T")[0],
+                end_date: endDate || null,
+                status: endDate ? "completed" : "ongoing",
             });
+
+            if (historyError) {
+                return { success: false, error: "Insert History Failed: " + historyError.message };
+            }
+
+            // Update current project on crew member if it is an ongoing active assignment
+            if (!endDate) {
+                const { error: updateError } = await supabase
+                    .from("crew_members")
+                    .update({ current_project_code: projectCode })
+                    .eq("id", crewMemberId);
+
+                if (updateError) {
+                    return { success: false, error: "Update Member Failed: " + updateError.message };
+                }
+            }
+
+            return { success: true };
         }
+    } catch (err: any) {
+        return { success: false, error: err.message };
+    }
+}
+
+/**
+ * Unassign crew from current project
+ */
+export async function unassignCrewFromProject(crewMemberId: string): Promise<boolean> {
+    // End ongoing assignment
+    await supabase
+        .from("crew_project_history")
+        .update({ status: "completed", end_date: new Date().toISOString().split("T")[0] })
+        .eq("crew_member_id", crewMemberId)
+        .eq("status", "ongoing");
+
+    // Clear current project
+    const { error } = await supabase
+        .from("crew_members")
+        .update({ current_project_code: null })
+        .eq("id", crewMemberId);
+
+    if (error) {
+        console.error("❌ Error unassigning crew:", error);
+        return false;
     }
 
-    return requestRows.map((r: any) => {
-        const member = memberMap[r.crew_id];
+    return true;
+}
+// ============================================
+// DAILY LOGS
+// ============================================
 
-        // Parse movedToPeriod or rejectReason if stored in reason with a special format
-        let movedToPeriod: string | undefined;
-        let rejectReason: string | undefined;
-        let cleanReason = r.reason || '';
+export async function fetchDailyLogs(workspaceId: string, projectCode?: string, dateStr?: string): Promise<DailyLog[]> {
+    let query = supabase.from("crew_daily_logs").select("*").eq("workspace_id", workspaceId);
 
-        if (cleanReason.includes('[MOVED_TO_PERIOD:')) {
-            const match = cleanReason.match(/\[MOVED_TO_PERIOD:\s*([^\]]+)\]/);
-            if (match) {
-                movedToPeriod = match[1];
-                cleanReason = cleanReason.replace(/\[MOVED_TO_PERIOD:\s*[^\]]+\]/, '').trim();
-            }
-        }
-        if (cleanReason.includes('[REJECT_REASON:')) {
-            const match = cleanReason.match(/\[REJECT_REASON:\s*([^\]]+)\]/);
-            if (match) {
-                rejectReason = match[1];
-                cleanReason = cleanReason.replace(/\[REJECT_REASON:\s*[^\]]+\]/, '').trim();
-            }
-        }
+    if (dateStr) query = query.eq("date", dateStr);
+
+    const { data, error } = await query;
+    if (error) throw error;
+    
+    let mapped = (data || []).map(mapDbToDailyLog);
+    if (projectCode && projectCode !== "ALL") {
+        mapped = mapped.filter(log => isMatchingProjectCode(log.projectCode, projectCode));
+    }
+    return mapped;
+}
+
+export async function upsertDailyLog(entry: {
+    workspaceId: string;
+    crewId: string;
+    projectCode: string;
+    date: string;
+    status: string;
+    regularHours: number;
+    ot1Hours: number;
+    ot2Hours: number;
+    ot3Hours: number;
+}): Promise<DailyLog> {
+    // Check if exists to determine insert/update (though upsert with unique key handles this)
+    const { data, error } = await supabase
+        .from("crew_daily_logs")
+        .upsert({
+            workspace_id: entry.workspaceId,
+            crew_id: entry.crewId,
+            project_code: entry.projectCode,
+            date: entry.date,
+            status: entry.status,
+            regular_hours: entry.regularHours,
+            ot1_hours: entry.ot1Hours,
+            ot2_hours: entry.ot2Hours,
+            ot3_hours: entry.ot3Hours,
+            updated_at: new Date().toISOString()
+        }, {
+            onConflict: 'crew_id, date, project_code'
+        })
+        .select()
+        .single();
+
+    if (error) throw error;
+    return mapDbToDailyLog(data);
+}
+
+
+export type RequestType = "LEAVE" | "KASBON" | "REIMBURSE" | "SICK" | "OTHER";
+export type RequestStatus = "PENDING" | "APPROVED" | "REJECTED" | "CANCELED";
+
+export interface CrewRequest {
+    id: string;
+    workspaceId: string;
+    crewId: string;
+    crewName?: string; // For joining
+    crewRole?: CrewRole; // For joining
+    projectCode?: string; // Resolved from daily log, assignment history, or crew
+    type: RequestType;
+    amount?: number;
+    startDate: string;
+    endDate?: string;
+    reason: string;
+    proofUrl?: string;
+    status: RequestStatus;
+    createdAt: string;
+    createdBy?: string;
+}
+
+export async function fetchRequests(workspaceId: string, projectId?: string): Promise<CrewRequest[]> {
+    const [requestsRes, historyRes, logsRes] = await Promise.all([
+        supabase
+            .from("crew_requests")
+            .select(`
+                *,
+                crew:crew_id (name, role, current_project_code)
+            `)
+            .eq("workspace_id", workspaceId)
+            .order("created_at", { ascending: false }),
+        supabase
+            .from("crew_project_history")
+            .select("crew_member_id, project_code, start_date, end_date")
+            .order("start_date", { ascending: false }),
+        supabase
+            .from("crew_daily_logs")
+            .select("crew_id, project_code, date")
+            .eq("workspace_id", workspaceId)
+            .order("date", { ascending: false })
+    ]);
+
+    if (requestsRes.error) {
+        console.error("Error fetching requests:", requestsRes.error);
+        return [];
+    }
+
+    const requestsData = requestsRes.data || [];
+    const historyData = historyRes.data || [];
+    const logsData = logsRes.data || [];
+
+    // Map result with dynamic time-based project resolution
+    const mapped: CrewRequest[] = requestsData.map((r: any) => {
+        const reqDate = r.start_date || (r.created_at ? r.created_at.split("T")[0] : "");
+        
+        // 1. Daily log check on request effective date
+        const matchedLog = reqDate 
+            ? logsData.find((l: any) => l.crew_id === r.crew_id && l.date === reqDate && l.project_code)
+            : null;
+        
+        // 2. Assignment history check on request effective date
+        const matchedAssignment = reqDate
+            ? historyData.find((h: any) => 
+                h.crew_member_id === r.crew_id && 
+                h.project_code &&
+                h.start_date <= reqDate && 
+                (!h.end_date || h.end_date >= reqDate)
+            )
+            : null;
+
+        // 3. Latest daily log for this crew member
+        const latestCrewLog = logsData.find((l: any) => l.crew_id === r.crew_id && l.project_code);
+
+        // 4. Latest assignment for this crew member
+        const latestCrewAssignment = historyData.find((h: any) => h.crew_member_id === r.crew_id && h.project_code);
+
+        // Resolve projectCode: Daily Log on Date -> Assignment on Date -> Stored Request Project -> Latest Daily Log -> Latest Assignment -> Crew master current_project_code
+        const resolvedProjectCode = 
+            matchedLog?.project_code || 
+            matchedAssignment?.project_code || 
+            r.project_code || 
+            latestCrewLog?.project_code || 
+            latestCrewAssignment?.project_code || 
+            r.crew?.current_project_code || 
+            undefined;
 
         return {
             id: r.id,
+            workspaceId: r.workspace_id,
             crewId: r.crew_id,
-            crewName: capitalizeEachWord(member?.name || 'Unknown'),
-            crewRole: (member?.role || 'HELPER') as CrewRole,
-            projectCode: member?.current_project_code || undefined,
-            type: r.type as RequestType,
-            amount: r.amount ? Number(r.amount) : undefined,
+            crewName: r.crew?.name || "Unknown",
+            crewRole: r.crew?.role,
+            projectCode: resolvedProjectCode,
+            type: r.type,
+            amount: r.amount != null && !isNaN(parseFloat(r.amount)) ? parseFloat(r.amount) : undefined,
             startDate: r.start_date,
-            endDate: r.end_date || undefined,
-            reason: cleanReason,
-            status: r.status as RequestStatus,
+            endDate: r.end_date,
+            reason: r.reason,
+            proofUrl: r.proof_url,
+            status: r.status,
             createdAt: r.created_at,
-            proofUrl: r.proof_url || undefined,
-            movedToPeriod,
-            rejectReason
+            createdBy: r.created_by
         };
     });
+
+    if (projectId && projectId !== "ALL") {
+        return mapped.filter(r => isMatchingProjectCode(r.projectCode, projectId));
+    }
+
+    return mapped;
 }
 
-export async function saveCrewRequest(request: CrewRequest, workspaceId: string): Promise<CrewRequest> {
-    // Append movedToPeriod and rejectReason metadata to reason column if they exist
-    let reasonWithMeta = request.reason;
-    if (request.movedToPeriod) {
-        reasonWithMeta = `[MOVED_TO_PERIOD: ${request.movedToPeriod}] ${reasonWithMeta}`;
-    }
-    if (request.rejectReason) {
-        reasonWithMeta = `[REJECT_REASON: ${request.rejectReason}] ${reasonWithMeta}`;
-    }
 
-    const dbPayload = {
-        workspace_id: workspaceId,
-        crew_id: request.crewId,
-        type: request.type,
-        amount: request.amount || null,
-        start_date: request.startDate,
-        end_date: request.endDate || null,
-        reason: reasonWithMeta,
-        proof_url: request.proofUrl || null,
-        status: request.status
-    };
-
-    let savedId = request.id;
-    let createdAt = request.createdAt || new Date().toISOString();
-
-    if (isUUID(request.id)) {
-        const { error } = await supabase
-            .from('crew_requests')
-            .update(dbPayload)
-            .eq('id', request.id);
-
-        if (error) {
-            console.error('Error updating crew request:', error);
-            throw error;
-        }
-    } else {
+export async function createRequest(request: Partial<CrewRequest>) {
+    try {
         const { data, error } = await supabase
-            .from('crew_requests')
-            .insert([dbPayload])
+            .from("crew_requests")
+            .insert({
+                workspace_id: request.workspaceId,
+                crew_id: request.crewId,
+                project_code: request.projectCode || null,
+                type: request.type,
+                amount: request.amount,
+                start_date: request.startDate,
+                end_date: request.endDate,
+                reason: request.reason,
+                proof_url: request.proofUrl,
+                status: "PENDING",
+                created_by: request.createdBy
+            })
             .select()
             .single();
 
-        if (error) {
-            console.error('Error inserting crew request:', error);
-            throw error;
+        if (error) throw error;
+        return data;
+    } catch (err: any) {
+        if (err.message?.includes("project_code") || err.code === "PGRST204" || err.message?.includes("cache")) {
+            console.warn("⚠️ Column project_code not found in crew_requests, falling back to inserting without it.");
+            const { data, error } = await supabase
+                .from("crew_requests")
+                .insert({
+                    workspace_id: request.workspaceId,
+                    crew_id: request.crewId,
+                    type: request.type,
+                    amount: request.amount,
+                    start_date: request.startDate,
+                    end_date: request.endDate,
+                    reason: request.reason,
+                    proof_url: request.proofUrl,
+                    status: "PENDING",
+                    created_by: request.createdBy
+                })
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
         }
-        savedId = data.id;
-        createdAt = data.created_at;
+        throw err;
     }
-
-    return {
-        ...request,
-        id: savedId,
-        createdAt
-    };
 }
 
-export async function deleteCrewRequest(requestId: string): Promise<void> {
+export async function updateRequest(id: string, updates: Partial<CrewRequest>) {
+    const updateData: Record<string, any> = {};
+    if (updates.type !== undefined) updateData.type = updates.type;
+    if (updates.amount !== undefined) updateData.amount = updates.amount;
+    if (updates.startDate !== undefined) updateData.start_date = updates.startDate;
+    if (updates.endDate !== undefined) updateData.end_date = updates.endDate;
+    if (updates.reason !== undefined) updateData.reason = updates.reason;
+    if (updates.proofUrl !== undefined) updateData.proof_url = updates.proofUrl;
+    if (updates.status !== undefined) updateData.status = updates.status;
+    if (updates.projectCode !== undefined) updateData.project_code = updates.projectCode;
+
+    try {
+        const { data, error } = await supabase
+            .from("crew_requests")
+            .update(updateData)
+            .eq("id", id)
+            .select()
+            .single();
+        if (error) throw error;
+        return data;
+    } catch (err: any) {
+        if (err.message?.includes("project_code") || err.code === "PGRST204" || err.message?.includes("cache")) {
+            console.warn("⚠️ Column project_code not found in crew_requests, falling back to updating without it.");
+            delete updateData.project_code;
+            const { data, error } = await supabase
+                .from("crew_requests")
+                .update(updateData)
+                .eq("id", id)
+                .select()
+                .single();
+            if (error) throw error;
+            return data;
+        }
+        throw err;
+    }
+}
+
+export async function deleteDailyLogsForDate(crewId: string, date: string) {
     const { error } = await supabase
-        .from('crew_requests')
+        .from("crew_daily_logs")
         .delete()
-        .eq('id', requestId);
+        .eq("crew_id", crewId)
+        .eq("date", date);
 
     if (error) {
-        console.error('Error deleting crew request:', error);
+        console.error("Error deleting daily logs:", error);
         throw error;
     }
 }
+
+export async function deleteDailyLogEntry(crewId: string, date: string, projectCode: string) {
+    const { error } = await supabase
+        .from("crew_daily_logs")
+        .delete()
+        .eq("crew_id", crewId)
+        .eq("date", date)
+        .eq("project_code", projectCode);
+
+    if (error) {
+        console.error("Error deleting daily log entry:", error);
+        throw error;
+    }
+}
+
+
+
+export async function deleteRequest(id: string) {
+    const { error } = await supabase.from("crew_requests").delete().eq("id", id);
+    if (error) throw error;
+    return true;
+}
+
+export async function updateRequestStatus(id: string, status: RequestStatus, approvedBy?: string) {
+    const updateData: any = { status, updated_at: new Date().toISOString() };
+    if (status === "APPROVED" && approvedBy) {
+        updateData.approved_by = approvedBy;
+        updateData.approved_at = new Date().toISOString();
+    }
+
+    const { data, error } = await supabase
+        .from("crew_requests")
+        .update(updateData)
+        .eq("id", id)
+        .select()
+        .single();
+
+    if (error) throw error;
+    return data;
+}
+
+// Helper to update just the rating
+export async function updateDailyRating(crewId: string, workspaceId: string, date: string, rating: number) {
+    // 1. Check if log exists
+    const { data: existing } = await supabase
+        .from("crew_daily_logs")
+        .select("*")
+        .eq("crew_id", crewId)
+        .eq("date", date)
+        .single();
+
+    if (existing) {
+        // Update
+        const { error } = await supabase
+            .from("crew_daily_logs")
+            .update({ rating })
+            .eq("id", existing.id);
+        if (error) throw error;
+    } else {
+        // Create new log with just rating
+        const { error } = await supabase
+            .from("crew_daily_logs")
+            .insert({
+                workspace_id: workspaceId,
+                crew_id: crewId,
+                date: date,
+                rating: rating,
+                status: "PRESENT", // Default to Present if rating is given
+                regular_hours: 0,
+                ot1_hours: 0,
+                ot2_hours: 0,
+                ot3_hours: 0
+            });
+        if (error) throw error;
+    }
+}
+
+// ============================================
+// FUTURE DATE UNLOCKS
+// ============================================
+
+/**
+ * Checks if a specific future date is unlocked for a project.
+ */
+export async function fetchFutureUnlock(
+    workspaceId: string,
+    projectCode: string,
+    dateStr: string
+): Promise<boolean> {
+    try {
+        const { data, error } = await supabase
+            .from("crew_future_unlocks")
+            .select("id")
+            .eq("workspace_id", workspaceId)
+            .eq("project_code", projectCode)
+            .eq("date", dateStr)
+            .maybeSingle();
+
+        if (error) {
+            // Log warning but don't throw (e.g. if migration not run yet)
+            console.warn("⚠️ Error fetching future unlock (make sure migration is run):", error.message);
+            return false;
+        }
+
+        return !!data;
+    } catch (e) {
+        console.error("❌ Exception in fetchFutureUnlock:", e);
+        return false;
+    }
+}
+
+/**
+ * Unlocks a future date for a project (persisted in database).
+ */
+export async function unlockFutureDate(
+    workspaceId: string,
+    projectCode: string,
+    dateStr: string,
+    userId?: string
+): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from("crew_future_unlocks")
+            .insert({
+                workspace_id: workspaceId,
+                project_code: projectCode,
+                date: dateStr,
+                unlocked_by: userId || null
+            });
+
+        if (error) {
+            console.error("❌ Error unlocking future date:", error.message);
+            throw error;
+        }
+
+        return true;
+    } catch (e) {
+        console.error("❌ Exception in unlockFutureDate:", e);
+        throw e;
+    }
+}
+
+/**
+ * Locks a future date again (removes override from database).
+ */
+export async function lockFutureDate(
+    workspaceId: string,
+    projectCode: string,
+    dateStr: string
+): Promise<boolean> {
+    try {
+        const { error } = await supabase
+            .from("crew_future_unlocks")
+            .delete()
+            .eq("workspace_id", workspaceId)
+            .eq("project_code", projectCode)
+            .eq("date", dateStr);
+
+        if (error) {
+            console.error("❌ Error locking future date:", error.message);
+            throw error;
+        }
+
+        return true;
+    } catch (e) {
+        console.error("❌ Exception in lockFutureDate:", e);
+        throw e;
+    }
+}
+

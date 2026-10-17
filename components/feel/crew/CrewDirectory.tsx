@@ -1,0 +1,1023 @@
+"use client";
+
+import { useState, useMemo, useEffect, useCallback, useContext } from "react";
+import { createPortal } from "react-dom";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
+import clsx from "clsx";
+import { Plus, Search, ChevronDown, ChevronUp, Edit2, Trash2, Filter, List, LayoutGrid, ArrowUpDown, X, Download, Loader2, Users, UserCheck, Star, Hammer } from "lucide-react";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+import { Button } from "@/shared/ui/primitives/button/button";
+import { Select } from "@/shared/ui/primitives/select/select";
+import {
+    fetchCrewMembers,
+    fetchCrewStats,
+    createCrewMember,
+    updateCrewMember,
+    deleteCrewMember,
+    CrewMember,
+    CrewRole,
+    CrewStatus,
+    CREW_ROLE_LABELS,
+    CREW_ROLE_OPTIONS,
+    SKILLED_ROLES,
+    formatProjectCode,
+    isMatchingProjectCode,
+    getProjectSuffix
+} from "@/lib/api/crew";
+import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
+import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+
+import { generateSmartInitials } from "@/lib/initials";
+import { GlobalLoading } from "@/components/shared/GlobalLoading";
+
+const toTitleCase = (str: string): string => {
+    if (!str) return "";
+    return str
+        .toLowerCase()
+        .split(/\s+/)
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(" ");
+};
+
+interface CrewDirectoryProps {
+    role?: string;
+    onViewDetail?: (crewId: string) => void;
+    triggerOpen?: number;
+}
+
+type ViewMode = "list" | "board";
+type FilterCard = "ALL" | "ACTIVE" | "SKILLED" | "UNSKILLED";
+
+// UI mapped type (simpler than full CrewMember)
+interface CrewListItem {
+    id: string;
+    name: string;
+    initials: string;
+    role: CrewRole;
+    status: CrewStatus;
+    skillTags: string[];
+    projectCode?: string;
+    baseDailyRate?: number;
+    overtimeDailyRate?: number;
+    otRate1?: number;
+    otRate2?: number;
+    otRate3?: number;
+}
+
+const ROLE_COLORS: Record<CrewRole, string> = {
+    FOREMAN: "bg-purple-100 text-purple-700",
+    LEADER: "bg-indigo-100 text-indigo-700",
+    SKILLED: "bg-blue-100 text-blue-700",
+    HELPER: "bg-neutral-100 text-neutral-700",
+    OPERATOR: "bg-amber-100 text-amber-700",
+    GENERAL: "bg-neutral-100 text-neutral-700"
+};
+
+export function CrewDirectory({ role, onViewDetail, triggerOpen }: CrewDirectoryProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
+    // Check project context
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+    const forceProjectSuffix = forceProjectCode 
+        ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+        : null;
+
+    // Data state
+    const [crewList, setCrewList] = useState<CrewListItem[]>([]);
+    const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
+    const [stats, setStats] = useState({ total: 0, active: 0, skilled: 0, unskilled: 0 });
+    const [workspaceId, setWorkspaceId] = useState<string | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSaving, setIsSaving] = useState(false);
+    const [exporting, setExporting] = useState(false);
+
+    // Initial Filter State from URL
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+
+    // Helper for array params - checks 'projects' first, then fallback to 'project'
+    const getArrayParam = (key: string): string[] => {
+        if (key === "projects") {
+            const single = searchParams.get("project");
+            return single ? [single] : [];
+        }
+        return [];
+    };
+
+    const [selectedRoles, setSelectedRoles] = useState<CrewRole[]>(getArrayParam("roles") as CrewRole[]);
+    const [selectedStatuses, setSelectedStatuses] = useState<CrewStatus[]>(getArrayParam("statuses") as CrewStatus[]);
+    const [selectedProjects, setSelectedProjects] = useState<string[]>(
+        forceProjectSuffix ? [forceProjectSuffix] : getArrayParam("projects")
+    );
+
+    useEffect(() => {
+        if (forceProjectSuffix) {
+            setSelectedProjects([forceProjectSuffix]);
+        }
+    }, [forceProjectSuffix]);
+
+    const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
+    const [viewMode, setViewMode] = useState<ViewMode>("list");
+    const [sortBy, setSortBy] = useState<"name" | "role" | "status" | "project">("name");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+    const [showFilterPopup, setShowFilterPopup] = useState(false);
+
+    // Sync from URL params (especially for mobile header control)
+    useEffect(() => {
+        const search = searchParams.get("search");
+        if (search !== null && search !== searchQuery) setSearchQuery(search);
+
+        const roles = searchParams.get("roles") || searchParams.get("role");
+        if (roles) {
+            const roleArray = roles.split(",") as CrewRole[];
+            if (JSON.stringify(roleArray) !== JSON.stringify(selectedRoles)) setSelectedRoles(roleArray);
+        } else if (selectedRoles.length > 0) {
+            setSelectedRoles([]);
+        }
+
+        const statuses = searchParams.get("statuses") || searchParams.get("status");
+        if (statuses) {
+            const statusArray = statuses.split(",") as CrewStatus[];
+            if (JSON.stringify(statusArray) !== JSON.stringify(selectedStatuses)) setSelectedStatuses(statusArray);
+        } else if (selectedStatuses.length > 0) {
+            setSelectedStatuses([]);
+        }
+
+        const view = searchParams.get("view") as ViewMode;
+        if (view && view !== viewMode) setViewMode(view);
+
+        const card = searchParams.get("card") as FilterCard;
+        if (card && card !== activeCard) setActiveCard(card);
+    }, [searchParams]);
+
+    // Sync state to URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+
+        if (searchQuery) params.set("search", searchQuery); else params.delete("search");
+
+        // Handle both roles (plural) and role (singular) for compatibility
+        if (selectedRoles.length > 0) {
+            params.set("roles", selectedRoles.join(","));
+            if (selectedRoles.length === 1) params.set("role", selectedRoles[0]);
+            else params.delete("role");
+        } else {
+            params.delete("roles");
+            params.delete("role");
+        }
+
+        if (selectedStatuses.length > 0) {
+            params.set("statuses", selectedStatuses.join(","));
+            if (selectedStatuses.length === 1) params.set("status", selectedStatuses[0]);
+            else params.delete("status");
+        } else {
+            params.delete("statuses");
+            params.delete("status");
+        }
+
+        const activeProjs = forceProjectSuffix ? [forceProjectSuffix] : selectedProjects;
+        if (activeProjs.length > 0) {
+            params.set("projects", activeProjs.join(","));
+            params.set("project", activeProjs[0]);
+        } else {
+            params.delete("projects");
+            params.delete("project");
+        }
+
+        if (activeCard && activeCard !== "ALL") params.set("card", activeCard); else params.delete("card");
+        if (viewMode && viewMode !== "list") params.set("view", viewMode); else params.delete("view");
+
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [searchQuery, selectedRoles, selectedStatuses, selectedProjects, activeCard, viewMode]);
+
+    // Drawer state
+    const [showAddDrawer, setShowAddDrawer] = useState(false);
+    const [showEditDrawer, setShowEditDrawer] = useState(false);
+    
+    const [isDesktop, setIsDesktop] = useState(false);
+    const [portalTarget, setPortalTarget] = useState<HTMLElement | null>(null);
+
+    useEffect(() => {
+        setIsDesktop(window.matchMedia("(min-width: 768px)").matches);
+        setPortalTarget(window.matchMedia("(min-width: 768px)").matches ? document.getElementById("crew-activity-portal-target") : null);
+        
+        const media = window.matchMedia("(min-width: 768px)");
+        const listener = (e: MediaQueryListEvent) => {
+            setIsDesktop(e.matches);
+            setPortalTarget(e.matches ? document.getElementById("crew-activity-portal-target") : null);
+        };
+        media.addEventListener("change", listener);
+        return () => media.removeEventListener("change", listener);
+    }, []);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+    const [selectedCrew, setSelectedCrew] = useState<CrewListItem | null>(null);
+
+    // Form state
+    const [formName, setFormName] = useState("");
+    const [formInitials, setFormInitials] = useState("");
+    const [formRole, setFormRole] = useState<CrewRole>("SKILLED");
+    const [formStatus, setFormStatus] = useState<CrewStatus>("ACTIVE");
+    const [formSkills, setFormSkills] = useState("");
+
+    const [formProject, setFormProject] = useState("");
+
+    // Rate State
+    const [formBaseRate, setFormBaseRate] = useState("0");
+    const [formOvertimeRate, setFormOvertimeRate] = useState("0");
+    const [formOtRate1, setFormOtRate1] = useState("0");
+    const [formOtRate2, setFormOtRate2] = useState("0");
+    const [formOtRate3, setFormOtRate3] = useState("0");
+
+    // Get unique project suffixes (e.g. "RBH" from "001-RBH")
+    const uniqueProjectSuffixes = useMemo(() => {
+
+        const suffixes = crewList
+            .map(c => formatProjectCode(c.projectCode))
+            .filter(Boolean) as string[];
+        return [...new Set(suffixes)].sort();
+    }, [crewList]);
+
+    // Load data from database
+    const loadData = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const wsId = await fetchDefaultWorkspaceId();
+
+            const [members, statsData, projectsData] = await Promise.all([
+                fetchCrewMembers(wsId || undefined),
+                fetchCrewStats(wsId || undefined),
+                fetchProjectsByWorkspace(wsId || undefined)
+            ]);
+
+            if (projectsData.length > 0) {
+                setProjects(projectsData.map((p: any) => ({
+                    code: `${p.project_number}-${p.project_code}`,
+                    name: p.project_name
+                })));
+            }
+
+            const mappedCrew: CrewListItem[] = members.map(m => ({
+                id: m.id,
+                name: m.name,
+                initials: m.initials,
+                role: m.role,
+                status: m.status,
+                skillTags: m.skillTags,
+                projectCode: m.currentProjectCode,
+                baseDailyRate: m.baseDailyRate,
+                overtimeDailyRate: m.overtimeDailyRate,
+                otRate1: m.otRate1,
+                otRate2: m.otRate2,
+                otRate3: m.otRate3
+            }));
+
+            setCrewList(mappedCrew);
+            setStats(statsData);
+            setWorkspaceId(wsId);
+        } catch (err) {
+            console.error("Failed to load crew:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    // Initial load
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+
+    // Handlers
+    const resetForm = () => {
+        setFormName("");
+        setFormInitials("");
+        setFormRole("SKILLED");
+        setFormStatus("ACTIVE");
+        setFormSkills("");
+        setFormProject("");
+        setFormBaseRate("0");
+        setFormOvertimeRate("0");
+        setFormOtRate1("0");
+        setFormOtRate2("0");
+        setFormOtRate3("0");
+    };
+
+    // FAB trigger
+    useEffect(() => {
+        if (triggerOpen && triggerOpen > 0) {
+            resetForm();
+            setShowAddDrawer(true);
+        }
+    }, [triggerOpen]);
+
+    // Base filtered data (ignoring the Active Card filter) to calculate dynamic stats
+    const filteredBaseData = useMemo(() => {
+        let data = crewList;
+        if (selectedRoles.length > 0) data = data.filter(c => selectedRoles.includes(c.role));
+        if (selectedStatuses.length > 0) data = data.filter(c => selectedStatuses.includes(c.status));
+        if (selectedProjects.length > 0) {
+            // Filter by Project matching
+            data = data.filter(c => {
+                if (!c.projectCode) return false;
+                return selectedProjects.some(sp => isMatchingProjectCode(c.projectCode, sp));
+            });
+        }
+
+        if (searchQuery) data = data.filter(c => c.name.toLowerCase().includes(searchQuery.toLowerCase()));
+        return data;
+    }, [crewList, searchQuery, selectedRoles, selectedStatuses, selectedProjects]);
+
+    // Derived stats from the base filtered data
+    const derivedStats = useMemo(() => {
+        return {
+            total: filteredBaseData.length,
+            active: filteredBaseData.filter(c => c.status === "ACTIVE").length,
+            skilled: filteredBaseData.filter(c => SKILLED_ROLES.includes(c.role)).length,
+            unskilled: filteredBaseData.filter(c => c.role === "HELPER" || c.role === "GENERAL").length
+        };
+    }, [filteredBaseData]);
+
+    // Filtered & sorted crew (Applying the Active Card filter)
+    const filteredCrew = useMemo(() => {
+        let data = filteredBaseData;
+
+        // Apply Card Filter
+        if (activeCard === "ACTIVE") data = data.filter(c => c.status === "ACTIVE");
+        else if (activeCard === "SKILLED") data = data.filter(c => SKILLED_ROLES.includes(c.role));
+        else if (activeCard === "UNSKILLED") data = data.filter(c => c.role === "HELPER" || c.role === "GENERAL");
+
+        return [...data].sort((a, b) => {
+            let cmp = 0;
+            if (sortBy === "name") cmp = a.name.localeCompare(b.name);
+            else if (sortBy === "role") cmp = a.role.localeCompare(b.role);
+            else if (sortBy === "status") cmp = a.status.localeCompare(b.status);
+            else if (sortBy === "project") cmp = (a.projectCode || "").localeCompare(b.projectCode || "");
+
+            return sortOrder === "asc" ? cmp : -cmp;
+        });
+    }, [filteredBaseData, activeCard, sortBy, sortOrder]);
+
+    const handleSort = (col: "name" | "role" | "status" | "project") => {
+        if (sortBy === col) setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+        else { setSortBy(col); setSortOrder("asc"); }
+    };
+
+    const toggleRole = (r: CrewRole) => setSelectedRoles(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
+    const toggleStatus = (s: CrewStatus) => setSelectedStatuses(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
+    const toggleProject = (suffix: string) => setSelectedProjects(prev => prev.includes(suffix) ? prev.filter(x => x !== suffix) : [...prev, suffix]);
+
+    const openEditDrawer = (crew: CrewListItem) => {
+        setSelectedCrew(crew);
+        setFormName(crew.name);
+        setFormInitials(crew.initials);
+        setFormRole(crew.role);
+        setFormStatus(crew.status);
+        setFormSkills(crew.skillTags.join(", "));
+        setFormProject(crew.projectCode || "");
+        setFormBaseRate(crew.baseDailyRate?.toString() || "0");
+        setFormOvertimeRate(crew.overtimeDailyRate?.toString() || "0");
+        setFormOtRate1(crew.otRate1?.toString() || "0");
+        setFormOtRate2(crew.otRate2?.toString() || "0");
+        setFormOtRate3(crew.otRate3?.toString() || "0");
+        setShowEditDrawer(true);
+    };
+
+    const openDeleteConfirm = (crew: CrewListItem) => {
+        setSelectedCrew(crew);
+        setShowDeleteConfirm(true);
+    };
+
+    // Auto-generate initials on name change
+    useEffect(() => {
+        // Only run if form is open (to avoid unnecessary calcs)
+        if (!showAddDrawer && !showEditDrawer) return;
+
+        const occupied = crewList
+            .filter(c => c.id !== selectedCrew?.id) // Exclude self if editing
+            .map(c => c.initials);
+
+        const smart = generateSmartInitials(formName, occupied);
+        setFormInitials(smart);
+    }, [formName, crewList, selectedCrew, showAddDrawer, showEditDrawer]);
+
+    // CRUD handlers
+    const handleAddCrew = async () => {
+        if (!formName.trim()) return;
+        setIsSaving(true);
+        try {
+            const skillTags = formSkills.split(",").map(s => s.trim()).filter(Boolean);
+            const result = await createCrewMember({
+                workspaceId: workspaceId || undefined,
+                name: formName.trim(),
+                initials: formInitials,
+                role: formRole,
+                status: formStatus,
+                skillTags,
+                currentProjectCode: formProject || undefined,
+                baseDailyRate: parseFloat(formBaseRate) || 0,
+                overtimeDailyRate: parseFloat(formOvertimeRate) || 0,
+                otRate1: parseFloat(formOtRate1) || 0,
+                otRate2: parseFloat(formOtRate2) || 0,
+                otRate3: parseFloat(formOtRate3) || 0,
+            });
+            if (result) {
+                await loadData();
+                setShowAddDrawer(false);
+                resetForm();
+            }
+        } catch (err: any) {
+            console.error("Failed to add crew:", err);
+            alert(`Failed to add crew: ${err.message || "Unknown error"}`);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleEditCrew = async () => {
+        if (!selectedCrew || !formName.trim()) return;
+        setIsSaving(true);
+        try {
+            const skillTags = formSkills.split(",").map(s => s.trim()).filter(Boolean);
+            const result = await updateCrewMember(selectedCrew.id, {
+                name: formName.trim(),
+                initials: formInitials,
+                role: formRole,
+                status: formStatus,
+                skillTags,
+                currentProjectCode: formProject || undefined,
+                baseDailyRate: parseFloat(formBaseRate) || 0,
+                overtimeDailyRate: parseFloat(formOvertimeRate) || 0,
+                otRate1: parseFloat(formOtRate1) || 0,
+                otRate2: parseFloat(formOtRate2) || 0,
+                otRate3: parseFloat(formOtRate3) || 0,
+            });
+            if (result) {
+                await loadData();
+                setShowEditDrawer(false);
+                setSelectedCrew(null);
+                resetForm();
+            }
+        } catch (err: any) {
+            console.error("Failed to update crew:", err);
+            alert(`Failed to update crew: ${err.message || "Unknown error"}`);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleDeleteCrew = async () => {
+        if (!selectedCrew) return;
+        setIsSaving(true);
+        try {
+            const success = await deleteCrewMember(selectedCrew.id);
+            if (success) {
+                await loadData();
+                setShowDeleteConfirm(false);
+                setSelectedCrew(null);
+            }
+        } catch (err: any) {
+            console.error("Failed to delete crew:", err);
+            alert(`Failed to delete crew: ${err.message || "Unknown error"}`);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleExport = async () => {
+        if (filteredCrew.length === 0) return;
+        setExporting(true);
+
+        try {
+            // 1. Prepare Meta
+            const documentName = "Crew Directory Report";
+            const generatedAt = new Date().toLocaleString("id-ID");
+
+            // Use current date as period text for directory
+            const periodText = `As of ${new Date().toLocaleDateString("id-ID", { day: 'numeric', month: 'long', year: 'numeric' })}`;
+
+            // 2. Prepare Summary
+            const summaryCards = [
+                { label: "Total Crew", value: derivedStats.total, format: "number" as const },
+                { label: "Active", value: derivedStats.active, format: "number" as const, color: "green" as const },
+                { label: "Skilled", value: derivedStats.skilled, format: "number" as const, color: "blue" as const },
+                { label: "Unskilled", value: derivedStats.unskilled, format: "number" as const, color: "default" as const },
+            ];
+
+            // 3. Prepare Columns
+            const columns = [
+                { id: "name", label: "Name", align: "left" as const },
+                { id: "role", label: "Role", align: "left" as const },
+                { id: "project", label: "Current Project", align: "left" as const },
+                { id: "status", label: "Status", align: "center" as const },
+            ];
+
+            // 4. Prepare Data
+            const rows = filteredCrew.map(c => {
+                // Find actual project from projects list to get full code
+                const project = projects.find(p => p.code.includes(c.projectCode || ""));
+                const formattedProject = project
+                    ? project.code.includes("-")
+                        ? project.code.replace("-", " · ").toUpperCase()
+                        : project.code.toUpperCase()
+                    : "-";
+
+                return {
+                    name: c.name,
+                    role: CREW_ROLE_LABELS[c.role]?.en || c.role,
+                    project: formattedProject,
+                    status: c.status === "ACTIVE" ? "Active" : "Inactive"
+                };
+            });
+
+            // 5. POST to API
+            const response = await fetch("/api/export/pdf", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    meta: {
+                        projectCode: "CREW",
+                        projectName: "Adidaya Studio (PT Mahardika Adidaya) - Crew Directory",
+                        documentName,
+                        periodText,
+                        generatedAt,
+                    },
+                    summary: summaryCards,
+                    sections: [
+                        {
+                            title: "Crew List",
+                            columns,
+                            data: rows
+                        }
+                    ]
+                })
+            });
+
+            if (!response.ok) throw new Error("Export failed");
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Crew_Directory_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+        } catch (error) {
+            console.error("PDF Export Error:", error);
+            alert("Failed to export PDF. Please try again.");
+        } finally {
+            setExporting(false);
+        }
+    };
+
+    const activeFiltersCount = selectedRoles.length + selectedStatuses.length + selectedProjects.length;
+
+    // Loading state removed from top-level block
+    // if (isLoading) {
+    //    return <GlobalLoading />;
+    // }
+
+    return (
+        <div className="space-y-6 w-full animate-in fade-in duration-500">
+
+
+            {/* Stats Cards */}
+            <SummaryCardsRow>
+                <SummaryCard
+                    icon={<Users className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-50"
+                    label="Total Crew"
+                    value={derivedStats.total}
+                    onClick={() => setActiveCard("ALL")}
+                    isActive={activeCard === "ALL"}
+                    activeBg="bg-blue-600 dark:bg-blue-500"
+                />
+                <SummaryCard
+                    icon={<UserCheck className="w-5 h-5 text-emerald-600" />}
+                    iconBg="bg-emerald-50"
+                    label="Active"
+                    value={derivedStats.active}
+                    onClick={() => setActiveCard("ACTIVE")}
+                    isActive={activeCard === "ACTIVE"}
+                    activeBg="bg-emerald-600 dark:bg-emerald-500"
+                />
+                <SummaryCard
+                    icon={<Star className="w-5 h-5 text-purple-600" />}
+                    iconBg="bg-purple-50"
+                    label="Skilled"
+                    value={derivedStats.skilled}
+                    onClick={() => setActiveCard("SKILLED")}
+                    isActive={activeCard === "SKILLED"}
+                    activeBg="bg-purple-600 dark:bg-purple-500"
+                />
+                <SummaryCard
+                    icon={<Hammer className="w-5 h-5 text-orange-600" />}
+                    iconBg="bg-orange-50"
+                    label="Unskilled"
+                    value={derivedStats.unskilled}
+                    onClick={() => setActiveCard("UNSKILLED")}
+                    isActive={activeCard === "UNSKILLED"}
+                    activeBg="bg-orange-600 dark:bg-orange-500"
+                />
+            </SummaryCardsRow>
+
+            {/* Search & Filters Bar */}
+            <div className="flex items-center justify-between gap-2 w-full">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                    <input 
+                        type="text" 
+                        placeholder="Search..." 
+                        value={searchQuery} 
+                        onChange={(e) => setSearchQuery(e.target.value)} 
+                        className="pl-9 pr-3 py-2 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 w-full transition-all" 
+                    />
+                </div>
+                
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-none">
+                    {/* Filter Button */}
+                    <button 
+                        onClick={() => setShowFilterPopup(!showFilterPopup)} 
+                        className={clsx(
+                            "p-2.5 rounded-full border transition-colors flex items-center gap-1.5", 
+                            activeFiltersCount > 0 ? "border-blue-500 bg-blue-50 text-blue-600" : "border-neutral-200 bg-white text-neutral-500"
+                        )}
+                    >
+                        <Filter className="w-4 h-4" />
+                        {activeFiltersCount > 0 && <span className="text-xs font-medium">{activeFiltersCount}</span>}
+                    </button>
+
+                    {/* Export Button - Compact on Mobile */}
+                    <button
+                        onClick={handleExport}
+                        disabled={exporting || filteredCrew.length === 0}
+                        className={clsx(
+                            "p-2.5 rounded-full border transition-colors flex items-center gap-1.5",
+                            exporting ? "bg-neutral-50 text-neutral-400" : "bg-white text-neutral-500 border-neutral-200 hover:bg-neutral-50"
+                        )}
+                    >
+                        {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                        <span className="hidden sm:inline text-xs font-medium">{exporting ? "Exporting..." : "Export"}</span>
+                    </button>
+
+                    {/* View Toggle - Hidden on Mobile */}
+                    <div className="hidden sm:flex items-center bg-neutral-100 rounded-full p-1">
+                        <button onClick={() => setViewMode("list")} className={clsx("p-2 rounded-full transition-colors", viewMode === "list" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><List className="w-4 h-4" /></button>
+                        <button onClick={() => setViewMode("board")} className={clsx("p-2 rounded-full transition-colors", viewMode === "board" ? "bg-white shadow text-neutral-900" : "text-neutral-500")}><LayoutGrid className="w-4 h-4" /></button>
+                    </div>
+                </div>
+            </div>
+
+            {/* Filter Popup */}
+            {showFilterPopup && (
+                <div className="bg-white rounded-xl border border-neutral-200 shadow-lg p-4 space-y-4">
+                    <div className="flex items-center justify-between"><h3 className="font-semibold text-neutral-900">Filters</h3><button onClick={() => setShowFilterPopup(false)} className="p-1 rounded-full hover:bg-neutral-100"><X className="w-4 h-4 text-neutral-500" /></button></div>
+                    <div><div className="text-xs font-medium text-neutral-500 mb-2">Roles</div><div className="flex flex-wrap gap-2">{CREW_ROLE_OPTIONS.map(opt => <button key={opt.value} onClick={() => toggleRole(opt.value)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedRoles.includes(opt.value) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{CREW_ROLE_LABELS[opt.value].en}</button>)}</div></div>
+                    <div><div className="text-xs font-medium text-neutral-500 mb-2">Status</div><div className="flex flex-wrap gap-2">{(["ACTIVE", "INACTIVE"] as CrewStatus[]).map(s => <button key={s} onClick={() => toggleStatus(s)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedStatuses.includes(s) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{s === "ACTIVE" ? "Active" : "Inactive"}</button>)}</div></div>
+                    {!forceProjectSuffix && uniqueProjectSuffixes.length > 0 && (
+                        <div><div className="text-xs font-medium text-neutral-500 mb-2">Projects</div><div className="flex flex-wrap gap-2">{uniqueProjectSuffixes.map(p => <button key={p} onClick={() => toggleProject(p)} className={clsx("px-3 py-1.5 text-xs font-medium rounded-full border transition-colors", selectedProjects.includes(p) ? "bg-blue-600 text-white border-blue-600" : "bg-white text-neutral-600 border-neutral-200")}>{p}</button>)}</div></div>
+                    )}
+                    {activeFiltersCount > 0 && <button onClick={() => { setSelectedRoles([]); setSelectedStatuses([]); setSelectedProjects([]); }} className="text-sm text-red-600 hover:underline">Clear all</button>}
+                </div>
+            )}
+
+            {/* Empty State or Loading */}
+            {isLoading ? (
+                <div className="py-24 flex flex-col justify-center items-center gap-3">
+                    <Loader2 className="w-8 h-8 text-neutral-300 animate-spin" />
+                    <p className="text-sm text-neutral-400">Loading crew directory...</p>
+                </div>
+            ) : filteredCrew.length === 0 && (
+                <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center">
+                    <Users className="w-12 h-12 mx-auto text-neutral-300 mb-4" />
+                    <h3 className="font-medium text-neutral-600 mb-2">{crewList.length === 0 ? "No crew members yet" : "No results found"}</h3>
+                    <p className="text-sm text-neutral-400 mb-4">{crewList.length === 0 ? "Start by adding your first crew member." : "Try adjusting your filters."}</p>
+                    {crewList.length === 0 && (
+                        <Button variant="primary" className="!bg-blue-600 hover:!bg-blue-700 !border-blue-600 !text-white" icon={<Plus className="w-4 h-4" />} onClick={() => { resetForm(); setShowAddDrawer(true); }}>Add First Crew</Button>
+                    )}
+                </div>
+            )}
+
+            {/* CONTENT (TABLE & CARDS) */}
+            {!isLoading && filteredCrew.length > 0 && (
+                <div className="space-y-4">
+                    {/* MOBILE CARDS (Replaces both List/Board mobile logic) */}
+                    <div className="lg:hidden space-y-3">
+                        {filteredCrew.map((crew) => (
+                            <div
+                                key={crew.id}
+                                className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all cursor-pointer"
+                                onClick={() => onViewDetail?.(crew.id)}
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                            {crew.initials}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-neutral-900">{toTitleCase(crew.name)}</div>
+                                            <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                                                {CREW_ROLE_LABELS[crew.role].en}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-widest", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>
+                                            {crew.status}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center justify-between pt-4 border-t border-black/[0.03]">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Project</span>
+                                        {crew.projectCode ? (
+                                            <span className="px-2 py-1 text-[10px] font-mono bg-neutral-100 text-neutral-600 rounded font-bold">
+                                                {formatProjectCode(crew.projectCode)}
+                                            </span>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-neutral-300">UNASSIGNED</span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                        <button onClick={() => openEditDrawer(crew)} className="p-2.5 rounded-xl bg-blue-50 text-blue-600 active:scale-90 transition-all">
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button onClick={() => openDeleteConfirm(crew)} className="p-2.5 rounded-xl bg-red-50 text-red-600 active:scale-90 transition-all">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* DESKTOP VIEWS */}
+                    <div className="hidden lg:block">
+                        {/* List View */}
+                        {viewMode === "list" ? (
+                            <div className="bg-white rounded-[22px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                                <div className="overflow-x-auto">
+                                    <table className="w-full text-sm">
+                                        <thead className="border-b border-neutral-100">
+                                            <tr>
+                                                <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon col="name" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                                <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("role")}><div className="flex items-center gap-1">Role <SortIcon col="role" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                                <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("project")}><div className="flex items-center gap-1">Project <SortIcon col="project" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                                <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("status")}><div className="flex items-center gap-1">Status <SortIcon col="status" sortBy={sortBy} sortOrder={sortOrder} /></div></th>
+                                                <th className="text-right px-4 py-3.5 text-xs font-semibold text-neutral-400">Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-neutral-100">
+                                            {filteredCrew.map((crew) => (
+                                                <tr key={crew.id} className="hover:bg-neutral-50 transition-colors cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
+                                                    <td className="px-4 py-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-9 h-9 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-sm font-semibold flex-shrink-0">{crew.initials}</div>
+                                                            <span className="font-medium text-neutral-900">{toTitleCase(crew.name)}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-3"><span className={clsx("px-2 py-1 rounded-full text-xs font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span></td>
+                                                    <td className="px-4 py-3">{crew.projectCode ? <span className="px-2 py-1 text-xs font-mono bg-neutral-100 text-neutral-600 rounded">{formatProjectCode(crew.projectCode)}</span> : <span className="text-neutral-400 text-xs">-</span>}</td>
+                                                    <td className="px-4 py-3"><span className={clsx("px-2 py-0.5 rounded-full text-xs font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span></td>
+                                                    <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                                                        <div className="flex items-center justify-end gap-1">
+                                                            <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-4 h-4" /></button>
+                                                            <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-4 h-4" /></button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        ) : (
+                            /* Board View */
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+                                {filteredCrew.map((crew) => (
+                                    <div key={crew.id} className="bg-white rounded-xl border border-neutral-200 p-4 shadow-sm hover:shadow-md transition-shadow cursor-pointer" onClick={() => onViewDetail?.(crew.id)}>
+                                        <div className="flex items-center gap-3 mb-3">
+                                            <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold flex-shrink-0">{crew.initials}</div>
+                                            <div className="min-w-0 flex-1">
+                                                <div className="font-semibold text-neutral-900 truncate">{toTitleCase(crew.name)}</div>
+                                                <span className={clsx("inline-block mt-0.5 px-2 py-0.5 rounded-full text-[10px] font-medium", ROLE_COLORS[crew.role])}>{CREW_ROLE_LABELS[crew.role].en}</span>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-2 border-t border-neutral-100">
+                                            <div className="flex items-center gap-2">
+                                                {crew.projectCode && <span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(crew.projectCode)}</span>}
+                                                <span className={clsx("px-2 py-0.5 rounded-full text-[10px] font-medium", crew.status === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-neutral-100 text-neutral-500")}>{crew.status === "ACTIVE" ? "Active" : "Inactive"}</span>
+                                            </div>
+                                            <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+                                                <button onClick={() => openEditDrawer(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-neutral-600"><Edit2 className="w-3.5 h-3.5" /></button>
+                                                <button onClick={() => openDeleteConfirm(crew)} className="p-1.5 rounded-full hover:bg-neutral-100 text-neutral-400 hover:text-red-500"><Trash2 className="w-3.5 h-3.5" /></button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Add Drawer */}
+            {showAddDrawer && (() => {
+                const drawerContent = (
+                    <div className={clsx(
+                        "flex flex-col overflow-hidden bg-white dark:bg-neutral-900",
+                        isDesktop 
+                            ? "w-full h-full border border-neutral-200/80 dark:border-neutral-800/80 rounded-[24px] shadow-xl" 
+                            : "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+                    )}>
+                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent md:px-5 md:pt-4 md:pb-3 md:bg-white md:dark:bg-neutral-900">
+                            <div className="flex items-center justify-between mb-4 md:mb-0">
+                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight md:text-sm md:font-extrabold">Add Crew</h2>
+                                <button
+                                    onClick={() => setShowAddDrawer(false)}
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform md:w-7 md:h-7 md:bg-transparent md:border-none md:hover:bg-neutral-100 md:dark:hover:bg-neutral-800 md:text-neutral-400"
+                                >
+                                    <X size={20} className="text-neutral-500 dark:text-neutral-400 md:w-4 md:h-4" strokeWidth={1.5} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32 md:px-5 md:py-4 md:pb-4">
+                            <div className="space-y-6">
+                                <div className="flex justify-center py-4">
+                                    <div className="w-24 h-24 rounded-full bg-white/40 dark:bg-neutral-800/40 backdrop-blur-md border-2 border-dashed border-neutral-300 dark:border-neutral-700 flex items-center justify-center cursor-pointer hover:border-blue-400 transition-colors group">
+                                        <Plus className="w-8 h-8 text-neutral-400 group-hover:text-blue-500 transition-colors" />
+                                    </div>
+                                </div>
+                                <FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" />
+                                <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
+                                <Select 
+                                    label="Current Project" 
+                                    value={formProject} 
+                                    onChange={setFormProject} 
+                                    options={[
+                                        { value: "", label: "No Project (Unassigned)" },
+                                        ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))
+                                    ]} 
+                                    placeholder="Assign to project" 
+                                    accentColor="blue" 
+                                />
+                                <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" accentColor="blue" />
+                                <FormInput label="Skills (comma separated)" value={formSkills} onChange={setFormSkills} placeholder="e.g. Beton, Finishing" />
+
+                                <div className="pt-6 border-t border-black/[0.05] dark:border-white/[0.05]">
+                                    <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-[0.1em] mb-4">Rates (IDR)</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormInput label="Daily Rate" value={formBaseRate} onChange={setFormBaseRate} type="number" />
+                                        <FormInput label="Sunday/Holiday" value={formOvertimeRate} onChange={setFormOvertimeRate} type="number" />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <FormInput label="OT Hour 1" value={formOtRate1} onChange={setFormOtRate1} type="number" />
+                                        <FormInput label="OT Hour 2" value={formOtRate2} onChange={setFormOtRate2} type="number" />
+                                        <FormInput label="OT Hour 3" value={formOtRate3} onChange={setFormOtRate3} type="number" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="absolute bottom-8 left-8 right-8 md:static md:p-5 md:bg-white md:dark:bg-neutral-900 flex-shrink-0">
+                            <button onClick={handleAddCrew} disabled={isSaving || !formName.trim()} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 md:py-2 md:h-10 md:rounded-xl md:text-[13px] md:shadow-none">
+                                {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
+                                <span>{isSaving ? "Saving..." : "Add Crew"}</span>
+                            </button>
+                        </div>
+                    </div>
+                );
+
+                if (isDesktop && portalTarget) {
+                    return createPortal(drawerContent, portalTarget);
+                }
+
+                return (
+                    <div className="fixed inset-0 z-[100] isolate">
+                        <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto" onClick={() => setShowAddDrawer(false)} />
+                        {drawerContent}
+                    </div>
+                );
+            })()}
+            {/* Edit Drawer */}
+            {showEditDrawer && selectedCrew && (() => {
+                const drawerContent = (
+                    <div className={clsx(
+                        "flex flex-col overflow-hidden bg-white dark:bg-neutral-900",
+                        isDesktop 
+                            ? "w-full h-full border border-neutral-200/80 dark:border-neutral-800/80 rounded-[24px] shadow-xl" 
+                            : "absolute z-50 bg-white/50 dark:bg-neutral-900/50 backdrop-blur-2xl border border-white/60 dark:border-neutral-800 shadow-2xl transition-all duration-500 rounded-[56px] bottom-2 left-2 right-2 top-20 sm:top-6 sm:bottom-6 sm:right-6 sm:left-auto sm:w-[500px]"
+                    )}>
+                        <div className="flex-none px-8 pt-8 pb-4 sticky top-0 z-20 bg-transparent md:px-5 md:pt-4 md:pb-3 md:bg-white md:dark:bg-neutral-900">
+                            <div className="flex items-center justify-between mb-4 md:mb-0">
+                                <h2 className="text-[22px] font-bold text-neutral-900 dark:text-white tracking-tight md:text-sm md:font-extrabold">Edit Crew</h2>
+                                <button
+                                    onClick={() => setShowEditDrawer(false)}
+                                    className="w-10 h-10 bg-white/50 dark:bg-neutral-800/50 backdrop-blur-xl border border-black/5 dark:border-white/10 rounded-full flex items-center justify-center active:scale-95 transition-transform md:w-7 md:h-7 md:bg-transparent md:border-none md:hover:bg-neutral-100 md:dark:hover:bg-neutral-800 md:text-neutral-400"
+                                >
+                                    <X size={20} className="text-neutral-500 dark:text-neutral-400 md:w-4 md:h-4" strokeWidth={1.5} />
+                                </button>
+                            </div>
+                        </div>
+                        <div className="flex-1 overflow-y-auto scrollbar-hide px-8 pb-32 md:px-5 md:py-4 md:pb-4">
+                            <div className="space-y-6">
+                                <div className="flex justify-center py-4">
+                                    <div className="w-24 h-24 rounded-full bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-600 text-2xl font-bold shadow-inner">
+                                        {selectedCrew.initials}
+                                    </div>
+                                </div>
+                                <div className="flex gap-3">
+                                    <div className="flex-1"><FormInput label="Name *" value={formName} onChange={setFormName} placeholder="Enter full name" /></div>
+                                    <div className="w-24"><FormInput label="Initials" value={formInitials} onChange={setFormInitials} placeholder="XX" /></div>
+                                </div>
+                                <Select label="Role *" value={formRole} onChange={(v) => setFormRole(v as CrewRole)} options={CREW_ROLE_OPTIONS.map(o => ({ value: o.value, label: o.label }))} placeholder="Select role" accentColor="blue" />
+                                <Select 
+                                    label="Current Project" 
+                                    value={formProject} 
+                                    onChange={setFormProject} 
+                                    options={[
+                                        { value: "", label: "No Project (Unassigned)" },
+                                        ...projects.map(p => ({ value: p.code, label: `${p.code} - ${p.name}` }))
+                                    ]} 
+                                    placeholder="Assign to project" 
+                                    accentColor="blue" 
+                                />
+                                <Select label="Status" value={formStatus} onChange={(v) => setFormStatus(v as CrewStatus)} options={[{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }]} placeholder="Select status" accentColor="blue" />
+                                <FormInput label="Skills (comma separated)" value={formSkills} onChange={setFormSkills} placeholder="e.g. Beton, Finishing" />
+
+                                <div className="pt-6 border-t border-black/[0.05] dark:border-white/[0.05]">
+                                    <h3 className="text-sm font-bold text-neutral-400 uppercase tracking-[0.1em] mb-4">Rates (IDR)</h3>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <FormInput label="Daily Rate" value={formBaseRate} onChange={setFormBaseRate} type="number" />
+                                        <FormInput label="Sunday/Holiday" value={formOvertimeRate} onChange={setFormOvertimeRate} type="number" />
+                                    </div>
+                                    <div className="grid grid-cols-3 gap-4 mt-4">
+                                        <FormInput label="OT Hour 1" value={formOtRate1} onChange={setFormOtRate1} type="number" />
+                                        <FormInput label="OT Hour 2" value={formOtRate2} onChange={setFormOtRate2} type="number" />
+                                        <FormInput label="OT Hour 3" value={formOtRate3} onChange={setFormOtRate3} type="number" />
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="absolute bottom-8 left-8 right-8 md:static md:p-5 md:bg-white md:dark:bg-neutral-900 flex-shrink-0">
+                            <button onClick={handleUpdateCrew} disabled={isSaving || !formName.trim()} className="w-full py-4 px-6 bg-blue-600 text-white font-bold rounded-full hover:bg-blue-700 transition-all shadow-lg shadow-blue-600/20 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 md:py-2 md:h-10 md:rounded-xl md:text-[13px] md:shadow-none">
+                                {isSaving && <Loader2 className="w-5 h-5 animate-spin" />}
+                                <span>{isSaving ? "Saving..." : "Save Changes"}</span>
+                            </button>
+                        </div>
+                    </div>
+                );
+
+                if (isDesktop && portalTarget) {
+                    return createPortal(drawerContent, portalTarget);
+                }
+
+                return (
+                    <div className="fixed inset-0 z-[100] isolate">
+                        <div className="absolute inset-0 bg-neutral-900/20 backdrop-blur-sm transition-opacity duration-300 pointer-events-auto" onClick={() => setShowEditDrawer(false)} />
+                        {drawerContent}
+                    </div>
+                );
+            })()}
+
+            {/* Delete Confirm */}
+            {showDeleteConfirm && selectedCrew && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-neutral-900/40 backdrop-blur-sm" onClick={() => setShowDeleteConfirm(false)} />
+                    <div className="relative bg-white dark:bg-neutral-900 rounded-[32px] shadow-2xl max-w-sm w-full p-8 animate-in zoom-in-95 border border-black/[0.05] dark:border-white/[0.1]">
+                        <div className="text-center">
+                            <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-900/20 text-red-600 mx-auto flex items-center justify-center mb-6 shadow-inner"><Trash2 className="w-8 h-8" /></div>
+                            <h3 className="text-xl font-bold text-neutral-900 dark:text-white mb-2">Delete Crew?</h3>
+                            <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-8 leading-relaxed">Are you sure you want to delete <strong>{selectedCrew.name}</strong> from the directory?</p>
+                            <div className="flex gap-3">
+                                <button onClick={() => setShowDeleteConfirm(false)} className="flex-1 py-3 px-4 border border-neutral-200 dark:border-neutral-700 rounded-full text-sm font-bold text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-800 transition-colors">Cancel</button>
+                                <button onClick={handleDeleteCrew} disabled={isSaving} className="flex-1 py-3 px-4 bg-red-600 rounded-full text-sm font-bold text-white hover:bg-red-700 transition-all shadow-lg shadow-red-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2">
+                                    {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                                    Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}
+
+const inputClass = "w-full px-4 py-2.5 text-sm border border-neutral-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:!ring-blue-500/30 focus:!border-blue-500 transition-all";
+
+const FormInput = ({ label, value, onChange, placeholder, type = "text" }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string }) => (
+    <div>
+        <label className="block text-sm font-medium text-neutral-700 mb-1.5">{label}</label>
+        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} className={inputClass} />
+    </div>
+);
+
+const SortIcon = ({ col, sortBy, sortOrder }: { col: "name" | "role" | "status" | "project", sortBy: string, sortOrder: string }) =>
+    sortBy !== col ? null :
+        sortOrder === "asc" ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;

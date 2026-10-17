@@ -1,0 +1,362 @@
+/* --- MAIN PILL CONTAINER (Tabs Only) --- */
+.tabBar {
+    height: 64px;
+    flex: 1;
+    min-width: 0;
+    /* Prevent flex blowout */
+    /* Take available width */
+    padding: 6px;
+    box-sizing: border-box;
+
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    align-items: center;
+
+    /* iOS 26 Liquid Glass — matching ClockAccessoryBar */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
+    backdrop-filter: blur(48px) saturate(220%);
+    -webkit-backdrop-filter: blur(48px) saturate(220%);
+
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.08),
+        0 4px 16px rgba(0, 0, 0, 0.04),
+        inset 0 1px 1px rgba(255, 255, 255, 0.6),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
+
+    border-radius: 40px;
+    z-index: 1000;
+    /* NO transition here — Framer Motion handles layout animation */
+    position: relative;
+    overflow: hidden;
+}
+
+/* --- SEPARATE SEARCH CIRCLE --- */
+.searchCircle {
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* iOS 26 Liquid Glass — matching ClockAccessoryBar */
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.02) 100%);
+    backdrop-filter: blur(48px) saturate(220%);
+    -webkit-backdrop-filter: blur(48px) saturate(220%);
+
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.08),
+        0 4px 16px rgba(0, 0, 0, 0.04),
+        inset 0 1px 1px rgba(255, 255, 255, 0.6),
+        inset 0 0 20px rgba(255, 255, 255, 0.1);
+    cursor: pointer;
+    /* NO transition here — Framer Motion handles layout animation */
+    position: relative;
+    overflow: hidden;
+    z-index: 1000;
+}
+
+.searchCircle:active {
+    transform: scale(0.95);
+    background: rgba(255, 255, 255, 0.75);
+}
+
+/* --- SEARCH MODE CONTAINER (Replaces the whole row) --- */
+.searchModeContainer {
+    width: 100%;
+    height: 64px;
+    border-radius: 40px;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+
+    /* Glass Background */
+    /* Glass Background - More Transparent & Liquid */
+    /* Glass Background - Consistent Liquid */
+    /* Glass Background - Consistent Liquid */
+    background: rgba(255, 255, 255, 0.05);
+    /* Slightly more opaque for input area */
+    backdrop-filter: blur(30px) saturate(220%);
+    -webkit-backdrop-filter: blur(30px) saturate(220%);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow:
+        0 20px 50px rgba(0, 0, 0, 0.12),
+        inset 0 1px 0 rgba(255, 255, 255, 0.5);
+
+    position: relative;
+    overflow: hidden;
+    /* Framer motion handles entrance/exit */
+}
+
+@keyframes expandBox {
+    from {
+        opacity: 0;
+        transform: scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* --- GLASS LAYERS (Shared) --- */
+.glassFilter,
+.glassOverlay,
+.glassSpecular {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+}
+
+.glassFilter {
+    z-index: 0;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    filter: url(#frosted) saturate(140%) brightness(1.2);
+}
+
+.glassOverlay {
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.glassSpecular {
+    z-index: 2;
+    box-shadow: inset 1px 1px 1px rgba(255, 255, 255, 0.6), inset -1px -1px 2px rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* --- MAGIC MOTION STATES --- */
+.activeIconCircle {
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Reuse Ghost Glass Style */
+    background: rgba(255, 255, 255, 0.01);
+    backdrop-filter: blur(30px) saturate(220%);
+    -webkit-backdrop-filter: blur(30px) saturate(220%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+    z-index: 1000;
+    position: relative;
+    overflow: hidden;
+}
+
+.searchBarExpanded {
+    height: 64px;
+    flex: 1;
+    /* Takes remaining space */
+    border-radius: 40px;
+
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 16px;
+
+    /* Reuse Ghost Glass Style but slightly more opaque for input? */
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(30px) saturate(220%);
+    -webkit-backdrop-filter: blur(30px) saturate(220%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.05),
+        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+
+    z-index: 1000;
+    position: relative;
+    overflow: hidden;
+}
+
+/* --- TAB ITEMS --- */
+.tabItem {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    cursor: pointer;
+    border: none;
+    background: none;
+    border-radius: 32px;
+    position: relative;
+    z-index: 4;
+    color: #98989E;
+    transition: color 0.3s ease;
+}
+
+.tabItem[data-active="true"] {
+    color: #FF3B30;
+    /* iOS Red */
+}
+
+/* --- NEW ACTIVE INDICATOR (Corrected Geometry) --- */
+.activeIndicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+
+    /* 1/4 of the grid */
+    width: 25%;
+
+    z-index: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    transition: transform 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.activeBubble {
+    /* Full height/width of the calibrated cell */
+    width: 100%;
+    height: 100%;
+
+    border-radius: 32px;
+    box-sizing: border-box;
+
+    background: linear-gradient(180deg, rgba(0, 122, 255, 0.15) 0%, rgba(0, 122, 255, 0.05) 100%);
+    backdrop-filter: blur(24px) saturate(220%);
+    -webkit-backdrop-filter: blur(24px) saturate(220%);
+
+    box-shadow:
+        0 8px 20px rgba(0, 0, 0, 0.06),
+        0 2px 4px rgba(0, 0, 0, 0.04),
+        inset 0 1px 2px rgba(255, 255, 255, 0.9),
+        inset 0 -1px 2px rgba(0, 0, 0, 0.02);
+
+    border: 1px solid rgba(255, 255, 255, 0.4);
+
+    position: relative;
+    transition: width 0.3s ease, background 0.3s ease;
+}
+
+.activeBubble::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 10%;
+    right: 10%;
+    height: 40%;
+    border-radius: 32px;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, transparent 100%);
+    pointer-events: none;
+}
+
+.activeBubble::before {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 32px;
+    background: linear-gradient(120deg,
+            rgba(255, 255, 255, 0) 20%,
+            rgba(255, 255, 255, 0.03) 40%,
+            rgba(255, 255, 255, 0.15) 50%,
+            rgba(255, 255, 255, 0.03) 60%,
+            rgba(255, 255, 255, 0) 80%);
+    z-index: 2;
+    opacity: 0;
+    transform: scale(0.9);
+    filter: blur(1px);
+    transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.activeBubble[data-moving="true"]::before {
+    opacity: 0.9;
+    transform: scale(1.1);
+    animation: liquidShimmer 1s infinite linear;
+}
+
+@keyframes liquidShimmer {
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 100% 50%;
+    }
+}
+
+.icon {
+    transition: transform 0.2s ease;
+}
+
+.label {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: -0.1px;
+    white-space: nowrap;
+    /* Prevent wrapping during shrink */
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.tabItem:active .icon {
+    transform: scale(0.9);
+}
+
+/* Theme Overrides */
+.tabBar[data-theme="dark"],
+.searchCircle[data-theme="dark"],
+.searchModeContainer[data-theme="dark"],
+.activeIconCircle[data-theme="dark"],
+.searchBarExpanded[data-theme="dark"] {
+    background: linear-gradient(180deg, rgba(30, 30, 30, 0.4) 0%, rgba(10, 10, 10, 0.2) 100%);
+    border-color: rgba(255, 255, 255, 0.05);
+    /* Softer dark mode border */
+    box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.05),
+        /* Dimmer inner highlight */
+        inset 0 0 20px rgba(255, 255, 255, 0.01);
+}
+
+.tabBar[data-theme="dark"] .glassOverlay,
+.searchCircle[data-theme="dark"] .glassOverlay,
+.searchModeContainer[data-theme="dark"] .glassOverlay,
+.activeIconCircle[data-theme="dark"] .glassOverlay,
+.searchBarExpanded[data-theme="dark"] .glassOverlay {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.tabBar[data-theme="dark"] .glassSpecular,
+.searchCircle[data-theme="dark"] .glassSpecular,
+.searchModeContainer[data-theme="dark"] .glassSpecular,
+.activeIconCircle[data-theme="dark"] .glassSpecular,
+.searchBarExpanded[data-theme="dark"] .glassSpecular {
+    box-shadow: inset 1px 1px 0 rgba(255, 255, 255, 0.05), inset 0 0 5px rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tabBar[data-theme="dark"] .activeBubble {
+    background: linear-gradient(180deg, rgba(0, 122, 255, 0.25) 0%, rgba(0, 122, 255, 0.1) 100%);
+    box-shadow:
+        0 4px 16px rgba(0, 0, 0, 0.4),
+        inset 0 1px 1px rgba(255, 255, 255, 0.08),
+        inset 0 -1px 1px rgba(0, 0, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.08);
+    /* Reduced from 0.15 */
+}
+
+.tabBar[data-theme="dark"] .activeBubble::after {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.05) 0%, transparent 100%);
+    /* Reduced highlight */
+}

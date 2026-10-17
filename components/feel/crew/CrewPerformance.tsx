@@ -1,0 +1,639 @@
+"use client";
+
+import { useState, useMemo, useEffect, useContext } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
+import { ProjectContext } from "@/components/flow/project-context";
+import clsx from "clsx";
+import { ChevronDown, ChevronUp, AlertCircle, CheckCircle, XCircle, Download, ArrowUpDown, Users, Search, Loader2, Calendar, TrendingUp, X } from "lucide-react";
+import { Button } from "@/shared/ui/primitives/button/button";
+import { SummaryCard, SummaryCardsRow } from "@/components/shared/SummaryCard";
+import { Select } from "@/shared/ui/primitives/select/select";
+import {
+    CREW_ROLE_LABELS,
+    CrewRole,
+    fetchCrewMembers,
+    fetchDailyLogs,
+    updateDailyRating,
+    DailyLog,
+    CrewMember,
+    formatProjectCode,
+    isMatchingProjectCode,
+    getProjectSuffix
+} from "@/lib/api/crew";
+import { fetchProjectsByWorkspace } from "@/lib/flow/repositories/project.repo";
+import { fetchDefaultWorkspaceId } from "@/lib/api/templates";
+
+
+interface CrewPerformanceProps { role?: string; }
+
+type PerformanceRating = "UNGGUL" | "SANGAT_BAIK" | "BAIK" | "CUKUP" | "KURANG";
+type FilterCard = "ALL" | "KEEP" | "MONITOR" | "REPLACE";
+type ViewPeriod = "LAST_7_DAYS" | "EVALUATION_30_DAYS"; // New capability
+
+interface PerformanceEntry {
+    id: string;
+    crewName: string;
+    crewRole: CrewRole;
+    projectCode: string;
+
+    // Components
+    attendanceScore: number; // 0-50
+    overtimeScore: number;   // 0-25
+    ratingScore: number;     // 0-25
+
+    // Raw Data
+    daysPresent: number;
+    daysOt: number;
+    avgRating: number;
+    workingDays: number;
+
+    totalScore: number;      // 0-100
+    ratingLabel: PerformanceRating;
+    status: "KEEP" | "MONITOR" | "REPLACE";
+}
+
+const RATING_LABELS: Record<PerformanceRating, string> = { UNGGUL: "Unggul", SANGAT_BAIK: "Sangat Baik", BAIK: "Baik", CUKUP: "Cukup", KURANG: "Kurang" };
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const EVALUATION_START_DATE = new Date("2026-01-11"); // Fixed start date
+const getInitials = (n?: string) => { if (!n) return "??"; const w = n.trim().split(/\s+/); return w.length >= 2 ? (w[0][0] + w[1][0]).toUpperCase() : w[0].substring(0, 2).toUpperCase(); };
+
+const toTitleCase = (str: string) => {
+
+    return str.replace(/\w\S*/g, (txt) => txt.charAt(0).toUpperCase() + txt.substring(1).toLowerCase());
+};
+
+export function CrewPerformance({ role }: CrewPerformanceProps) {
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const pathname = usePathname();
+
+    // Check project context
+    const projectCtx = useContext(ProjectContext);
+    const forceProjectCode = projectCtx?.project?.code || null;
+    const forceProjectSuffix = forceProjectCode 
+        ? (forceProjectCode.includes("-") ? forceProjectCode.split("-")[1] : forceProjectCode)
+        : null;
+
+    const [data, setData] = useState<PerformanceEntry[]>([]);
+    const [projects, setProjects] = useState<{ code: string; name: string }[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // View State
+    const [viewPeriod, setViewPeriod] = useState<ViewPeriod>("EVALUATION_30_DAYS");
+    const [selectedProject, setSelectedProject] = useState(forceProjectSuffix || searchParams.get("project") || "ALL");
+    const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
+    const [activeCard, setActiveCard] = useState<FilterCard>((searchParams.get("card") as FilterCard) || "ALL");
+    const [showSearch, setShowSearch] = useState(false);
+
+    // Sync FROM URL
+    useEffect(() => {
+        const search = searchParams.get("search");
+        if (search !== null && search !== searchQuery) setSearchQuery(search);
+
+        const card = searchParams.get("card") as FilterCard;
+        if (card && card !== activeCard) setActiveCard(card);
+
+        const project = forceProjectSuffix || searchParams.get("project") || "ALL";
+        if (project !== selectedProject) setSelectedProject(project);
+
+        const period = searchParams.get("period") as ViewPeriod;
+        if (period && period !== viewPeriod) setViewPeriod(period);
+    }, [searchParams, forceProjectSuffix]);
+
+    // Sync TO URL
+    useEffect(() => {
+        const params = new URLSearchParams(searchParams);
+        if (searchQuery) params.set("search", searchQuery); else params.delete("search");
+        if (activeCard && activeCard !== "ALL") params.set("card", activeCard); else params.delete("card");
+        
+        const activeProj = forceProjectSuffix || selectedProject;
+        if (activeProj && activeProj !== "ALL") params.set("project", activeProj); else params.delete("project");
+        if (viewPeriod !== "EVALUATION_30_DAYS") params.set("period", viewPeriod); else params.delete("period");
+
+        router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    }, [searchQuery, activeCard, selectedProject, viewPeriod, forceProjectSuffix]);
+
+    // Sorting
+    const [sortBy, setSortBy] = useState<"name" | "score" | "status">("score");
+    const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+    const handleSort = (c: "name" | "score" | "status") => {
+        if (sortBy === c) setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+        else { setSortBy(c); setSortOrder(c === "score" ? "desc" : "asc"); }
+    };
+
+    const SortIcon = ({ c }: { c: "name" | "score" | "status" }) => {
+        if (sortBy !== c) return null;
+        return sortOrder === "asc" ? <ChevronUp className="w-3.5 h-3.5 text-neutral-600" /> : <ChevronDown className="w-3.5 h-3.5 text-neutral-600" />;
+    };
+
+    // State for Rating Modal or inline rating
+    // We'll do inline rating for "Today" or a selector?
+    // User asked "masukin ratingnya manaa".
+    // I will add an interactive Star Rating in the table. 
+    // When clicked, it updates the rating for the *Current Date* (Today)?
+    // Or maybe we need a date picker?
+    // Let's assume we rate for the LATEST LOG date or TODAY.
+    // Simplifying: Show "Average Rating" (Stars). Beside it, a "Rate Today" button?
+    // Or just make the stars interactive and it updates "Today's" rating?
+    // Let's try: "Rate Now" button opens a small popup to pick date (default today) and stars.
+
+    // Actually, user wants "tombol bintang, trus bisa milih skala 1-5".
+    // I'll add a "Rate" action column.
+
+    const [ratingModal, setRatingModal] = useState<{ isOpen: boolean, crewId: string, crewName: string, date: string, currentRating: number } | null>(null);
+
+    const handleRate = (crewId: string, crewName: string) => {
+        // Default to today
+        const todayStr = new Date().toISOString().split('T')[0];
+        setRatingModal({
+            isOpen: true,
+            crewId,
+            crewName,
+            date: todayStr,
+            currentRating: 0
+        });
+    };
+
+    const submitRating = async (val: number) => {
+        if (!ratingModal) return;
+        try {
+            const wsId = await fetchDefaultWorkspaceId();
+            if (wsId) {
+                await updateDailyRating(ratingModal.crewId, wsId, ratingModal.date, val);
+                // Refresh data
+                // Quick hack: toggle viewPeriod to trigger reload
+                setViewPeriod(v => v);
+            }
+            setRatingModal(null);
+        } catch (e) {
+            console.error("Failed to rate", e);
+            alert("Failed to save rating");
+        }
+    };
+
+    // Load Data
+    useEffect(() => {
+        const loadData = async () => {
+            setLoading(true);
+            try {
+                const wsId = await fetchDefaultWorkspaceId();
+                if (!wsId) return;
+
+                const [projs, members] = await Promise.all([
+                    fetchProjectsByWorkspace(wsId),
+                    fetchCrewMembers(wsId)
+                ]);
+                setProjects(projs.map((p: any) => ({ code: p.project_code, name: p.project_name })));
+
+                const today = new Date();
+                today.setHours(23, 59, 59, 999);
+
+                const todayMidnight = new Date(today);
+                todayMidnight.setHours(0, 0, 0, 0);
+
+                let startDate = new Date();
+
+                if (viewPeriod === "LAST_7_DAYS") {
+                    // "Week starts Sunday"
+                    startDate = new Date(todayMidnight);
+                    startDate.setDate(todayMidnight.getDate() - todayMidnight.getDay()); // Go back to Sunday
+                    startDate.setHours(0, 0, 0, 0);
+                } else {
+                    // Evaluation Mode
+                    // 30 Days rolling, but capped at Jan 11
+                    const thirtyDaysAgo = new Date(todayMidnight);
+                    thirtyDaysAgo.setDate(todayMidnight.getDate() - 29); // 30 days inclusive
+
+                    // Max with Jan 11, 2026
+                    startDate = thirtyDaysAgo > EVALUATION_START_DATE ? thirtyDaysAgo : EVALUATION_START_DATE;
+                    startDate.setHours(0, 0, 0, 0);
+                }
+
+                const allLogs = await fetchDailyLogs(wsId);
+
+                const calculatedData: PerformanceEntry[] = members.map(m => {
+                    const memberLogs = allLogs.filter(l => {
+                        const ld = new Date(l.date);
+                        return l.crewId === m.id && ld >= startDate && ld <= today;
+                    });
+
+                    // Elapsed Days Calculation (Calendar Days)
+                    // Ensure midnight-to-midnight diff
+                    const startMidnight = new Date(startDate);
+                    startMidnight.setHours(0, 0, 0, 0);
+
+                    const diffTime = Math.abs(todayMidnight.getTime() - startMidnight.getTime());
+                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                    const elapsedDays = diffDays + 1; // Inclusive (e.g. 11 to 14 = 3 diff + 1 = 4)
+
+                    // 1. Attendance (50%)
+                    const daysPresent = memberLogs.filter(l => l.status === "PRESENT" || l.status === "CUTI").length;
+                    const halfDays = memberLogs.filter(l => l.status === "HALF_DAY").length;
+                    const effectivePresent = daysPresent + (halfDays * 0.5);
+                    const attendanceRatio = Math.min(1, effectivePresent / elapsedDays);
+                    const attendanceScore = attendanceRatio * 50;
+
+                    // 2. Overtime (25%)
+                    // Formula: (Total OT Hours) / (Elapsed Days * 6) * 25
+                    const totalOtHours = memberLogs.reduce((sum, l) => sum + l.ot1Hours + l.ot2Hours + l.ot3Hours, 0);
+                    const otBenchmark = elapsedDays * 6; // 6 hours per elapsed day benchmark
+                    const otRatio = Math.min(1, totalOtHours / (otBenchmark || 1));
+                    const overtimeScore = otRatio * 25;
+
+                    // 3. Rating (25%)
+                    const ratings = memberLogs.filter(l => l.rating !== undefined && l.rating > 0).map(l => l.rating!);
+                    const avgRating = ratings.length > 0 ? ratings.reduce((a, b) => a + b, 0) / ratings.length : 0;
+                    const ratingScore = (avgRating / 5) * 25;
+
+                    const totalScore = Math.round(attendanceScore + overtimeScore + ratingScore);
+
+                    let ratingLabel: PerformanceRating = "KURANG";
+                    let status: "KEEP" | "MONITOR" | "REPLACE" = "REPLACE";
+
+                    if (totalScore >= 80) { ratingLabel = "SANGAT_BAIK"; status = "KEEP"; }
+                    else if (totalScore >= 60) { ratingLabel = "CUKUP"; status = "MONITOR"; }
+                    else { ratingLabel = "KURANG"; status = "REPLACE"; }
+
+                    return {
+                        id: m.id,
+                        crewName: m.name,
+                        crewRole: m.role,
+                        projectCode: m.currentProjectCode || "-",
+
+                        attendanceScore: Math.round(attendanceScore),
+                        overtimeScore: Math.round(overtimeScore),
+                        ratingScore: Math.round(ratingScore),
+
+                        daysPresent: effectivePresent,
+                        daysOt: totalOtHours, // Storing HOURS now for display
+                        avgRating: parseFloat(avgRating.toFixed(1)),
+                        workingDays: elapsedDays, // Renaming or reusing field for display
+
+                        totalScore,
+                        ratingLabel,
+                        status
+                    };
+                });
+
+                setData(calculatedData);
+            } catch (e) {
+                console.error(e);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadData();
+    }, [viewPeriod, ratingModal]); // Reload on valid change
+
+    const filtered = useMemo(() => {
+        let d = data;
+
+        // Filter Inactive (unless shown?)
+        // Note: The calculatedData includes all fetched members.
+        // We might want to filter out INACTIVE members if they have 0 attendance?
+        // Current requirement doesn't specify, but usually we hide inactive.
+        // Let's stick to the requested filters first.
+
+        if (activeCard !== "ALL") d = d.filter(p => p.status === activeCard);
+        if (selectedProject !== "ALL") d = d.filter(p => p.projectCode && isMatchingProjectCode(p.projectCode, selectedProject));
+
+        if (searchQuery) {
+            const q = searchQuery.toLowerCase();
+            d = d.filter(p => p.crewName.toLowerCase().includes(q));
+        }
+
+        return [...d].sort((a, b) => {
+            const cmp = sortBy === "name" ? a.crewName.localeCompare(b.crewName) :
+                sortBy === "score" ? a.totalScore - b.totalScore :
+                    a.status.localeCompare(b.status);
+            return sortOrder === "asc" ? cmp : -cmp;
+        });
+    }, [data, activeCard, selectedProject, searchQuery, sortBy, sortOrder]);
+
+    const stats = useMemo(() => ({
+        avg: data.length > 0 ? Math.round(data.reduce((s, p) => s + p.totalScore, 0) / data.length) : 0,
+        keep: data.filter(p => p.status === "KEEP").length,
+        monitor: data.filter(p => p.status === "MONITOR").length,
+        replace: data.filter(p => p.status === "REPLACE").length
+    }), [data]);
+
+    const getScoreColor = (s: number) => s >= 80 ? "text-emerald-600" : s >= 60 ? "text-amber-600" : "text-red-600";
+    const getStatusBadge = (s: string) => s === "KEEP" ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700"><CheckCircle className="w-3 h-3" /> Keep</span> : s === "MONITOR" ? <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700"><AlertCircle className="w-3 h-3" /> Monitor</span> : <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-700"><XCircle className="w-3 h-3" /> Replace</span>;
+    const getRatingColor = (r: PerformanceRating) => ({ UNGGUL: "bg-purple-100 text-purple-700", SANGAT_BAIK: "bg-emerald-100 text-emerald-700", BAIK: "bg-blue-100 text-blue-700", CUKUP: "bg-amber-100 text-amber-700", KURANG: "bg-red-100 text-red-700" })[r];
+
+    return (
+        <div className="space-y-6 w-full animate-in fade-in duration-500 relative">
+            {/* Rating Modal */}
+            {ratingModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
+                    <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 space-y-4">
+                        <div className="text-center">
+                            <h3 className="text-lg font-bold text-neutral-900">Rate {ratingModal.crewName}</h3>
+                            <p className="text-sm text-neutral-500">How was their performance today?</p>
+                        </div>
+
+                        <div className="flex justify-center gap-2 py-4">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    onClick={() => submitRating(star)}
+                                    className="p-2 hover:scale-110 transition-transform"
+                                >
+                                    <svg
+                                        className={clsx("w-8 h-8", star <= (ratingModal.currentRating || 0) ? "text-amber-400 fill-amber-400" : "text-neutral-300 hover:text-amber-300")}
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                        onMouseEnter={() => setRatingModal(prev => prev ? { ...prev, currentRating: star } : null)}
+                                        onMouseLeave={() => setRatingModal(prev => prev ? { ...prev, currentRating: 0 } : null)}
+                                    >
+                                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                                    </svg>
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="flex items-center gap-2 text-sm text-neutral-500 justify-center bg-neutral-50 p-2 rounded-lg">
+                            <span>Date:</span>
+                            <input
+                                type="date"
+                                value={ratingModal.date}
+                                onChange={e => setRatingModal(prev => prev ? { ...prev, date: e.target.value } : null)}
+                                className="bg-transparent border-none p-0 focus:ring-0 text-neutral-900 font-medium cursor-pointer"
+                            />
+                        </div>
+
+                        <Button variant="secondary" className="w-full bg-neutral-100 hover:bg-neutral-200 text-neutral-900 border-none" onClick={() => setRatingModal(null)}>Cancel</Button>
+                    </div>
+                </div>
+            )}
+
+            {/* HEADER REMOVED - Using Global PageHeader */}
+
+            <SummaryCardsRow>
+                <SummaryCard
+                    icon={<TrendingUp className="w-5 h-5 text-blue-600" />}
+                    iconBg="bg-blue-50"
+                    label="Avg Score"
+                    value={stats.avg}
+                    onClick={() => setActiveCard("ALL")}
+                    isActive={activeCard === "ALL"}
+                    activeBg="bg-blue-600"
+                />
+                <SummaryCard
+                    icon={<CheckCircle className="w-5 h-5 text-emerald-600" />}
+                    iconBg="bg-emerald-50"
+                    label="Keep"
+                    value={stats.keep}
+                    onClick={() => setActiveCard("KEEP")}
+                    isActive={activeCard === "KEEP"}
+                    activeBg="bg-emerald-600"
+                />
+                <SummaryCard
+                    icon={<AlertCircle className="w-5 h-5 text-amber-600" />}
+                    iconBg="bg-amber-50"
+                    label="Monitor"
+                    value={stats.monitor}
+                    onClick={() => setActiveCard("MONITOR")}
+                    isActive={activeCard === "MONITOR"}
+                    activeBg="bg-amber-500"
+                />
+                <SummaryCard
+                    icon={<XCircle className="w-5 h-5 text-red-600" />}
+                    iconBg="bg-red-50"
+                    label="Replace"
+                    value={stats.replace}
+                    onClick={() => setActiveCard("REPLACE")}
+                    isActive={activeCard === "REPLACE"}
+                    activeBg="bg-red-600"
+                />
+            </SummaryCardsRow>
+
+            {/* TOOLBAR */}
+            <div className="flex flex-wrap sm:flex-nowrap items-center justify-between gap-4 w-full">
+                {/* Left section: Filter + Project Selector */}
+                <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    {/* View Toggle */}
+                    <div className="flex bg-neutral-200/50 dark:bg-neutral-800/60 p-1 rounded-full flex-shrink-0">
+                        <button
+                            onClick={() => setViewPeriod("LAST_7_DAYS")}
+                            className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-all", viewPeriod === "LAST_7_DAYS" ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-250")}
+                        >
+                            This Week
+                        </button>
+                        <button
+                            onClick={() => setViewPeriod("EVALUATION_30_DAYS")}
+                            className={clsx("px-3 py-1.5 text-xs font-medium rounded-full transition-all", viewPeriod === "EVALUATION_30_DAYS" ? "bg-white dark:bg-neutral-700 text-neutral-900 dark:text-neutral-100 shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-250")}
+                        >
+                            Evaluation
+                        </button>
+                    </div>
+
+                    {/* Project select */}
+                    {!forceProjectSuffix && projects.length > 0 && (
+                        <div className="relative w-full sm:w-auto sm:min-w-[200px]">
+                            <select 
+                                value={selectedProject} 
+                                onChange={(e) => setSelectedProject(e.target.value)} 
+                                className="appearance-none w-full pl-3 pr-7 py-2 text-sm border border-neutral-200 rounded-full bg-white font-medium focus:outline-none focus:border-blue-500 focus:shadow-[0_0_0_2px_rgba(33,118,255,0.3)] transition-all"
+                            >
+                                <option value="ALL">All Projects</option>
+                                {projects.map(p => <option key={p.code} value={p.code}>[{formatProjectCode(p.code)}] {p.name}</option>)}
+                            </select>
+                            <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-neutral-400 pointer-events-none" />
+                        </div>
+                    )}
+                </div>
+
+                {/* Right section: Search + Export */}
+                <div className="flex items-center gap-2 ml-auto">
+                    {showSearch && (
+                        <div className="relative animate-in slide-in-from-right-2 duration-200">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                            <input
+                                type="text"
+                                placeholder="Search name..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                className="pl-9 pr-3 py-1.5 text-sm border border-neutral-200 rounded-full bg-white focus:outline-none focus:border-blue-500 w-40 sm:w-48 transition-all"
+                            />
+                        </div>
+                    )}
+                    <button
+                        type="button"
+                        onClick={() => {
+                            setShowSearch(!showSearch);
+                            if (showSearch) setSearchQuery("");
+                        }}
+                        className={clsx(
+                            "w-8 h-8 rounded-full border border-neutral-200 hover:bg-neutral-50 transition-colors flex items-center justify-center shrink-0",
+                            showSearch ? "bg-neutral-100 text-neutral-600" : "bg-white text-neutral-500"
+                        )}
+                        title="Search"
+                    >
+                        {showSearch ? <X className="w-4 h-4" /> : <Search className="w-4 h-4" />}
+                    </button>
+                    <Button variant="secondary" className="!rounded-full !py-1.5 !px-4 shadow-sm active:scale-95 transition-all" icon={<Download className="w-4 h-4" />}>Export</Button>
+                </div>
+            </div>
+
+            <div className="bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100/50 dark:border-blue-900/30 rounded-xl p-3 text-xs text-blue-700 dark:text-blue-300 flex items-start gap-2">
+                <Calendar className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                <div>
+                    <span className="font-semibold">Evaluation Rule:</span> {viewPeriod === "LAST_7_DAYS" && "This Week (Sun - Sat) — "}50% Att + 25% OT (Benchmark: 6h/day) + 25% Rating.
+                </div>
+            </div>
+
+            {/* CONTENT (TABLE & CARDS) */}
+            {loading ? (
+                <div className="py-20 text-center"><Loader2 className="w-8 h-8 mx-auto text-blue-500 animate-spin" /><p className="text-neutral-400 text-sm mt-2">Calculating KPIs...</p></div>
+            ) : filtered.length === 0 ? (
+                <div className="bg-white rounded-xl border border-neutral-200 p-12 text-center">
+                    <Users className="w-12 h-12 mx-auto text-neutral-300 mb-4" />
+                    <h3 className="font-medium text-neutral-600 mb-2">No data found</h3>
+                    <p className="text-sm text-neutral-400">Try adjusting filters or ensure daily logs exist for this period.</p>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    {/* MOBILE CARDS */}
+                    <div className="lg:hidden space-y-3">
+                        {filtered.map((e) => (
+                            <div
+                                key={e.id}
+                                className="bg-white/50 backdrop-blur-md rounded-2xl border border-white/40 p-4 shadow-sm active:scale-[0.98] transition-all"
+                            >
+                                <div className="flex items-center justify-between mb-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 font-semibold shadow-sm">
+                                            {getInitials(e.crewName)}
+                                        </div>
+                                        <div>
+                                            <div className="font-bold text-neutral-900">{toTitleCase(e.crewName)}</div>
+                                            <div className="text-[10px] text-neutral-500 font-bold uppercase tracking-wider">
+                                                {CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest leading-none mb-1">Score</div>
+                                        <div className={clsx("text-2xl font-black tracking-tight", getScoreColor(e.totalScore))}>
+                                            {e.totalScore}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-y-4 gap-x-6 py-4 border-y border-black/[0.03]">
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Attendance (50%)</div>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className={clsx("text-sm font-bold", getScoreColor(e.attendanceScore * 2))}>{e.attendanceScore}</span>
+                                            <span className="text-[10px] font-bold text-neutral-400">({e.daysPresent}d / {e.workingDays}d)</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Overtime (25%)</div>
+                                        <div className="flex items-baseline gap-2">
+                                            <span className={clsx("text-sm font-bold", getScoreColor(e.overtimeScore * 4))}>{e.overtimeScore}</span>
+                                            <span className="text-[10px] font-bold text-neutral-400">({e.daysOt}h total)</span>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Rating (25%)</div>
+                                        <button
+                                            onClick={() => handleRate(e.id, e.crewName)}
+                                            className="flex items-center gap-1 group"
+                                        >
+                                            <span className={clsx("text-sm font-bold", getScoreColor(e.ratingScore * 4))}>
+                                                {e.avgRating > 0 ? e.avgRating : "-"}
+                                            </span>
+                                            <svg className="w-3.5 h-3.5 text-amber-400 fill-amber-400" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                                            <span className="text-[10px] text-blue-500 font-bold uppercase underline decoration-blue-200 ml-1">Rate</span>
+                                        </button>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <div className="text-[10px] font-bold text-neutral-400 uppercase tracking-widest">Project / Status</div>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-mono text-[10px] bg-neutral-100 px-1.5 py-0.5 rounded font-bold text-neutral-600">{formatProjectCode(e.projectCode)}</span>
+                                            {getStatusBadge(e.status)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* DESKTOP TABLE */}
+                    <div className="hidden lg:block bg-white rounded-[22px] overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.02)]">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead className="border-b border-neutral-100">
+                                    <tr>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("name")}><div className="flex items-center gap-1">Name <SortIcon c="name" /></div></th>
+                                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden sm:table-cell">Project</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden md:table-cell" title="Weight: 50%">Attendance</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden md:table-cell" title="Weight: 25%">Overtime</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 hidden md:table-cell" title="Weight: 25%">Rating</th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("score")}><div className="flex items-center justify-center gap-1">Total <SortIcon c="score" /></div></th>
+                                        <th className="text-center px-4 py-3.5 text-xs font-semibold text-neutral-400 cursor-pointer hover:bg-neutral-50/50" onClick={() => handleSort("status")}><div className="flex items-center justify-center gap-1">Status <SortIcon c="status" /></div></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-neutral-100">
+                                    {filtered.map(e => (
+                                        <tr key={e.id} className="hover:bg-neutral-50 transition-colors">
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-8 h-8 rounded-full bg-neutral-200 flex items-center justify-center text-neutral-600 text-xs font-semibold flex-shrink-0">{getInitials(e.crewName)}</div>
+                                                    <div>
+                                                        <div className="font-medium text-neutral-900">{toTitleCase(e.crewName)}</div>
+                                                        <div className="text-xs text-neutral-500">{CREW_ROLE_LABELS[e.crewRole]?.en || e.crewRole}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 hidden sm:table-cell"><span className="font-mono text-xs bg-neutral-100 px-2 py-1 rounded">{formatProjectCode(e.projectCode)}</span></td>
+
+                                            {/* Attendance */}
+                                            <td className="px-4 py-3 text-center hidden md:table-cell">
+                                                <div className="flex flex-col items-center">
+                                                    <span className={clsx("font-bold", getScoreColor(e.attendanceScore * 2))}>{e.attendanceScore}</span>
+                                                    <span className="text-[10px] text-neutral-400">{e.daysPresent} of {e.workingDays}d</span>
+                                                </div>
+                                            </td>
+
+                                            {/* Overtime */}
+                                            <td className="px-4 py-3 text-center hidden md:table-cell">
+                                                <div className="flex flex-col items-center">
+                                                    <span className={clsx("font-bold", getScoreColor(e.overtimeScore * 4))}>{e.overtimeScore}</span>
+                                                    <span className="text-[10px] text-neutral-400">{e.daysOt}h total</span>
+                                                </div>
+                                            </td>
+
+                                            {/* Rating */}
+                                            <td className="px-4 py-3 text-center hidden md:table-cell">
+                                                <div className="flex flex-col items-center group cursor-pointer" onClick={() => handleRate(e.id, e.crewName)}>
+                                                    <span className={clsx("font-bold flex items-center gap-1 group-hover:text-blue-600 transition-colors", getScoreColor(e.ratingScore * 4))}>
+                                                        {e.avgRating > 0 ? e.avgRating : "-"}
+                                                        <svg className="w-3 h-3 text-amber-500 fill-amber-500" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
+                                                    </span>
+                                                    <span className="text-[10px] text-neutral-400 underline decoration-dotted group-hover:text-blue-500">{e.avgRating > 0 ? "Avg Rating" : "Rate Now"}</span>
+                                                </div>
+                                            </td>
+
+                                            <td className="px-4 py-3 text-center"><span className={clsx("text-lg font-bold", getScoreColor(e.totalScore))}>{e.totalScore}</span></td>
+                                            <td className="px-4 py-3 text-center">{getStatusBadge(e.status)}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+}

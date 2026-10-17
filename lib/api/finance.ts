@@ -1,23 +1,308 @@
-import { assertFinanceMutation } from '@/lib/financeAccess';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { fetchOrganizationDepartments, getFinanceCategories, getFinanceDocumentRules } from './financeSetup';
-import { formatPurchasingReference, formatPurchasingShortReference, readPurchasingNotes, writePurchasingNotes } from '../financeRequestPresentation';
-import { supabase } from '../supabase';
-import { decode } from 'base64-arraybuffer';
+import { supabase } from "@/lib/supabaseClient";
+import { FundingSource, FundingSourceType, BankProvider } from "@/lib/types/finance-types";
 
-export interface PurchasingItem {
-    name: string;
-    qty: number;
-    unit: string;
-    unit_price: number;
-    total: number;
+export interface BeneficiaryAccount {
+    id: string;
+    bank_name: string;
+    account_number: string;
+    account_name: string;
+    alias?: string;
+    is_global: boolean;
+    created_by: string;
 }
 
-export interface PurchasingRequest {
-    title?: string;
-    department_id?: string | null;
-    id?: string;
-    project_id?: string;
+// -- FETCHING --
+
+export async function fetchFundingSources(workspaceId: string): Promise<FundingSource[]> {
+    const result = await (supabase
+        .from("funding_sources")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .order("position", { ascending: true })
+        .order("created_at", { ascending: false }) as any);
+
+    const { data, error } = result;
+
+    if (error) {
+        console.error("Error fetching funding sources:", error);
+        return [];
+    }
+
+    return (data || []).map(mapDbToFundingSource);
+}
+
+export async function fetchPettyCashPools(workspaceId: string): Promise<FundingSource[]> {
+    const result = await (supabase
+        .from("funding_sources")
+        .select("*")
+        .eq("workspace_id", workspaceId)
+        .eq("type", "PETTY_CASH")
+        .order("name", { ascending: true }) as any);
+
+    const { data, error } = result;
+
+    if (error) {
+        console.error("Error fetching petty cash pools:", error);
+        return [];
+    }
+
+    return (data || []).map(mapDbToFundingSource);
+}
+
+// -- SAVING --
+
+export async function upsertFundingSource(source: Partial<FundingSource> & { workspace_id: string }): Promise<FundingSource | null> {
+    const dbSource: any = {
+        workspace_id: source.workspace_id,
+        name: source.name,
+        type: source.type,
+        provider: source.provider,
+        currency: source.currency || "IDR",
+        balance: source.balance || 0,
+        account_number: source.account_number,
+        project_id: source.project_id,
+        position: source.position ?? 0,
+        is_active: source.is_active ?? true,
+        is_archived: source.is_archived ?? false,
+        updated_at: new Date().toISOString()
+    };
+
+    // Add ID if updating and it's a real UUID
+    if (source.id && !source.id.startsWith("fs-")) {
+        dbSource.id = source.id;
+    }
+
+    let data, error;
+
+    if (dbSource.id) {
+        // UPDATE
+        const result = await (supabase
+            .from("funding_sources")
+            .update(dbSource)
+            .eq("id", dbSource.id)
+            .select()
+            .single() as any);
+        data = result.data;
+        error = result.error;
+    } else {
+        // INSERT
+        // Remove ID from object if it's undefined to let DB handle generation
+        delete dbSource.id;
+
+        const result = await (supabase
+            .from("funding_sources")
+            .insert(dbSource)
+            .select()
+            .single() as any);
+        data = result.data;
+        error = result.error;
+    }
+
+    if (error) {
+        console.error("Error saving funding source:", error);
+        throw error;
+    }
+
+    return mapDbToFundingSource(data);
+}
+
+export async function updateFundingSourcePositions(items: { id: string; position: number }[]): Promise<boolean> {
+    const updates = items.map(item => ({
+        id: item.id,
+        position: item.position,
+        updated_at: new Date().toISOString()
+    }));
+
+    const result = await (supabase
+        .from("funding_sources")
+        .upsert(updates as any) as any);
+    const { error } = result;
+
+    if (error) {
+        console.error("Error updating positions:", error);
+        return false;
+    }
+    return true;
+}
+
+// -- ACTIONS --
+
+export async function deleteFundingSource(id: string): Promise<boolean> {
+    const response = await (supabase
+        .from("funding_sources")
+        .delete()
+        .eq("id", id) as any);
+
+    if (response.error) {
+        console.error("Error deleting funding source:", response.error);
+        return false;
+    }
+    return true;
+}
+
+export async function toggleFundingSourceArchive(id: string, isArchived: boolean): Promise<boolean> {
+    const response = await (supabase
+        .from("funding_sources")
+        .update({ is_archived: isArchived })
+        .eq("id", id) as any);
+
+    if (response.error) {
+        console.error("Error archiving funding source:", response.error);
+        return false;
+    }
+    return true;
+}
+
+export async function toggleFundingSourceActive(id: string, isActive: boolean): Promise<boolean> {
+    const response = await (supabase
+        .from("funding_sources")
+        .update({ is_active: isActive })
+        .eq("id", id) as any);
+
+    if (response.error) {
+        console.error("Error toggling funding source status:", response.error);
+        return false;
+    }
+    return true;
+}
+
+
+// -- BENEFICIARY ACCOUNTS --
+
+export async function fetchBeneficiaryAccounts(): Promise<BeneficiaryAccount[]> {
+    const result = await (supabase
+        .from("finance_beneficiary_accounts")
+        .select("*")
+        .order("created_at", { ascending: false }) as any);
+
+    const { data, error } = result;
+
+    if (error) {
+        console.error("Error fetching beneficiary accounts:", error);
+        return [];
+    }
+
+    console.log("[DEBUG] fetchBeneficiaryAccounts returned:", data?.length, "accounts");
+
+    return (data || []).map((row: any) => ({
+        id: row.id,
+        bank_name: row.bank_name,
+        account_number: row.account_number,
+        account_name: row.account_name,
+        alias: row.alias,
+        is_global: row.is_global,
+        created_by: row.created_by
+    }));
+}
+
+export async function saveBeneficiaryAccount(account: {
+    bank_name: string;
+    account_number: string;
+    account_name: string;
+    alias?: string;
+    is_global?: boolean;
+    created_by: string;
+}): Promise<BeneficiaryAccount | null> {
+    const { data, error } = await supabase
+        .from("finance_beneficiary_accounts")
+        .insert([{
+            ...account,
+            is_global: account.is_global ?? true // Default to true for shared
+        }])
+        .select()
+        .single();
+
+    if (error) {
+        console.error("Error saving beneficiary account:", JSON.stringify(error, null, 2));
+        return null;
+    }
+
+    return data;
+}
+
+// -- MAPPER --
+
+function mapDbToFundingSource(row: any): FundingSource {
+    return {
+        id: row.id,
+        workspace_id: row.workspace_id,
+        name: row.name,
+        type: row.type as FundingSourceType,
+        provider: row.provider as BankProvider,
+        currency: row.currency,
+        balance: row.balance,
+        account_number: row.account_number,
+        project_id: row.project_id,
+        position: row.position,
+        is_active: row.is_active,
+        is_archived: row.is_archived,
+        created_at: row.created_at,
+        updated_at: row.updated_at
+    };
+}
+
+// -- TRANSACTIONS --
+
+export async function fetchFundingSourceTransactions(sourceId: string): Promise<any[]> {
+    const { data, error } = await supabase
+        .from("funding_source_transactions")
+        .select("*")
+        .eq("funding_source_id", sourceId)
+        .order("created_at", { ascending: false });
+
+    if (error) {
+        console.error("Error fetching funding source transactions:", error);
+        return [];
+    }
+
+    return data || [];
+}
+
+export async function recordFundingSourceTransaction(tx: {
+    funding_source_id: string;
+    type: "TOP_UP" | "WITHDRAWAL" | "ADJUSTMENT";
+    amount: number;
+    description?: string;
+    reference_type?: "PURCHASE" | "REIMBURSE" | "MANUAL";
+    reference_id?: string;
+    performed_by?: string;
+}): Promise<boolean> {
+    // 1. Record the transaction
+    const { error: txError } = await supabase
+        .from("funding_source_transactions")
+        .insert([tx]);
+
+    if (txError) {
+        console.error("Error recording funding source transaction:", txError);
+        return false;
+    }
+
+    // 2. Update the balance of the funding source
+    const balanceChange = tx.type === "TOP_UP" ? tx.amount : -tx.amount;
+    
+    // We fetch current balance first or use use RPC for atomicity if available.
+    // For now, let's use a simple update with calculated balance.
+    const { data: source } = await supabase
+        .from("funding_sources")
+        .select("balance")
+        .eq("id", tx.funding_source_id)
+        .single();
+    
+    if (source) {
+        const newBalance = (source.balance || 0) + balanceChange;
+        await supabase
+            .from("funding_sources")
+            .update({ balance: newBalance })
+            .eq("id", tx.funding_source_id);
+    }
+
+    return true;
+}
+
+// -- PURCHASING --
+
+export interface PurchasingRequestPayload {
+    project_id: string;
     date: string;
     vendor?: string;
     description: string;
@@ -34,24 +319,256 @@ export interface PurchasingRequest {
     beneficiary_bank?: string;
     beneficiary_number?: string;
     beneficiary_name?: string;
-    target_date?: string | null;
-    items?: PurchasingItem[];
-    invoices?: { invoice_url: string, invoice_name: string }[];
+    created_by: string; // Required: user ID
+    items: {
+        name: string;
+        qty: number;
+        unit: string;
+        unitPrice: number;
+        total: number;
+    }[];
 }
 
-export interface ReimburseItem {
-    name: string;
-    qty: number;
-    unit: string;
-    unitPrice: number;
-    total: number;
+export async function createPurchasingRequest(payload: PurchasingRequestPayload) {
+    const { items, created_by, invoice_urls, existing_invoice_ids, ...requestData } = payload as any;
+
+    if (!created_by) {
+        throw new Error("User ID is required to create a purchasing request");
+    }
+
+    console.log("[DEBUG] createPurchasingRequest - User:", created_by);
+    console.log("[DEBUG] createPurchasingRequest - Payload (without invoice_urls):", JSON.stringify(requestData, null, 2));
+
+    // 1. Create Request - Explicitly whitelist fields to avoid "column does not exist" or other insertion errors
+    const insertData = {
+        project_id: requestData.project_id,
+        date: requestData.date,
+        vendor: requestData.vendor,
+        beneficiary_bank: requestData.beneficiary_bank,
+        beneficiary_number: requestData.beneficiary_number,
+        beneficiary_name: requestData.beneficiary_name,
+        target_date: requestData.target_date,
+        description: requestData.description,
+        priority: requestData.priority,
+        type: requestData.type,
+        subcategory: requestData.subcategory,
+        amount: requestData.amount,
+        purchase_stage: requestData.purchase_stage,
+        approval_status: requestData.approval_status || 'SUBMITTED',
+        financial_status: requestData.financial_status || 'UNPAID',
+        invoice_url: requestData.invoice_url,
+        notes: requestData.notes,
+        created_by
+    };
+
+    const result = await (supabase
+        .from("purchasing_requests")
+        .insert([insertData])
+        .select()
+        .single() as any);
+
+    const { data: request, error: reqError } = result;
+
+    if (reqError) {
+        console.error("Error creating purchasing request:", JSON.stringify(reqError, null, 2));
+        console.error("Error details - code:", reqError.code, "message:", reqError.message, "hint:", reqError.hint);
+        throw reqError;
+    }
+
+    // 2. Create Items
+    if (items.length > 0) {
+        const itemsData = items.map((item: any) => ({
+            request_id: request.id,
+            name: item.name,
+            qty: item.qty,
+            unit: item.unit,
+            unit_price: item.unitPrice,
+            total: item.total,
+            subcategory: item.subcategory,
+            group_name: item.group_name
+        }));
+
+        const result = await (supabase
+            .from("purchasing_items")
+            .insert(itemsData) as any);
+        const { error: itemsError } = result;
+
+        if (itemsError) {
+            console.error("Error creating purchasing items:", itemsError);
+            // ROLLBACK: Delete the request header
+            await supabase.from("purchasing_requests").delete().eq("id", request.id);
+            throw new Error(`Failed to create items: ${itemsError.message}. Request rolled back.`);
+        }
+    }
+
+    // 3. Create Invoices if provided
+    if (invoice_urls && invoice_urls.length > 0) {
+        const invoicesData = invoice_urls.map((inv: any) => ({
+            request_id: request.id,
+            invoice_url: inv.invoice_url,
+            invoice_name: inv.invoice_name,
+            invoice_type: 'INVOICE',
+            uploaded_by: created_by
+        }));
+
+        const { error: invoicesError } = await supabase
+            .from("purchasing_invoices")
+            .insert(invoicesData);
+
+        if (invoicesError) {
+            console.error("Error creating purchasing invoices:", invoicesError);
+            // Don't rollback for this, just log the error
+        }
+    }
+
+    return request;
 }
 
-export interface ReimburseRequest {
-    id?: string;
-    title?: string;
-    department_id?: string | null;
-    project_id?: string;
+export async function updatePurchasingRequest(id: string, payload: Partial<PurchasingRequestPayload>) {
+    const { items, invoice_urls, existing_invoice_ids, created_by, ...requestData } = payload as any;
+
+    // 1. Update Request
+    const result = await (supabase
+        .from("purchasing_requests")
+        .update({
+            ...requestData,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", id) as any);
+    const { error: reqError } = result;
+
+    if (reqError) {
+        console.error("Error updating purchasing request:", reqError);
+        console.error("Error details:", JSON.stringify(reqError, null, 2));
+        throw reqError;
+    }
+
+    // 2. Update Items (Delete all and recreate for simplicity, same as reimburse)
+    if (items) {
+        const result = await (supabase
+            .from("purchasing_items")
+            .delete()
+            .eq("request_id", id) as any);
+        const { error: delError } = result;
+
+        if (delError) {
+            console.error("Delete items error:", delError);
+            throw delError;
+        }
+
+        // Insert new
+        if (items.length > 0) {
+            const itemsData = items.map((item: any) => ({
+                request_id: id,
+                name: item.name,
+                qty: item.qty,
+                unit: item.unit,
+                unit_price: item.unitPrice,
+                total: item.total,
+                subcategory: item.subcategory,
+                group_name: item.group_name
+            }));
+
+            const result = await (supabase
+                .from("purchasing_items")
+                .insert(itemsData) as any);
+            const { error: insError } = result;
+
+            if (insError) {
+                console.error("Insert items error:", insError);
+                console.error("Failed ID:", id);
+                throw insError; // This is where FK error happens 
+            }
+        }
+    }
+
+    // 3. Update Invoices - delete removed ones, add new ones
+    if (existing_invoice_ids !== undefined || invoice_urls !== undefined) {
+        // Delete invoices that the user removed (not in existing_invoice_ids)
+        // But first fetch current ones to compare
+        if (existing_invoice_ids && Array.isArray(existing_invoice_ids)) {
+            const validIds = existing_invoice_ids.filter((i: string) => i && i !== 'legacy');
+            if (validIds.length > 0) {
+                await supabase
+                    .from("purchasing_invoices")
+                    .delete()
+                    .eq("request_id", id)
+                    .not("id", "in", `(${validIds.join(',')})`);
+            } else {
+                // No valid existing IDs means delete all existing
+                await supabase
+                    .from("purchasing_invoices")
+                    .delete()
+                    .eq("request_id", id);
+            }
+        }
+
+        // Insert new invoices
+        if (invoice_urls && invoice_urls.length > 0) {
+            const invoicesData = invoice_urls.map((inv: any) => ({
+                request_id: id,
+                invoice_url: inv.invoice_url,
+                invoice_name: inv.invoice_name,
+                invoice_type: 'INVOICE',
+                uploaded_by: created_by || null
+            }));
+
+            const { error: invoicesError } = await supabase
+                .from("purchasing_invoices")
+                .insert(invoicesData);
+
+            if (invoicesError) {
+                console.error("Error creating purchasing invoices:", invoicesError);
+            }
+        }
+    }
+
+    return true;
+}
+
+export async function fetchPurchasingRequests() {
+    const response = await (supabase
+        .from("purchasing_requests")
+        .select(`
+            *,
+            project:projects(project_name, project_code),
+            items:purchasing_items(*)
+        `)
+        .order("created_at", { ascending: false }) as any);
+
+    if (response.error) {
+        console.error("Error fetching purchasing requests:", JSON.stringify(response.error, null, 2));
+        console.error("Error details - code:", response.error.code, "message:", response.error.message, "hint:", response.error.hint);
+        return [];
+    }
+
+    return response.data;
+}
+
+export async function deletePurchasingRequest(requestId: string) {
+    await (supabase
+        .from("purchasing_items")
+        .delete()
+        .eq("request_id", requestId) as any);
+
+    // Then delete the request
+    const response = await (supabase
+        .from("purchasing_requests")
+        .delete()
+        .eq("id", requestId) as any);
+
+    if (response.error) {
+        console.error("Error deleting purchasing request:", response.error);
+        throw response.error;
+    }
+
+    return true;
+}
+
+// -- REIMBURSEMENT --
+
+export interface ReimburseRequestPayload {
+    project_id: string;
     category: string;
     subcategory?: string;
     date: string;
@@ -59,1102 +576,506 @@ export interface ReimburseRequest {
     amount: number;
     status?: string;
     invoice_url?: string;
-    /** Stored inside notes metadata until the database has a dedicated expense-proof column. */
-    expense_proof_url?: string;
-    invoice_number?: string;
-    vendor?: string;
-    subtotal_amount?: number;
-    discount_type?: string;
-    discount_value?: number;
-    discount_amount?: number;
-    tax_name?: string;
-    tax_type?: string;
-    tax_rate?: number;
-    tax_amount?: number;
     notes?: string;
+    details?: any; // JSONB
     beneficiary_bank?: string;
     beneficiary_number?: string;
     beneficiary_name?: string;
-    target_date?: string | null;
-    priority?: string;
-    items?: ReimburseItem[];
+    revision_reason?: string;
+    rejection_reason?: string;
+    approved_amount?: number;
+    created_by: string; // Required: user ID
+    items: {
+        name: string;
+        qty: number;
+        unit: string;
+        unitPrice: number;
+        total: number;
+    }[];
 }
 
-export const PURCHASING_COLUMNS = `
-    id, project_id, date, vendor, description, type, subcategory, amount, approval_status, purchase_stage, 
-    financial_status, source_of_fund_id, payment_date, invoice_url, notes, beneficiary_bank, beneficiary_number, 
-    beneficiary_name, created_by, created_at, updated_at, rejection_reason, revision_reason, payment_proof_url,
-    priority, target_date, request_number, approved_amount, approved_by_name, paid_amount,
-    project:projects(id, project_name, project_code, project_number),
-    items:purchasing_items(id, name, item_name, qty, unit, unit_price, total),
-    invoices:purchasing_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)
-`;
+export async function createReimburseRequest(payload: ReimburseRequestPayload) {
+    const { items, created_by, invoice_urls, existing_invoice_ids, ...requestData } = payload as any;
 
-export const REIMBURSE_COLUMNS = `
-    id, project_id, user_id, category, subcategory, date, description, amount, status, approved_amount,
-    approved_by_name, payment_date, payment_proof_url, invoice_url, notes,
-    rejection_reason, revision_reason, target_date, request_number, source_of_fund_id,
-    beneficiary_bank, beneficiary_number, beneficiary_name, created_at, updated_at, priority,
-    project:projects(id, project_name, project_code, project_number),
-    items:reimbursement_items(id, name, qty, unit, unit_price, total),
-    existingInvoices:reimbursement_invoices(*)
-`;
-
-function getRequestTitle(description: string | null | undefined, items: any[] | null | undefined): string {
-    if (description && description.trim().length > 0) {
-        return description;
-    }
-    const safeItems = items || [];
-    if (safeItems.length > 0) {
-        const names = safeItems.map(item => item.name).filter(Boolean);
-        if (names.length === 1) {
-            return names[0];
-        } else if (names.length === 2) {
-            return `${names[0]}, ${names[1]}`;
-        } else if (names.length > 2) {
-            return `${names[0]}, ${names[1]}, and +${names.length - 2} more`;
-        }
-    }
-    return '';
-}
-
-function getReimbursementTitle(items: any[] | null | undefined): string {
-    const names = (items || []).map(item => String(item.name || '').trim()).filter(Boolean);
-    if (names.length === 0) return 'Reimbursement Request';
-    if (names.length === 1) return names[0];
-    const firstTwo = `${names[0]}, ${names[1]}`;
-    return names.length === 2 ? firstTwo : `${firstTwo} +${names.length - 2}`;
-}
-
-const TRIP_MARKER = '<!--FINANCE_TRIP:';
-const TRIP_MARKER_END = '-->';
-const REIMBURSE_PROOF_MARKER = '<!--REIMBURSE_PROOF:';
-
-export interface TripDetails {
-    origin?: string;
-    destination?: string;
-    distance?: number;
-}
-
-export function encodeNotesWithTrip(notes: string | undefined, trip: TripDetails | undefined): string | undefined {
-    const userNotes = (notes || '').trim();
-    if (!trip?.origin && !trip?.destination && !trip?.distance) {
-        return userNotes || undefined;
-    }
-    const tripBlock = `${TRIP_MARKER}${JSON.stringify(trip)}${TRIP_MARKER_END}`;
-    return userNotes ? `${userNotes}\n${tripBlock}` : tripBlock;
-}
-
-export function parseTripDetailsFromNotes(notes: string | null | undefined): TripDetails | null {
-    if (!notes) return null;
-    const start = notes.indexOf(TRIP_MARKER);
-    if (start === -1) return null;
-    const jsonStart = start + TRIP_MARKER.length;
-    const end = notes.indexOf(TRIP_MARKER_END, jsonStart);
-    if (end === -1) return null;
-    try {
-        return JSON.parse(notes.slice(jsonStart, end));
-    } catch {
-        return null;
-    }
-}
-
-export function stripTripFromNotes(notes: string | null | undefined): string {
-    if (!notes) return '';
-    const start = notes.indexOf(TRIP_MARKER);
-    if (start === -1) return notes.trim();
-    return notes.slice(0, start).trim();
-}
-
-export function parseReimbursementProofFromNotes(notes: string | null | undefined): string | null {
-    return parseReimbursementMetadataFromNotes(notes)?.expense_proof_url || null;
-}
-
-function parseReimbursementMetadataFromNotes(notes: string | null | undefined): Record<string, any> | null {
-    if (!notes) return null;
-    const start = notes.indexOf(REIMBURSE_PROOF_MARKER);
-    if (start === -1) return null;
-    const valueStart = start + REIMBURSE_PROOF_MARKER.length;
-    const end = notes.indexOf(TRIP_MARKER_END, valueStart);
-    if (end === -1) return null;
-    try {
-        const parsed = JSON.parse(notes.slice(valueStart, end));
-        return parsed?.url ? { expense_proof_url: parsed.url } : parsed;
-    } catch {
-        return null;
-    }
-}
-
-function encodeReimbursementNotes(
-    notes: string | undefined,
-    trip: TripDetails | undefined,
-    metadata: Record<string, any>,
-): string | undefined {
-    const withTrip = encodeNotesWithTrip(notes, trip) || '';
-    const cleanMetadata = Object.fromEntries(Object.entries(metadata).filter(([, value]) => value !== undefined && value !== null && value !== ''));
-    if (Object.keys(cleanMetadata).length === 0) return withTrip || undefined;
-    const proofBlock = `${REIMBURSE_PROOF_MARKER}${JSON.stringify(cleanMetadata)}${TRIP_MARKER_END}`;
-    return withTrip ? `${withTrip}\n${proofBlock}` : proofBlock;
-}
-
-function stripFinanceMetadataFromNotes(notes: string | null | undefined): string {
-    if (!notes) return '';
-    return notes
-        .replace(/<!--FINANCE_TRIP:[\s\S]*?-->/g, '')
-        .replace(/<!--REIMBURSE_PROOF:[\s\S]*?-->/g, '')
-        .trim();
-}
-
-function reimbursementActualTotal(items: any[] | undefined, payload: Record<string, any>): number {
-    if (!items?.length) return Number(payload.amount) || 0;
-    const subtotal = items.reduce((sum, item) => {
-        const qty = Number(item.qty) || 0;
-        const unitPrice = Number(item.unitPrice ?? item.unit_price) || 0;
-        return sum + (qty * unitPrice);
-    }, 0);
-    const discount = Number(payload.discount_amount) || 0;
-    const tax = Number(payload.tax_amount) || 0;
-    return Math.max(0, subtotal - discount + (payload.tax_type === 'withholding' ? -tax : tax));
-}
-
-function validateReimbursementSubmission(payload: {
-    invoice_url?: string;
-    expense_proof_url?: string;
-    beneficiary_bank?: string;
-    beneficiary_number?: string;
-    beneficiary_name?: string;
-    amount?: number;
-}, items?: any[]) {
-    if (!items?.length || items.some(item => !String(item.name || '').trim() || Number(item.qty) <= 0 || Number(item.unitPrice ?? item.unit_price) <= 0)) {
-        throw new Error('Every reimbursement item must contain an actual quantity and unit price.');
-    }
-    if (!payload.invoice_url) throw new Error('Invoice document is required for reimbursement.');
-    if (!payload.expense_proof_url) throw new Error('Expense payment proof is required for reimbursement.');
-    if (!String(payload.beneficiary_bank || '').trim() || !String(payload.beneficiary_number || '').trim() || !String(payload.beneficiary_name || '').trim()) {
-        throw new Error('Complete the reimbursement destination account.');
-    }
-    if (!payload.amount || payload.amount <= 0) throw new Error('Actual reimbursement amount must be greater than zero.');
-}
-
-function formatReferenceNumber(type: 'PO' | 'RE', project: any, requestNumber: any, id: string): string {
-    const projectNum = project?.project_number !== undefined && project?.project_number !== null
-        ? String(project.project_number).padStart(3, '0')
-        : '000';
-        
-    const reqNum = requestNumber !== undefined && requestNumber !== null
-        ? String(requestNumber).padStart(5, '0')
-        : (id ? id.slice(0, 5) : '00000');
-        
-    return `${type}-${projectNum}-${reqNum}`;
-}
-
-export async function fetchPurchasingRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY') {
-    let query = supabase
-        .from('purchasing_requests')
-        .select(PURCHASING_COLUMNS)
-        .order('created_at', { ascending: false })
-        .range(0, 4999); // Override Supabase default 1000-row limit
-
-    if (!isTeam) {
-        query = query.eq('created_by', userId);
+    if (!created_by) {
+        throw new Error("User ID is required to create a reimburse request");
     }
 
-    let { data, error } = await query;
-    if (error) {
-        console.warn("Retrying purchasing requests with fallback query due to:", error.message || error);
-        let fallbackQuery = supabase
-            .from('purchasing_requests')
-            .select(`*, project:projects(id, project_name, project_code, project_number), items:purchasing_items(*)`)
-            .order('created_at', { ascending: false })
-            .range(0, 4999);
-        if (!isTeam) {
-            fallbackQuery = fallbackQuery.eq('created_by', userId);
-        }
-        const fallbackRes = await fallbackQuery;
-        if (fallbackRes.error) {
-            console.warn("Retrying purchasing requests with simple select * due to:", fallbackRes.error.message);
-            let simpleQuery = supabase
-                .from('purchasing_requests')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .range(0, 4999);
-            if (!isTeam) {
-                simpleQuery = simpleQuery.eq('created_by', userId);
-            }
-            const simpleRes = await simpleQuery;
-            data = simpleRes.data;
-            if (simpleRes.error) {
-                console.error("Failed all purchasing requests queries:", simpleRes.error);
-                return [];
-            }
-        } else {
-            data = fallbackRes.data;
-        }
-    }
-
-    if (!data || data.length === 0) return [];
-    // Fetch profiles manually to avoid PostgREST PGRST200 join errors
-    const userIds = Array.from(new Set((data || []).map((r: any) => r.created_by).filter(Boolean)));
-    const profileMap = new Map<string, any>();
-    if (userIds.length > 0) {
-        const { data: profiles } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url, nickname')
-            .in('id', userIds);
-        if (profiles) {
-            profiles.forEach((p: any) => profileMap.set(p.id, p));
-        }
-    }
-    
-    const [departments, documentRules, categories] = await Promise.all([
-        fetchOrganizationDepartments(),
-        getFinanceDocumentRules(),
-        getFinanceCategories(),
-    ]);
-    const departmentMap = new Map(departments.map(department => [department.id, department]));
-
-    // Read active consolidations to reflect requester-facing status (Consolidated / Paying / Paid)
-    const requestConsolidationMap = new Map<string, { consolidationId: string; consolidationDocNumber: string; consolidationStatus: string }>();
-    try {
-        const rawConsolidations = await AsyncStorage.getItem('forma_finance_consolidations_v1');
-        if (rawConsolidations) {
-            const parsedConsolidations = JSON.parse(rawConsolidations);
-            (parsedConsolidations || []).forEach((c: any) => {
-                if (c.status !== 'Cancelled' && c.status !== 'Rejected') {
-                    (c.request_ids || []).forEach((reqId: string) => {
-                        requestConsolidationMap.set(reqId, {
-                            consolidationId: c.id,
-                            consolidationDocNumber: c.document_number,
-                            consolidationStatus: c.status,
-                        });
-                    });
-                }
-            });
-        }
-    } catch {}
-
-    // Map response to match local format
-    return (data || []).map((rawReq: any) => {
-        const stored = readPurchasingNotes(rawReq.notes || '');
-        const req = { ...rawReq, ...stored.commercial, notes: stored.notes };
-        const department = departmentMap.get(req.department_id) || (req.department_id ? { id: req.department_id, name: req.department_name || 'Department', code: req.department_code } : null);
-        const profile = profileMap.get(req.created_by) || null;
-        const itemsList = (req.items || []).map((item: any) => ({
-            ...item,
-            name: item.name || item.item_name || '',
-        }));
-        const inferredCategory = categories.find(category =>
-            category.subcategories?.some(subcategory =>
-                subcategory.id === req.subcategory || subcategory.name === req.subcategory
-            )
-        );
-        const categoryName = (!req.type || req.type === 'General Purchasing') && inferredCategory
-            ? inferredCategory.name
-            : req.type;
-
-        const conInfo = requestConsolidationMap.get(req.id);
-        const isApproved = req.approval_status === 'APPROVED';
-        const isPaid = req.financial_status === 'PAID';
-
-        let derivedStatus = 'Draft';
-        let derivedStatusTag = 'draft';
-
-        if (isPaid) {
-            derivedStatus = 'Paid';
-            derivedStatusTag = 'paid';
-        } else if (req.financial_status === 'PARTIALLY_PAID') {
-            derivedStatus = 'Partially Paid'; derivedStatusTag = 'paying';
-        } else if (req.approval_status === 'REJECTED' && req.revision_reason) {
-            derivedStatus = 'Need Revision';
-            derivedStatusTag = 'revision';
-        } else if (req.approval_status === 'REJECTED') {
-            derivedStatus = 'Rejected';
-            derivedStatusTag = 'rejected';
-        } else if (['REVISED', 'REVISION', 'NEED_REVISION'].includes(req.approval_status?.toUpperCase())) {
-            derivedStatus = 'Need Revision';
-            derivedStatusTag = 'revision';
-        } else if (req.approval_status === 'SUBMITTED') {
-            derivedStatus = 'Pending';
-            derivedStatusTag = 'pending';
-        } else if (isApproved) {
-            if (conInfo) {
-                if (['Approved', 'Paying', 'Partially Paid'].includes(conInfo.consolidationStatus)) {
-                    derivedStatus = 'Paying';
-                    derivedStatusTag = 'paying';
-                } else {
-                    derivedStatus = 'Consolidated';
-                    derivedStatusTag = 'consolidated';
-                }
-            } else {
-                derivedStatus = 'Approved';
-                derivedStatusTag = 'approved';
-            }
-        }
-
-        const computedTitle = req.description || getRequestTitle(req.description, itemsList) || 'Purchase Request';
-        return {
-            ...req,
-            type: categoryName,
-            items: itemsList,
-            title: computedTitle,
-            description: req.description || computedTitle,
-            department,
-            department_code: department?.code,
-            department_name: department?.name,
-            project: req.project?.project_code || department?.code || 'Unassigned',
-            project_obj: req.project,
-            ref: formatPurchasingReference(req, documentRules.purchasing.levels.request, department?.code || req.project?.project_code, orgPrefix),
-            shortRef: formatPurchasingShortReference(req, documentRules.purchasing.levels.request, department?.code || req.project?.project_code),
-            cardRef: formatPurchasingShortReference(req, documentRules.purchasing.levels.request),
-            status: derivedStatus,
-            statusTag: derivedStatusTag,
-            consolidation_id: conInfo?.consolidationId,
-            consolidation_doc_number: conInfo?.consolidationDocNumber,
-            consolidation_status: conInfo?.consolidationStatus,
-            submitted_by_name: profile?.full_name || 'Unknown',
-            profile: profile,
-            invoices: req.invoices || []
-        };
-    });
-}
-
-export async function fetchProjects() {
-    const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .order('created_at', { ascending: false });
-    if (error) {
-        console.error("Error fetching projects:", error);
-        return [];
-    }
-    return data || [];
-}
-
-export async function createPurchasingRequest(userId: string, payload: PurchasingRequest & { category?: string; vendor_name?: string; status?: string; statusTag?: string }) {
-    const { items, invoices, category, vendor_name, status, statusTag, ...rest } = payload as any;
-
-    const isDraft = (status || rest.approval_status || '').toUpperCase() === 'DRAFT';
-    const finalDescription = (rest.title?.trim() || rest.description?.trim() || getRequestTitle(rest.description, items).trim() || 'Purchase Request');
-
-    const insertData: Record<string, any> = {
-        project_id: rest.project_id || null,
-        date: rest.date,
-        target_date: rest.target_date ?? null,
-        description: finalDescription,
-        type: rest.type || category,
-        subcategory: rest.subcategory,
-        amount: rest.amount,
-        vendor: rest.vendor || vendor_name,
-        purchase_stage: rest.purchase_stage || 'PLANNED',
-        approval_status: isDraft ? 'DRAFT' : (rest.approval_status || 'SUBMITTED'),
-        financial_status: 'UNPAID',
-        source_of_fund_id: rest.source_of_fund_id,
-        payment_date: rest.payment_date,
-        invoice_url: rest.invoice_url,
-        notes: writePurchasingNotes(rest.notes, rest),
-        beneficiary_bank: rest.beneficiary_bank,
-        beneficiary_number: rest.beneficiary_number,
-        beneficiary_name: rest.beneficiary_name,
-        priority: rest.priority,
-        created_by: userId,
-    };
-
-    Object.keys(insertData).forEach(key => {
-        if (insertData[key] === undefined) delete insertData[key];
-    });
-
+    // 1. Create Request
     const { data: request, error: reqError } = await supabase
-        .from('purchasing_requests')
-        .insert([insertData])
+        .from("reimbursement_requests")
+        .insert([{
+            ...requestData,
+            user_id: created_by,
+            created_by
+        }])
         .select()
         .single();
-        
-    if (reqError) throw reqError;
-    
-    if (items && items.length > 0) {
-        const itemsData = items.map((item: any) => ({
-            request_id: request.id,
-            name: item.name,
-            item_name: item.name,
-            qty: item.qty,
-            unit: item.unit,
-            unit_price: item.unit_price,
-            total: item.total
-        }));
-        const { error: itemError } = await supabase.from('purchasing_items').insert(itemsData);
-            if (itemError) throw new Error(`Request saved, but items could not be saved: ${itemError.message}. Open this request to edit and retry.`);
+
+    if (reqError) {
+        console.error("Error creating reimburse request:", reqError);
+        throw reqError;
     }
 
-    if (invoices && invoices.length > 0) {
-        const invoicesData = invoices.map((inv: any) => ({
+    // 2. Create Items
+    if (items.length > 0) {
+        const itemsData = items.map((item: any) => ({
+            reimbursement_id: request.id,
+            name: item.name,
+            qty: item.qty,
+            unit: item.unit,
+            unit_price: item.unitPrice,
+            total: item.total,
+            subcategory: item.subcategory,
+            group_name: item.group_name
+        }));
+
+        const { error: itemsError } = await supabase
+            .from("reimbursement_items")
+            .insert(itemsData);
+
+        if (itemsError) {
+            console.error("Error creating reimburse items:", itemsError);
+            // ROLLBACK: Delete the request header
+            await supabase.from("reimbursement_requests").delete().eq("id", request.id);
+            throw new Error(`Failed to create items: ${itemsError.message}. Request rolled back.`);
+        }
+    }
+
+    // 3. Create Invoices if provided
+    if (invoice_urls && invoice_urls.length > 0) {
+        const invoicesData = invoice_urls.map((inv: any) => ({
             request_id: request.id,
             invoice_url: inv.invoice_url,
             invoice_name: inv.invoice_name,
-            invoice_type: 'INVOICE',
-                notes: inv.notes || null,
-            uploaded_by: userId
+            invoice_type: 'RECEIPT',
+            uploaded_by: created_by
         }));
-        const { error: attachmentError } = await supabase.from('purchasing_invoices').insert(invoicesData);
-            if (attachmentError) throw new Error(`Request saved, but attachments could not be saved: ${attachmentError.message}. Open this request to edit and retry.`);
+
+        const { error: invoicesError } = await supabase
+            .from("reimbursement_invoices")
+            .insert(invoicesData);
+
+        if (invoicesError) {
+            console.error("Error creating reimburse invoices:", invoicesError);
+        }
     }
-    
+
     return request;
 }
 
-export async function updatePurchasingStatus(id: string, updates: any) {
-    await assertFinanceMutation('purchasing', id, updates);
-    const { error } = await supabase.from('purchasing_requests').update(updates).eq('id', id);
-    if (error) throw error;
+export async function fetchReimburseRequests() {
+    const response = await (supabase
+        .from("reimbursement_requests")
+        .select(`
+            *,
+            project:projects(project_name, project_code),
+            items:reimbursement_items(*),
+            existingInvoices:reimbursement_invoices(*)
+        `)
+        .order("created_at", { ascending: false }) as any);
+
+    if (response.error) {
+        console.error("Error fetching reimburse requests:", JSON.stringify(response.error, null, 2));
+        console.error("Error details - code:", response.error.code, "message:", response.error.message, "hint:", response.error.hint);
+        return [];
+    }
+    return response.data;
+}
+
+// -- PROFILES HELPER --
+export async function fetchMyProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    // Check if we have a table mapping user ids to names if 'profiles' isn't sufficient
+    // For now assuming existing profiles pattern
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
+    return data;
+}
+
+// -- UPDATES / ACTIONS --
+
+export async function updatePurchasingStatus(id: string, updates: {
+    approval_status?: string;
+    financial_status?: string;
+    purchase_stage?: string;
+    payment_date?: string;
+    source_of_fund_id?: string;
+    notes?: string;
+    rejection_reason?: string;
+    revision_reason?: string;
+    payment_proof_url?: string;
+    approved_amount?: number;
+}) {
+    const { error } = await supabase
+        .from("purchasing_requests")
+        .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+    if (error) {
+        console.error("Error updating purchasing request:", error);
+        return false;
+    }
     return true;
 }
 
-function resolveEditApprovalStatus(statusTag?: string, isDraft?: boolean, currentApproval?: string) {
-    if (isDraft) return 'DRAFT';
-    if (statusTag === 'approved') return 'APPROVED';
-    if (statusTag === 'paid') return 'APPROVED';
-    if (statusTag === 'draft' || statusTag === 'revision' || statusTag === 'rejected') return 'SUBMITTED';
-    return currentApproval || 'SUBMITTED';
-}
+export async function updateReimburseStatus(id: string, updates: {
+    status?: string;
+    payment_date?: string;
+    invoice_url?: string;
+    approved_amount?: number;
+    notes?: string;
+    revision_reason?: string;
+    rejection_reason?: string;
+    payment_proof_url?: string;
+    source_of_fund_id?: string;
+    details?: any; // Add details support
+}) {
+    console.log("updateReimburseStatus Payload:", { id, updates });
 
-function resolveEditReimburseStatus(statusTag?: string, isDraft?: boolean, currentStatus?: string) {
-    if (isDraft) return 'DRAFT';
-    if (statusTag === 'approved') return 'APPROVED';
-    if (statusTag === 'paid') return 'PAID';
-    if (statusTag === 'draft' || statusTag === 'revision' || statusTag === 'rejected') return 'PENDING';
-    
-    const normalizedCurrent = currentStatus?.toUpperCase();
-    if (normalizedCurrent === 'SUBMITTED') return 'PENDING';
-    return currentStatus || 'PENDING';
-}
+    // Handle approved_amount by moving it to details if column is missing
 
-export async function updatePurchasingRequest(
-    userId: string,
-    id: string,
-    payload: PurchasingRequest & { category?: string; vendor_name?: string; status?: string; statusTag?: string; isDraft?: boolean }
-) {
-    const { items, invoices, category, vendor_name, status, statusTag, isDraft, ...rest } = payload as any;
 
-    const approval_status = resolveEditApprovalStatus(statusTag, isDraft ?? (status?.toUpperCase() === 'DRAFT'), rest.approval_status);
-    const finalDescription = (rest.title?.trim() || rest.description?.trim() || getRequestTitle(rest.description, items).trim() || 'Purchase Request');
+    const { error } = await supabase
+        .from("reimbursement_requests")
+        .update({
+            ...updates,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
 
-    const updateData: Record<string, any> = {
-        project_id: rest.project_id !== undefined ? (rest.project_id || null) : undefined,
-        date: rest.date,
-        target_date: rest.target_date ?? null,
-        description: finalDescription,
-        type: rest.type || category,
-        subcategory: rest.subcategory,
-        amount: rest.amount,
-        vendor: rest.vendor || vendor_name,
-        purchase_stage: rest.purchase_stage,
-        approval_status,
-        invoice_url: rest.invoice_url,
-        notes: writePurchasingNotes(rest.notes, rest),
-        beneficiary_bank: rest.beneficiary_bank,
-        beneficiary_number: rest.beneficiary_number,
-        beneficiary_name: rest.beneficiary_name,
-        priority: rest.priority,
-    };
-
-    Object.keys(updateData).forEach(key => {
-        if (updateData[key] === undefined) delete updateData[key];
-    });
-
-    const { error: reqError } = await supabase.from('purchasing_requests').update(updateData).eq('id', id);
-    if (reqError) throw reqError;
-
-    if (items) {
-        await supabase.from('purchasing_items').delete().eq('request_id', id);
-        if (items.length > 0) {
-            const itemsData = items.map((item: any) => ({
-                request_id: id,
-                name: item.name,
-                item_name: item.name,
-                qty: item.qty,
-                unit: item.unit,
-                unit_price: item.unit_price,
-                total: item.total,
-            }));
-            const { error: itemError } = await supabase.from('purchasing_items').insert(itemsData);
-            if (itemError) throw new Error(`Request saved, but items could not be saved: ${itemError.message}. Open this request to edit and retry.`);
-        }
+    if (error) {
+        console.error("Error updating reimburse status:", error);
+        console.error("Error details:", JSON.stringify(error, null, 2));
+        return false;
     }
-
-    if (invoices !== undefined) {
-        await supabase.from('purchasing_invoices').delete().eq('request_id', id);
-        if (invoices.length > 0) {
-            const invoicesData = invoices.map((inv: any) => ({
-                request_id: id,
-                invoice_url: inv.invoice_url,
-                invoice_name: inv.invoice_name,
-                invoice_type: 'INVOICE',
-                notes: inv.notes || null,
-                uploaded_by: userId,
-            }));
-            const { error: attachmentError } = await supabase.from('purchasing_invoices').insert(invoicesData);
-            if (attachmentError) throw new Error(`Request saved, but attachments could not be saved: ${attachmentError.message}. Open this request to edit and retry.`);
-        }
-    }
-
     return true;
 }
 
-export async function updateReimburseRequest(
-    userId: string,
-    id: string,
-    payload: ReimburseRequest & { details?: TripDetails; statusTag?: string; isDraft?: boolean }
-) {
-    const { items, details, expense_proof_url, statusTag, isDraft, ...rest } = payload as any;
+export async function updateReimburseRequest(id: string, payload: Partial<ReimburseRequestPayload>) {
+    const { items, invoice_urls, existing_invoice_ids, created_by, ...requestData } = payload as any;
 
-    const dbStatus = resolveEditReimburseStatus(statusTag, isDraft ?? (rest.status?.toUpperCase() === 'DRAFT'), rest.status);
-    const amount = reimbursementActualTotal(items, rest);
-    const reimbursementTitle = getReimbursementTitle(items);
-    if (dbStatus !== 'DRAFT') {
-        validateReimbursementSubmission({ ...rest, expense_proof_url, amount }, items);
+    // 1. Update Request
+    const { error: reqError } = await supabase
+        .from("reimbursement_requests")
+        .update({
+            ...requestData,
+            updated_at: new Date().toISOString()
+        })
+        .eq("id", id);
+
+    if (reqError) {
+        console.error("Error updating reimburse request:", JSON.stringify(reqError, null, 2));
+        throw reqError;
     }
-    const notes = writePurchasingNotes(encodeReimbursementNotes(rest.notes, details, {
-        expense_proof_url,
-        invoice_number: rest.invoice_number,
-        vendor: rest.vendor,
-        subtotal_amount: rest.subtotal_amount,
-        discount_type: rest.discount_type,
-        discount_value: rest.discount_value,
-        discount_amount: rest.discount_amount,
-        tax_name: rest.tax_name,
-        tax_type: rest.tax_type,
-        tax_rate: rest.tax_rate,
-        tax_amount: rest.tax_amount,
-    }), rest);
 
-    const updateData: Record<string, any> = {
-        project_id: rest.project_id !== undefined ? (rest.project_id || null) : undefined,
-        category: rest.category,
-        subcategory: rest.subcategory,
-        date: rest.date,
-        description: rest.title?.trim() || rest.description?.trim() || reimbursementTitle,
-        amount,
-        status: dbStatus,
-        invoice_url: rest.invoice_url,
-        notes,
-        beneficiary_bank: rest.beneficiary_bank,
-        beneficiary_number: rest.beneficiary_number,
-        beneficiary_name: rest.beneficiary_name,
-        priority: rest.priority,
-        target_date: rest.target_date ?? null,
-    };
-
-    Object.keys(updateData).forEach(key => {
-        if (updateData[key] === undefined) delete updateData[key];
-    });
-
-    const { error: reqError } = await supabase.from('reimbursement_requests').update(updateData).eq('id', id);
-    if (reqError) throw reqError;
-
+    // 2. Update Items (Delete all and recreate for simplicity)
     if (items) {
-        await supabase.from('reimbursement_items').delete().eq('reimbursement_id', id);
+        // Delete old
+        const { error: delError } = await supabase
+            .from("reimbursement_items")
+            .delete()
+            .eq("reimbursement_id", id);
+
+        if (delError) throw delError;
+
+        // Insert new
         if (items.length > 0) {
             const itemsData = items.map((item: any) => ({
                 reimbursement_id: id,
                 name: item.name,
                 qty: item.qty,
                 unit: item.unit,
-                unit_price: item.unitPrice || item.unit_price,
-                total: item.total,
+                unit_price: item.unitPrice,
+                total: item.total
             }));
-            const { error: itemError } = await supabase.from('reimbursement_items').insert(itemsData);
-            if (itemError) throw new Error(`Request saved, but reimbursement items could not be saved: ${itemError.message}`);
+
+            const { error: insError } = await supabase
+                .from("reimbursement_items")
+                .insert(itemsData);
+
+            if (insError) throw insError;
+        }
+    }
+
+    // 3. Update Invoices
+    if (existing_invoice_ids !== undefined || invoice_urls !== undefined) {
+        if (existing_invoice_ids && Array.isArray(existing_invoice_ids)) {
+            const validIds = existing_invoice_ids.filter((i: string) => i && i !== 'legacy');
+            if (validIds.length > 0) {
+                await supabase
+                    .from("reimbursement_invoices")
+                    .delete()
+                    .eq("request_id", id)
+                    .not("id", "in", `(${validIds.join(',')})`);
+            } else {
+                await supabase
+                    .from("reimbursement_invoices")
+                    .delete()
+                    .eq("request_id", id);
+            }
+        }
+
+        if (invoice_urls && invoice_urls.length > 0) {
+            const invoicesData = invoice_urls.map((inv: any) => ({
+                request_id: id,
+                invoice_url: inv.invoice_url,
+                invoice_name: inv.invoice_name,
+                invoice_type: 'RECEIPT',
+                uploaded_by: created_by || null
+            }));
+
+            const { error: invoicesError } = await supabase
+                .from("reimbursement_invoices")
+                .insert(invoicesData);
+
+            if (invoicesError) {
+                console.error("Error creating reimburse invoices:", invoicesError);
+            }
         }
     }
 
     return true;
 }
 
-const paymentsInFlight = new Set<string>();
-export async function payFinanceRequest(userId: string, id: string, type: 'purchasing' | 'reimbursement', payload: { source_of_fund_id: string; payment_date: string; payment_proof_url?: string; amount: number; ref?: string }) {
-    const key = type + ':' + id;
-    if (paymentsInFlight.has(key)) throw new Error('This payment is already being processed.');
-    paymentsInFlight.add(key);
-    try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user || user.id !== userId) throw new Error('Sign in to process a payment.');
-        await assertFinanceMutation(type, id, { [type === 'purchasing' ? 'financial_status' : 'status']: 'PAID' });
-        const table = type === 'purchasing' ? 'purchasing_requests' : 'reimbursement_requests';
-        const { data: request, error } = await supabase.from(table).select('*').eq('id', id).single();
-        if (error || !request) throw new Error('Finance request not found.');
-        const state = String(type === 'purchasing' ? request.financial_status : request.status).toUpperCase();
-        if (state === 'PAID') throw new Error('This request has already been paid.');
-        const approval = String(type === 'purchasing' ? request.approval_status : request.status).toUpperCase();
-        if (!['APPROVED', 'PARTIALLY_PAID', 'PAYING'].includes(approval)) throw new Error('Approve the request before payment.');
-        const total = Number(request.approved_amount ?? request.amount);
-        const paid = type === 'purchasing' ? Number(request.paid_amount || 0) : 0;
-        const amount = Number(payload.amount);
-        if (!Number.isFinite(amount) || amount <= 0 || amount > total - paid) throw new Error('Payment amount exceeds the outstanding amount.');
-        if (type === 'reimbursement' && amount !== total) throw new Error('Reimbursement must be paid in full.');
-        if (!payload.source_of_fund_id || !payload.payment_date || !payload.payment_proof_url) throw new Error('Funding source, payment date and proof are required.');
-        const { data: source, error: sourceError } = await supabase.from('funding_sources').select('id').eq('id', payload.source_of_fund_id).single();
-        if (sourceError || !source) throw new Error('Funding source not found.');
-        const finalPaid = paid + amount;
-        const proofs = [...new Set([request.payment_proof_url, payload.payment_proof_url].filter(Boolean).flatMap(value => String(value).split(',').map(path => path.trim()).filter(Boolean)))].join(',');
-        const updates: any = { ...(type === 'purchasing' ? { paid_amount: finalPaid } : {}), source_of_fund_id: payload.source_of_fund_id, payment_date: payload.payment_date, payment_proof_url: proofs, [type === 'purchasing' ? 'financial_status' : 'status']: finalPaid >= total ? 'PAID' : 'PARTIALLY_PAID' };
-        // Preserve legacy Adidaya payment behavior: update the payment request, not an invented balance/ledger transaction.
-        let update = supabase.from(table).update(updates).eq('id', id);
-        if (type === 'purchasing') update = request.paid_amount == null ? update.is('paid_amount', null) : update.eq('paid_amount', request.paid_amount);
-        const statusColumn = type === 'purchasing' ? 'financial_status' : 'status';
-        update = request[statusColumn] == null ? update.is(statusColumn, null) : update.eq(statusColumn, request[statusColumn]);
-        const { data: saved, error: updateError } = await update.select('id').maybeSingle();
-        if (updateError) throw updateError;
-        if (!saved) throw new Error('Request changed during payment. Refresh before retrying.');
-    } finally { paymentsInFlight.delete(key); }
+export async function deleteReimburseRequest(requestId: string) {
+    // First delete items (cascade should handle this, but being explicit)
+    await supabase
+        .from("reimbursement_items")
+        .delete()
+        .eq("reimbursement_id", requestId);
+
+    // Then delete the request
+    const { error } = await supabase
+        .from("reimbursement_requests")
+        .delete()
+        .eq("id", requestId);
+
+    if (error) {
+        console.error("Error deleting reimburse request:", error);
+        throw error;
+    }
+
+    return true;
 }
 
+export async function fetchFinanceDashboardData(userId: string) {
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString();
 
-export async function fetchReimburseRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY') {
-    let query = supabase
+    // 1. TEAM SUMMARY
+    // Total Paid (Purchasing + Reimburse) in Current Month
+    const { data: paidPurchases } = await supabase
+        .from('purchasing_requests')
+        .select('amount')
+        .eq('financial_status', 'PAID')
+        .gte('payment_date', startOfMonth)
+        .lte('payment_date', endOfMonth);
+
+    const { data: paidReimburse } = await supabase
         .from('reimbursement_requests')
-        .select(REIMBURSE_COLUMNS)
+        .select('amount')
+        .eq('status', 'PAID')
+        .gte('payment_date', startOfMonth)
+        .lte('payment_date', endOfMonth);
+
+    const totalPaidPurchasing = paidPurchases?.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0) || 0;
+    const totalPaidReimburse = paidReimburse?.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0) || 0;
+    const totalPaidThisMonth = totalPaidPurchasing + totalPaidReimburse;
+
+    // Outstanding Bills (Purchasing: Unpaid but Invoiced/Received)
+    const { count: outstandingBills } = await supabase
+        .from('purchasing_requests')
+        .select('*', { count: 'exact', head: true })
+        .neq('financial_status', 'PAID')
+        .in('purchase_stage', ['INVOICED', 'RECEIVED']);
+
+    // Reimburse Pending
+    const { count: reimbursePending } = await supabase
+        .from('reimbursement_requests')
+        .select('*', { count: 'exact', head: true })
+        .in('status', ['PENDING']); // Ensure PENDING status is correct
+
+    // Petty Cash Balance
+    const { data: pettyCash } = await supabase
+        .from('funding_sources')
+        .select('balance')
+        .eq('type', 'PETTY_CASH');
+    const pettyCashBalance = pettyCash?.reduce((sum: number, item: any) => sum + (item.balance || 0), 0) || 0;
+
+    // 2. PERSONAL SUMMARY
+    // My Purchases (This Month)
+    const { count: myPurchases } = await supabase
+        .from('purchasing_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .gte('created_at', startOfMonth);
+
+    // My Reimbursements (This Month)
+    const { count: myReimburse } = await supabase
+        .from('reimbursement_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .gte('created_at', startOfMonth);
+
+    // Pending Approval (My Submissions)
+    // Updated Pending Logic
+    const purchasesResult = await (supabase
+        .from('purchasing_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .in('approval_status', ['DRAFT', 'SUBMITTED', 'NEED_REVISION']) as any);
+
+    const myPendingPurchases = purchasesResult.count;
+
+    const reimburseResult = await (supabase
+        .from('reimbursement_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('created_by', userId)
+        .in('status', ['DRAFT', 'PENDING', 'NEED_REVISION']) as any);
+
+    const myPendingReimburse = reimburseResult.count;
+
+    const pendingApproval = (myPendingPurchases || 0) + (myPendingReimburse || 0);
+
+    console.log("[DEBUG] Dashboard Pending Count details:", {
+        purchasingCount: myPendingPurchases,
+        purchasingError: purchasesResult.error,
+        reimburseCount: myPendingReimburse,
+        reimburseError: reimburseResult.error,
+        total: pendingApproval,
+        userId
+    });
+
+    // Paid to Me (This Month)
+    const { data: myPaidReimburse } = await supabase
+        .from('reimbursement_requests')
+        .select('amount')
+        .eq('created_by', userId)
+        .eq('status', 'PAID')
+        .gte('payment_date', startOfMonth)
+        .lte('payment_date', endOfMonth);
+    const paidToMe = myPaidReimburse?.reduce((sum: number, item: any) => sum + Number(item.amount || 0), 0) || 0;
+
+    // 3. ATTENTION ITEMS (TEAM VIEW) / LISTS
+    // Goods Received (Unpaid/Need Payment)
+    const { data: goodsReceived } = await supabase
+        .from('purchasing_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('approval_status', 'APPROVED')
+        .eq('purchase_stage', 'RECEIVED')
+        .neq('financial_status', 'PAID')
         .order('created_at', { ascending: false })
-        .range(0, 4999); // Override Supabase default 1000-row limit
+        .limit(5);
 
-    if (!isTeam) {
-        query = query.eq('user_id', userId);
-    }
+    // Invoices Pending (Need Payment)
+    const { data: invoices } = await supabase
+        .from('purchasing_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('approval_status', 'APPROVED')
+        .eq('purchase_stage', 'INVOICED')
+        .neq('financial_status', 'PAID')
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-    let { data, error } = await query;
-    if (error) {
-        console.warn("Retrying reimburse requests with fallback query due to:", error.message || error);
-        let fallbackQuery = supabase
-            .from('reimbursement_requests')
-            .select(`*, project:projects(id, project_name, project_code, project_number), items:reimbursement_items(*)`)
-            .order('created_at', { ascending: false })
-            .range(0, 4999);
-        if (!isTeam) {
-            fallbackQuery = fallbackQuery.eq('user_id', userId);
-        }
-        const fallbackRes = await fallbackQuery;
-        if (fallbackRes.error) {
-            console.warn("Retrying reimburse requests with simple select * due to:", fallbackRes.error.message);
-            let simpleQuery = supabase
-                .from('reimbursement_requests')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .range(0, 4999);
-            if (!isTeam) {
-                simpleQuery = simpleQuery.eq('user_id', userId);
-            }
-            const simpleRes = await simpleQuery;
-            data = simpleRes.data;
-            if (simpleRes.error) {
-                console.error("Failed all reimburse requests queries:", simpleRes.error);
-                return [];
-            }
-        } else {
-            data = fallbackRes.data;
-        }
-    }
+    // Reimburse Approval (PENDING status)
+    const { data: staffClaims } = await supabase
+        .from('reimbursement_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('status', 'PENDING')
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-    if (!data || data.length === 0) return [];
+    // 4. MY HISTORY (PERSONAL VIEW)
+    const { data: myPurchaseHistory } = await supabase
+        .from('purchasing_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false })
+        .limit(5);
 
-    // Fetch profiles manually to avoid PostgREST PGRST200 join errors
-    const userIds = Array.from(new Set((data || []).map((r: any) => r.user_id).filter(Boolean)));
-    const profileMap = new Map<string, any>();
-    if (userIds.length > 0) {
+    const { data: myReimburseHistory } = await supabase
+        .from('reimbursement_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .eq('created_by', userId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+    // 5. RECENT ACTIVITY (TEAM VIEW)
+    const { data: recentPurchases } = await supabase
+        .from('purchasing_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+    const { data: recentReimburse } = await supabase
+        .from('reimbursement_requests')
+        .select('*, project:projects(project_name, project_code)')
+        .order('updated_at', { ascending: false })
+        .limit(10);
+
+    // Fetch profiles manually to avoid join errors
+    const userIds = new Set<string>();
+    recentPurchases?.forEach((p: any) => { if (p.created_by) userIds.add(p.created_by); });
+    recentReimburse?.forEach((r: any) => { if (r.created_by) userIds.add(r.created_by); });
+
+    // If we have userIds, fetch profiles
+    let profileMap = new Map<string, string>();
+    if (userIds.size > 0) {
         const { data: profiles } = await supabase
             .from('profiles')
-            .select('id, full_name, avatar_url, nickname')
-            .in('id', userIds);
+            .select('id, username, full_name')
+            .in('id', Array.from(userIds));
         if (profiles) {
-            profiles.forEach((p: any) => profileMap.set(p.id, p));
+            profiles.forEach((p: any) => {
+                // Use full_name if available, otherwise username
+                profileMap.set(p.id, p.full_name || p.username || 'Unknown User');
+            });
         }
     }
 
-    const [departments, documentRules] = await Promise.all([
-        fetchOrganizationDepartments(),
-        getFinanceDocumentRules(),
-    ]);
-    const departmentMap = new Map(departments.map(department => [department.id, department]));
+    // Merge and sort
+    const allActivity = [
+        ...(recentPurchases || []).map((p: any) => ({
+            ...p,
+            type: 'PURCHASE',
+            created_by_name: profileMap.get(p.created_by) || p.created_by_name || 'Unknown User'
+        })),
+        ...(recentReimburse || []).map((r: any) => ({
+            ...r,
+            type: 'REIMBURSE',
+            staff_name: profileMap.get(r.created_by) || r.staff_name || 'Unknown Staff'
+        }))
+    ].sort((a: any, b: any) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+        .slice(0, 10);
 
-    return (data || []).map((req: any) => {
-        const profile = profileMap.get(req.user_id) || null;
-        const itemsList = req.items || [];
-        const rawStatus = (req.status || '').toUpperCase();
-        const workflowStatus = rawStatus === 'PARTIALLY_PAID' ? 'Partially Paid' : rawStatus === 'CONSOLIDATED' ? 'Consolidated'
-            : rawStatus === 'PAYING' ? 'Paying'
-                : null;
-        const tripDetails = parseTripDetailsFromNotes(req.notes);
-        const cleanNotes = stripFinanceMetadataFromNotes(req.notes);
-        const reimbursementMetadata = parseReimbursementMetadataFromNotes(req.notes) || {};
-        const legacyDocuments = String(req.invoice_url || '').split(',').map(value => value.trim()).filter(Boolean);
-
-        // Read department info from notes (same pattern as purchasing)
-        const stored = readPurchasingNotes(cleanNotes || req.notes || '');
-        const deptId = stored.commercial?.department_id || req.department_id;
-        const department = departmentMap.get(deptId) || (deptId ? { id: deptId, name: stored.commercial?.department_name || 'Department', code: stored.commercial?.department_code } : null);
-
-        return {
-            ...req,
-            ...stored.commercial,
-            ...reimbursementMetadata,
-            invoice_url: req.invoice_url,
-            expense_proof_url: reimbursementMetadata.expense_proof_url || legacyDocuments[1] || undefined,
-            notes: stored.notes || (cleanNotes || undefined),
-            details: tripDetails,
-            title: req.description || getReimbursementTitle(itemsList),
-            description: req.description || getReimbursementTitle(itemsList),
-            department,
-            department_code: department?.code,
-            department_name: department?.name,
-            project: req.project?.project_code || department?.code || 'Unassigned',
-            project_obj: req.project,
-            ref: formatPurchasingReference(req, documentRules.reimbursement?.levels?.request || { customCode: 'RR', recommendedCode: 'RR', sequenceLength: 5, sequenceScope: 'global' }, department?.code || req.project?.project_code, orgPrefix),
-            shortRef: formatPurchasingShortReference({ ...req, request_number: req.request_number }, documentRules.reimbursement?.levels?.request || { customCode: 'RR', recommendedCode: 'RR', sequenceLength: 5, sequenceScope: 'global' }, department?.code || req.project?.project_code),
-            cardRef: formatPurchasingShortReference({ ...req, request_number: req.request_number }, documentRules.reimbursement?.levels?.request || { customCode: 'RR', recommendedCode: 'RR', sequenceLength: 5, sequenceScope: 'global' }),
-            status: workflowStatus || (rawStatus === 'PAID' ? 'Paid' : (
-                rawStatus === 'APPROVED' ? 'Approved' : (
-                    rawStatus === 'REJECTED' && req.revision_reason ? 'Need Revision' : (
-                    rawStatus === 'REJECTED' ? 'Rejected' : (
-                        ['REVISED', 'REVISION', 'NEED_REVISION'].includes(rawStatus) ? 'Need Revision' : (
-                            rawStatus === 'SUBMITTED' || rawStatus === 'PENDING' ? 'Pending' : 'Draft'
-                        )
-                    ))
-                )
-            )),
-            statusTag: workflowStatus ? (rawStatus === 'PARTIALLY_PAID' ? 'paying' : rawStatus.toLowerCase()) : (rawStatus === 'PAID' ? 'paid' : (
-                rawStatus === 'APPROVED' ? 'approved' : (
-                rawStatus === 'REJECTED' && req.revision_reason ? 'revision' : (
-                rawStatus === 'REJECTED' ? 'rejected' : (
-                        ['REVISED', 'REVISION', 'NEED_REVISION'].includes(rawStatus) ? 'revision' : (
-                            rawStatus === 'DRAFT' ? 'draft' : 'pending'
-            ))
-                    )
-                ))
-            ),
-            submitted_by_name: profile?.full_name || 'Unknown',
-            profile: profile,
-            items: req.items || []
-        };
-    });
-}
-
-export async function createReimburseRequest(userId: string, payload: ReimburseRequest & { details?: TripDetails; statusTag?: string }) {
-    const { items, details, expense_proof_url, statusTag, ...rest } = payload as any;
-
-    const isDraft = (rest.status || '').toUpperCase() === 'DRAFT';
-    const amount = reimbursementActualTotal(items, rest);
-    const reimbursementTitle = getReimbursementTitle(items);
-    if (!isDraft) {
-        validateReimbursementSubmission({ ...rest, expense_proof_url, amount }, items);
-    }
-    const notes = writePurchasingNotes(encodeReimbursementNotes(rest.notes, details, {
-        expense_proof_url,
-        invoice_number: rest.invoice_number,
-        vendor: rest.vendor,
-        subtotal_amount: rest.subtotal_amount,
-        discount_type: rest.discount_type,
-        discount_value: rest.discount_value,
-        discount_amount: rest.discount_amount,
-        tax_name: rest.tax_name,
-        tax_type: rest.tax_type,
-        tax_rate: rest.tax_rate,
-        tax_amount: rest.tax_amount,
-    }), rest);
-
-    const insertData: Record<string, any> = {
-        project_id: rest.project_id || null,
-        category: rest.category,
-        subcategory: rest.subcategory,
-        date: rest.date,
-        description: rest.title?.trim() || rest.description?.trim() || reimbursementTitle,
-        amount,
-        status: isDraft ? 'DRAFT' : (rest.status === 'SUBMITTED' ? 'PENDING' : (rest.status || 'PENDING')),
-        invoice_url: rest.invoice_url,
-        notes,
-        beneficiary_bank: rest.beneficiary_bank,
-        beneficiary_number: rest.beneficiary_number,
-        beneficiary_name: rest.beneficiary_name,
-        priority: rest.priority,
-        target_date: rest.target_date ?? null,
-        user_id: userId,
-    };
-
-    Object.keys(insertData).forEach(key => {
-        if (insertData[key] === undefined) delete insertData[key];
-    });
-
-    const { data: request, error: reqError } = await supabase
-        .from('reimbursement_requests')
-        .insert([insertData])
-        .select()
-        .single();
-        
-    if (reqError) throw reqError;
-    
-    if (items && items.length > 0) {
-        const itemsData = items.map((item: any) => ({
-            reimbursement_id: request.id,
-            name: item.name,
-            qty: item.qty,
-            unit: item.unit,
-            unit_price: item.unitPrice || item.unit_price,
-            total: item.total
-        }));
-        const { error: itemError } = await supabase.from('reimbursement_items').insert(itemsData);
-        if (itemError) throw new Error(`Request saved, but reimbursement items could not be saved: ${itemError.message}`);
-    }
-    
-    return request;
-}
-
-export async function updateReimburseStatus(id: string, updates: any) {
-    await assertFinanceMutation('reimbursement', id, updates);
-    if (String(updates.status || '').toUpperCase() === 'APPROVED') {
-        const { data: request, error: requestError } = await supabase
-            .from('reimbursement_requests')
-            .select('amount')
-            .eq('id', id)
-            .single();
-        if (requestError || !request) throw new Error('Reimbursement request not found');
-        updates = { ...updates, approved_amount: request.amount };
-    }
-    const { error } = await supabase.from('reimbursement_requests').update(updates).eq('id', id);
-    if (error) throw error;
-    return true;
-}
-
-export async function deletePurchasingRequest(id: string) {
-    await assertFinanceMutation('purchasing', id, undefined, true);
-    const { error } = await supabase.from('purchasing_requests').delete().eq('id', id);
-    if (error) throw error;
-    return true;
-}
-
-export async function deleteReimburseRequest(id: string) {
-    await assertFinanceMutation('reimbursement', id, undefined, true);
-    const { error } = await supabase.from('reimbursement_requests').delete().eq('id', id);
-    if (error) throw error;
-    return true;
-}
-
-export async function fetchFundingSources() {
-    const { data, error } = await supabase
-        .from('funding_sources')
-        .select('*')
-        .order('position', { ascending: true });
-        
-    if (error) {
-        console.error("Error fetching funding sources:", error);
-        return [];
-    }
-    
-    return data || [];
-}
-
-export async function fetchPettyCashPools() {
-    try {
-        const { data, error } = await supabase
-            .from('funding_sources')
-            .select('*')
-            .eq('type', 'PETTY_CASH')
-            .order('created_at', { ascending: false });
-            
-        if (error) {
-            return [];
-        }
-        
-        return (data || []).map((pool: any) => ({
-            id: pool.id,
-            projectId: pool.project_id || 'NA',
-            projectName: pool.name || 'Petty Cash',
-            balance: pool.balance || 0,
-            limit: 1000000,
-            status: pool.is_active ? 'active' : 'inactive',
-            history: []
-        }));
-    } catch {
-        return [];
-    }
-}
-
-export async function topUpPettyCashApi(poolId: string, amount: number, description: string, userId: string) {
-    // Note: In a real app this should be an RPC call or handled transactionally
-    const { data: pool } = await supabase.from('funding_sources').select('balance').eq('id', poolId).single();
-    if (!pool) throw new Error("Pool not found");
-    
-    const newBalance = (pool.balance || 0) + amount;
-    
-    await supabase.from('funding_sources').update({ balance: newBalance }).eq('id', poolId);
-    
-    await supabase.from('funding_source_transactions').insert([{
-        funding_source_id: poolId,
-        type: 'TOP_UP',
-        amount,
-        description,
-        performed_by: userId
-    }]);
-    
-    return true;
-}
-
-export async function uploadFinanceFileBase64(base64Data: string, fileExt: string, contentType: string, folder: string = 'purchasing') {
-    const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
-    
-    const { data, error } = await supabase.storage
-        .from('finance-documents')
-        .upload(filePath, decode(base64Data), {
-            contentType,
-            upsert: false
-        });
-        
-    if (error) {
-        // Fallback to finance_attachments bucket if finance-documents bucket is not found in the environment
-        if (error.message?.includes('Bucket not found') || (error as any).status === '404' || (error as any).status === 404) {
-            const fallbackResult = await supabase.storage
-                .from('finance_attachments')
-                .upload(filePath, decode(base64Data), {
-                    contentType,
-                    upsert: false
-                });
-            if (fallbackResult.error) throw fallbackResult.error;
-            return filePath;
-        }
-        throw error;
-    }
-    return filePath;
-}
-
-export async function resolveFinanceUrl(path: string): Promise<string> {
-    if (!path) return '';
-
-    // If it is already a full URL, return it directly. Skip splitting/resigning.
-    if (path.startsWith('http')) {
-        return path;
-    }
-
-    const cleanPath = path;
-    try {
-        // Run both buckets in parallel with a 5-second timeout to prevent UI freezes
-        const timeout = new Promise<{data: any}>((resolve) => setTimeout(() => resolve({ data: null }), 5000));
-        const [res1, res2] = await Promise.all([
-            Promise.race([
-                supabase.storage.from('finance_attachments').createSignedUrl(cleanPath, 3600).catch(() => ({ data: null })),
-                timeout
-            ]),
-            Promise.race([
-                supabase.storage.from('finance-documents').createSignedUrl(cleanPath, 3600).catch(() => ({ data: null })),
-                timeout
-            ])
-        ]);
-        if (res1?.data?.signedUrl) return res1.data.signedUrl;
-        if (res2?.data?.signedUrl) return res2.data.signedUrl;
-    } catch (e) {
-        console.log("Error resolving finance storage URL in parallel:", e);
-    }
-
-    // Final fallback to public URL of finance-documents bucket
-    return `https://fmgcvwximerhgjgctpsp.supabase.co/storage/v1/object/public/finance-documents/${cleanPath}`;
-}
-
-
-export async function fetchBeneficiaryAccounts() {
-    // 1. Fetch from dedicated beneficiary table
-    const { data: savedData, error: savedError } = await supabase
-        .from('finance_beneficiary_accounts')
-        .select('*')
-        .order('account_name', { ascending: true });
-    if (savedError) console.error("Error fetching beneficiary accounts:", savedError);
-
-    // 2. Extract unique bank accounts from existing purchasing requests
-    const { data: purchaseData } = await supabase
-        .from('purchasing_requests')
-        .select('beneficiary_bank, beneficiary_number, beneficiary_name')
-        .not('beneficiary_bank', 'is', null)
-        .not('beneficiary_number', 'is', null);
-
-    // 3. Extract unique bank accounts from existing reimbursement requests
-    const { data: reimburseData } = await supabase
-        .from('reimbursement_requests')
-        .select('beneficiary_bank, beneficiary_number, beneficiary_name')
-        .not('beneficiary_bank', 'is', null)
-        .not('beneficiary_number', 'is', null);
-
-    // Merge and deduplicate by bank + account number
-    const accountMap = new Map<string, { id?: string; bank_name: string; account_number: string; account_name: string; vendor_name?: string }>();
-
-    (purchaseData || []).forEach((r: any) => {
-        if (r.beneficiary_number && r.beneficiary_bank) {
-            const key = `${r.beneficiary_bank}-${r.beneficiary_number}`.toLowerCase();
-            if (!accountMap.has(key)) {
-                accountMap.set(key, {
-                    bank_name: r.beneficiary_bank,
-                    account_number: r.beneficiary_number,
-                    account_name: r.beneficiary_name || ''
-                });
+    return {
+        summary: {
+            team: {
+                totalPaidThisMonth,
+                outstanding: outstandingBills || 0,
+                reimbursePending: reimbursePending || 0,
+                pettyCashBalance
+            },
+            personal: {
+                myPurchases: myPurchases || 0,
+                myReimburse: myReimburse || 0,
+                pendingApproval,
+                paid: paidToMe
             }
+        },
+        lists: {
+            goodsReceived: goodsReceived || [],
+            invoices: invoices || [],
+            staffClaims: staffClaims || [],
+            myPurchaseHistory: myPurchaseHistory || [],
+            myReimburseHistory: myReimburseHistory || [],
+            recentActivity: allActivity
         }
-    });
-
-    (reimburseData || []).forEach((r: any) => {
-        if (r.beneficiary_number && r.beneficiary_bank) {
-            const key = `${r.beneficiary_bank}-${r.beneficiary_number}`.toLowerCase();
-            if (!accountMap.has(key)) {
-                accountMap.set(key, {
-                    bank_name: r.beneficiary_bank,
-                    account_number: r.beneficiary_number,
-                    account_name: r.beneficiary_name || ''
-                });
-            }
-        }
-    });
-
-    // Dedicated table takes priority
-    (savedData || []).forEach((acc: any) => {
-        const key = `${acc.bank_name}-${acc.account_number}`.toLowerCase();
-        accountMap.set(key, {
-            id: acc.id,
-            bank_name: acc.bank_name,
-            account_number: acc.account_number,
-            account_name: acc.account_name,
-            vendor_name: acc.vendor_name || undefined,
-        });
-    });
-
-    return Array.from(accountMap.values()).sort((a, b) => a.account_name.localeCompare(b.account_name));
-}
-
-export async function saveBeneficiaryAccount(account: { bank_name: string; account_number: string; account_name: string; vendor_name?: string }) {
-    const { data: { user } } = await supabase.auth.getUser();
-    const userId = user?.id || (await supabase.auth.getSession()).data.session?.user?.id;
-    if (!userId) throw new Error("User not authenticated");
-
-    const normalized = {
-        ...account,
-        bank_name: account.bank_name.trim(),
-        account_number: account.account_number.trim(),
-        account_name: account.account_name.trim(),
     };
-    const { data: existing, error: lookupError } = await supabase
-        .from('finance_beneficiary_accounts')
-        .select('id')
-        .ilike('bank_name', normalized.bank_name)
-        .eq('account_number', normalized.account_number)
-        .maybeSingle();
-    if (lookupError) throw lookupError;
-
-    const query = existing?.id
-        ? supabase.from('finance_beneficiary_accounts').update({
-            account_name: normalized.account_name,
-            vendor_name: normalized.vendor_name,
-            is_global: true,
-        }).eq('id', existing.id)
-        : supabase.from('finance_beneficiary_accounts').insert([{
-            ...normalized,
-            created_by: userId,
-            is_global: true,
-        }]);
-    const { data, error } = await query.select();
-    if (error) {
-        console.error("Error saving beneficiary account:", error);
-        throw error;
-    }
-    return data;
 }

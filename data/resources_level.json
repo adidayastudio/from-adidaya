@@ -1,0 +1,2757 @@
+{
+    "version": "1.0",
+    "description": "Master resource taxonomy umum untuk konstruksi dan operasional studio. Struktur: level1 > level2 > level3 > level4 > variants. Semua level dan variant tetap bisa ditambah manual.",
+    "allow_custom_additions": true,
+    "structure": {
+        "level1": "category",
+        "level2": "sub_category",
+        "level3": "group",
+        "level4": "item",
+        "variants": "item_variants"
+    },
+    "data": [
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Beton",
+            "level4": "Semen Portland",
+            "variants": [
+                "40 kg",
+                "50 kg"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Beton",
+            "level4": "Semen instan",
+            "variants": [
+                "20 kg",
+                "25 kg",
+                "40 kg"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Beton",
+            "level4": "Grout",
+            "variants": [
+                "25 kg",
+                "non-shrink",
+                "general purpose"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Beton",
+            "level4": "Floor hardener",
+            "variants": [
+                "natural",
+                "abu-abu",
+                "hijau",
+                "5 kg/m2"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Beton",
+            "level4": "Beton ready mix",
+            "variants": [
+                "K-225",
+                "K-250",
+                "K-300",
+                "K-350"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Beton",
+            "level4": "Beton pracetak",
+            "variants": [
+                "U-ditch",
+                "box culvert",
+                "panel",
+                "custom"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Agregat",
+            "level4": "Pasir beton",
+            "variants": [
+                "halus",
+                "sedang",
+                "kasar"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Agregat",
+            "level4": "Pasir pasang",
+            "variants": [
+                "halus",
+                "sedang"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Agregat",
+            "level4": "Pasir urug",
+            "variants": [
+                "urug biasa",
+                "urug sirtu"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Agregat",
+            "level4": "Batu split",
+            "variants": [
+                "1/2",
+                "2/3",
+                "3/5"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Agregat",
+            "level4": "Kerikil",
+            "variants": [
+                "kecil",
+                "sedang"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Agregat",
+            "level4": "Sirtu",
+            "variants": [
+                "standar",
+                "padat"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Besi & Baja",
+            "level4": "Besi beton polos",
+            "variants": [
+                "6 mm",
+                "8 mm",
+                "10 mm",
+                "12 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Besi & Baja",
+            "level4": "Besi beton ulir",
+            "variants": [
+                "10 mm",
+                "13 mm",
+                "16 mm",
+                "19 mm",
+                "22 mm",
+                "25 mm",
+                "32 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Besi & Baja",
+            "level4": "Wiremesh",
+            "variants": [
+                "M6",
+                "M8",
+                "M10",
+                "M12"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Besi & Baja",
+            "level4": "Plat baja",
+            "variants": [
+                "3 mm",
+                "4 mm",
+                "6 mm",
+                "8 mm",
+                "10 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Besi & Baja",
+            "level4": "Hollow galvanis",
+            "variants": [
+                "20x40x1.6 mm",
+                "40x40x1.6 mm",
+                "40x60x1.6 mm",
+                "50x100x2.3 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Besi & Baja",
+            "level4": "Profil kanal C",
+            "variants": [
+                "C75",
+                "C100",
+                "C150",
+                "C200"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Besi & Baja",
+            "level4": "Pipa baja",
+            "variants": [
+                "1/2 inci",
+                "3/4 inci",
+                "1 inci",
+                "1 1/2 inci",
+                "2 inci",
+                "3 inci",
+                "4 inci"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Besi & Baja",
+            "level4": "Kawat bendrat",
+            "variants": [
+                "1 mm",
+                "1.2 mm",
+                "roll kecil",
+                "roll besar"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Bekisting",
+            "level4": "Multipleks",
+            "variants": [
+                "9 mm",
+                "12 mm",
+                "15 mm",
+                "18 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Bekisting",
+            "level4": "Kayu bekisting",
+            "variants": [
+                "5/7",
+                "4/6",
+                "balok",
+                "papan"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Bekisting",
+            "level4": "Paku",
+            "variants": [
+                "2 inci",
+                "2.5 inci",
+                "3 inci",
+                "4 inci",
+                "5 inci"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Bekisting",
+            "level4": "Sekrup",
+            "variants": [
+                "1 inci",
+                "1.5 inci",
+                "2 inci",
+                "gypsum",
+                "metal"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Struktur",
+            "level3": "Bekisting",
+            "level4": "Baut",
+            "variants": [
+                "M8",
+                "M10",
+                "M12",
+                "M16",
+                "M20"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Dinding",
+            "level4": "Bata merah",
+            "variants": [
+                "standar",
+                "oven"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Dinding",
+            "level4": "Bata ringan",
+            "variants": [
+                "7.5 cm",
+                "10 cm",
+                "12.5 cm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Dinding",
+            "level4": "Batako",
+            "variants": [
+                "standar",
+                "press"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Dinding",
+            "level4": "Mortar pasangan",
+            "variants": [
+                "instan",
+                "manual",
+                "bata ringan"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Dinding",
+            "level4": "Roster",
+            "variants": [
+                "beton",
+                "tanah liat",
+                "motif standar"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Lantai",
+            "level4": "Keramik lantai",
+            "variants": [
+                "30x30",
+                "40x40",
+                "50x50",
+                "60x60"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Lantai",
+            "level4": "Keramik dinding",
+            "variants": [
+                "25x40",
+                "30x60",
+                "40x40"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Lantai",
+            "level4": "Granit tile",
+            "variants": [
+                "60x60",
+                "80x80",
+                "60x120"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Lantai",
+            "level4": "Homogeneous tile",
+            "variants": [
+                "60x60",
+                "80x80",
+                "60x120"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Lantai",
+            "level4": "Vinyl lantai",
+            "variants": [
+                "2 mm",
+                "3 mm",
+                "5 mm",
+                "motif kayu",
+                "motif batu"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Lantai",
+            "level4": "SPC lantai",
+            "variants": [
+                "4 mm",
+                "5 mm",
+                "motif kayu"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Lantai",
+            "level4": "Parket",
+            "variants": [
+                "engineered",
+                "solid",
+                "motif kayu terang",
+                "motif kayu gelap"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Plafon",
+            "level4": "Gypsum board",
+            "variants": [
+                "9 mm",
+                "12 mm",
+                "standar",
+                "tahan air"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Plafon",
+            "level4": "Kalsiboard",
+            "variants": [
+                "3.5 mm",
+                "4 mm",
+                "6 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Plafon",
+            "level4": "GRC board",
+            "variants": [
+                "4 mm",
+                "6 mm",
+                "8 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Plafon",
+            "level4": "Metal furing",
+            "variants": [
+                "rangka utama",
+                "rangka silang",
+                "galvanis"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Kaca & Aluminium",
+            "level4": "Kaca bening",
+            "variants": [
+                "5 mm",
+                "8 mm",
+                "10 mm",
+                "12 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Kaca & Aluminium",
+            "level4": "Kaca tempered",
+            "variants": [
+                "8 mm",
+                "10 mm",
+                "12 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Kaca & Aluminium",
+            "level4": "Kaca laminated",
+            "variants": [
+                "5+5 mm",
+                "6+6 mm",
+                "8+8 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Kaca & Aluminium",
+            "level4": "Kusen aluminium",
+            "variants": [
+                "putih",
+                "hitam",
+                "natural anodized",
+                "powder coating"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Kaca & Aluminium",
+            "level4": "ACP",
+            "variants": [
+                "3 mm",
+                "4 mm",
+                "solid color",
+                "metallic",
+                "wood finish"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Pintu & Jendela",
+            "level4": "Pintu kayu",
+            "variants": [
+                "solid",
+                "engineering",
+                "flush door"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Pintu & Jendela",
+            "level4": "Pintu aluminium",
+            "variants": [
+                "swing",
+                "sliding",
+                "powder coating"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Pintu & Jendela",
+            "level4": "Pintu kaca",
+            "variants": [
+                "frameless",
+                "aluminium frame",
+                "tempered 10 mm",
+                "tempered 12 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Pintu & Jendela",
+            "level4": "Jendela aluminium",
+            "variants": [
+                "casement",
+                "sliding",
+                "fixed",
+                "awning"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Pintu & Jendela",
+            "level4": "Handle pintu",
+            "variants": [
+                "stainless",
+                "hitam",
+                "silver"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Pintu & Jendela",
+            "level4": "Kunci pintu",
+            "variants": [
+                "silinder",
+                "lever",
+                "smart lock"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Arsitektur",
+            "level3": "Pintu & Jendela",
+            "level4": "Engsel",
+            "variants": [
+                "3 inci",
+                "4 inci",
+                "stainless",
+                "biasa"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Cat",
+            "level4": "Cat dasar",
+            "variants": [
+                "interior",
+                "eksterior",
+                "alkali resisting"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Cat",
+            "level4": "Cat tembok interior",
+            "variants": [
+                "5 kg",
+                "20 kg",
+                "matte",
+                "satin",
+                "semi gloss"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Cat",
+            "level4": "Cat tembok eksterior",
+            "variants": [
+                "5 kg",
+                "20 kg",
+                "weather shield",
+                "anti jamur"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Cat",
+            "level4": "Cat besi",
+            "variants": [
+                "primer",
+                "finishing",
+                "hitam",
+                "abu-abu"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Cat",
+            "level4": "Cat kayu",
+            "variants": [
+                "melamik",
+                "duco",
+                "clear coat",
+                "doff",
+                "glossy"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Dempul & Aci",
+            "level4": "Plamir",
+            "variants": [
+                "interior",
+                "eksterior",
+                "instan"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Dempul & Aci",
+            "level4": "Aci instan",
+            "variants": [
+                "interior",
+                "eksterior",
+                "halus"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Dempul & Aci",
+            "level4": "Mortar aci",
+            "variants": [
+                "abu-abu",
+                "putih"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Pelapis",
+            "level4": "Waterproofing",
+            "variants": [
+                "coating",
+                "membrane bakar",
+                "crystalline",
+                "2 komponen"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Pelapis",
+            "level4": "Sealant",
+            "variants": [
+                "silicone",
+                "polyurethane",
+                "putih",
+                "bening",
+                "abu-abu",
+                "hitam"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Finishing",
+            "level3": "Pelapis",
+            "level4": "Epoxy lantai",
+            "variants": [
+                "1 mm",
+                "2 mm",
+                "3 mm",
+                "self leveling"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Atap",
+            "level3": "Penutup Atap",
+            "level4": "Genteng beton",
+            "variants": [
+                "flat",
+                "gelombang",
+                "abu-abu",
+                "merah"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Atap",
+            "level3": "Penutup Atap",
+            "level4": "Genteng metal",
+            "variants": [
+                "pasir",
+                "metal polos",
+                "merah",
+                "hitam"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Atap",
+            "level3": "Penutup Atap",
+            "level4": "Atap spandek",
+            "variants": [
+                "0.30 mm",
+                "0.35 mm",
+                "0.40 mm",
+                "zincalume",
+                "warna"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Atap",
+            "level3": "Penutup Atap",
+            "level4": "Atap UPVC",
+            "variants": [
+                "single layer",
+                "double layer",
+                "putih",
+                "abu-abu"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Atap",
+            "level3": "Penutup Atap",
+            "level4": "Atap polycarbonate",
+            "variants": [
+                "bening",
+                "biru",
+                "bronze",
+                "5 mm",
+                "6 mm",
+                "10 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Atap",
+            "level3": "Aksesori Atap",
+            "level4": "Talang",
+            "variants": [
+                "PVC",
+                "galvalum",
+                "custom"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Atap",
+            "level3": "Aksesori Atap",
+            "level4": "Nok atap",
+            "variants": [
+                "metal",
+                "beton",
+                "keramik"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Plumbing",
+            "level4": "Pipa PVC",
+            "variants": [
+                "1/2 inci",
+                "3/4 inci",
+                "1 inci",
+                "1 1/2 inci",
+                "2 inci",
+                "3 inci",
+                "4 inci"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Plumbing",
+            "level4": "Pipa HDPE",
+            "variants": [
+                "20 mm",
+                "25 mm",
+                "32 mm",
+                "40 mm",
+                "50 mm",
+                "63 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Plumbing",
+            "level4": "Pipa PPR",
+            "variants": [
+                "20 mm",
+                "25 mm",
+                "32 mm",
+                "40 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Plumbing",
+            "level4": "Fitting pipa",
+            "variants": [
+                "socket",
+                "elbow",
+                "tee",
+                "reducer",
+                "dop",
+                "union"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Plumbing",
+            "level4": "Valve",
+            "variants": [
+                "ball valve",
+                "gate valve",
+                "check valve",
+                "1/2 inci",
+                "3/4 inci",
+                "1 inci"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Plumbing",
+            "level4": "Floor drain",
+            "variants": [
+                "stainless",
+                "10x10",
+                "15x15"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Sanitary",
+            "level4": "Closet",
+            "variants": [
+                "duduk",
+                "jongkok",
+                "one piece",
+                "two piece"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Sanitary",
+            "level4": "Wastafel",
+            "variants": [
+                "table top",
+                "wall hung",
+                "pedestal"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Sanitary",
+            "level4": "Keran",
+            "variants": [
+                "basin tap",
+                "wall tap",
+                "angle valve",
+                "chrome",
+                "matte black"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Sanitary",
+            "level4": "Shower",
+            "variants": [
+                "hand shower",
+                "rain shower",
+                "set mixer"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Sanitary",
+            "level4": "Pompa air",
+            "variants": [
+                "125 watt",
+                "250 watt",
+                "booster",
+                "sumur dangkal"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Sanitary",
+            "level4": "Tandon air",
+            "variants": [
+                "500 liter",
+                "1000 liter",
+                "2000 liter"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Kabel NYA",
+            "variants": [
+                "1.5 mm",
+                "2.5 mm",
+                "4 mm",
+                "6 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Kabel NYM",
+            "variants": [
+                "2x1.5 mm",
+                "3x1.5 mm",
+                "2x2.5 mm",
+                "3x2.5 mm",
+                "4x2.5 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Kabel NYY",
+            "variants": [
+                "2x2.5 mm",
+                "3x2.5 mm",
+                "4x4 mm",
+                "4x6 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Pipa conduit",
+            "variants": [
+                "16 mm",
+                "20 mm",
+                "25 mm",
+                "PVC",
+                "flexible"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Panel listrik",
+            "variants": [
+                "indoor",
+                "outdoor",
+                "single phase",
+                "three phase"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "MCB",
+            "variants": [
+                "6A",
+                "10A",
+                "16A",
+                "20A",
+                "32A",
+                "40A"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Sakelar",
+            "variants": [
+                "single",
+                "double",
+                "hotel switch"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Stop kontak",
+            "variants": [
+                "single",
+                "double",
+                "universal",
+                "outdoor"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Lampu LED",
+            "variants": [
+                "bulb",
+                "downlight",
+                "spotlight",
+                "tube",
+                "strip"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Armatur lampu",
+            "variants": [
+                "surface",
+                "recessed",
+                "waterproof"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "MEP",
+            "level3": "Elektrikal",
+            "level4": "Grounding",
+            "variants": [
+                "rod",
+                "clamp",
+                "cable grounding"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Interior",
+            "level3": "Panel & Furnishing Material",
+            "level4": "Plywood",
+            "variants": [
+                "9 mm",
+                "12 mm",
+                "15 mm",
+                "18 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Interior",
+            "level3": "Panel & Furnishing Material",
+            "level4": "Multipleks",
+            "variants": [
+                "9 mm",
+                "12 mm",
+                "15 mm",
+                "18 mm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Interior",
+            "level3": "Panel & Furnishing Material",
+            "level4": "HPL",
+            "variants": [
+                "solid color",
+                "wood grain",
+                "stone pattern",
+                "doff",
+                "glossy"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Interior",
+            "level3": "Panel & Furnishing Material",
+            "level4": "Cermin",
+            "variants": [
+                "5 mm",
+                "6 mm",
+                "clear",
+                "bronze",
+                "grey"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Lanskap",
+            "level3": "Hardscape",
+            "level4": "Paving block",
+            "variants": [
+                "6 cm",
+                "8 cm",
+                "abu-abu",
+                "merah"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Lanskap",
+            "level3": "Hardscape",
+            "level4": "Kanstin",
+            "variants": [
+                "standar",
+                "taman",
+                "beton"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Lanskap",
+            "level3": "Hardscape",
+            "level4": "Grass block",
+            "variants": [
+                "8 cm",
+                "abu-abu"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Lanskap",
+            "level3": "Hardscape",
+            "level4": "Batu taman",
+            "variants": [
+                "sikat",
+                "koral",
+                "batu alam"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Lanskap",
+            "level3": "Softscape",
+            "level4": "Rumput taman",
+            "variants": [
+                "gajah mini",
+                "jepang",
+                "manila"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Lanskap",
+            "level3": "Softscape",
+            "level4": "Tanah taman",
+            "variants": [
+                "subur",
+                "urug",
+                "campuran kompos"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Lanskap",
+            "level3": "Softscape",
+            "level4": "Tanaman",
+            "variants": [
+                "semak",
+                "penutup tanah",
+                "pohon kecil",
+                "pohon sedang"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Infrastruktur",
+            "level3": "Drainase & Sipil",
+            "level4": "U-Ditch",
+            "variants": [
+                "30x30",
+                "40x40",
+                "50x50",
+                "60x60"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Infrastruktur",
+            "level3": "Drainase & Sipil",
+            "level4": "Buis beton",
+            "variants": [
+                "30 cm",
+                "40 cm",
+                "60 cm",
+                "80 cm"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Infrastruktur",
+            "level3": "Drainase & Sipil",
+            "level4": "Pipa drainase",
+            "variants": [
+                "4 inci",
+                "6 inci",
+                "8 inci",
+                "PVC",
+                "HDPE"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Umum",
+            "level3": "Perlengkapan Kecil",
+            "level4": "Lakban",
+            "variants": [
+                "bening",
+                "coklat",
+                "hitam",
+                "double tape"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Umum",
+            "level3": "Perlengkapan Kecil",
+            "level4": "Tali",
+            "variants": [
+                "nilon",
+                "rafia",
+                "tambang"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Umum",
+            "level3": "Perlengkapan Kecil",
+            "level4": "Terpal",
+            "variants": [
+                "biru",
+                "oranye",
+                "2x3 m",
+                "4x6 m"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Umum",
+            "level3": "Perlengkapan Kecil",
+            "level4": "Kabel roll",
+            "variants": [
+                "10 m",
+                "20 m",
+                "30 m",
+                "4 socket"
+            ]
+        },
+        {
+            "level1": "Material",
+            "level2": "Umum",
+            "level3": "Perlengkapan Kecil",
+            "level4": "Extension cord",
+            "variants": [
+                "3 socket",
+                "4 socket",
+                "5 m",
+                "10 m"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Tangan",
+            "level4": "Palu",
+            "variants": [
+                "kayu",
+                "besi",
+                "karet",
+                "16 oz",
+                "20 oz"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Tangan",
+            "level4": "Obeng",
+            "variants": [
+                "plus",
+                "minus",
+                "set"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Tangan",
+            "level4": "Tang",
+            "variants": [
+                "kombinasi",
+                "potong",
+                "lancip"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Tangan",
+            "level4": "Kunci pas",
+            "variants": [
+                "8 mm",
+                "10 mm",
+                "12 mm",
+                "14 mm",
+                "17 mm",
+                "set"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Tangan",
+            "level4": "Kunci inggris",
+            "variants": [
+                "8 inci",
+                "10 inci",
+                "12 inci"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Tangan",
+            "level4": "Pahat",
+            "variants": [
+                "baja",
+                "kayu",
+                "1 inci",
+                "2 inci"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Ukur",
+            "level4": "Meteran",
+            "variants": [
+                "3 m",
+                "5 m",
+                "7.5 m",
+                "10 m"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Ukur",
+            "level4": "Waterpass",
+            "variants": [
+                "40 cm",
+                "60 cm",
+                "100 cm",
+                "120 cm"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Ukur",
+            "level4": "Benang ukur",
+            "variants": [
+                "roll kecil",
+                "roll besar"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Ukur",
+            "level4": "Siku",
+            "variants": [
+                "10 inci",
+                "12 inci",
+                "baja"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Kerja Lapangan",
+            "level4": "Cangkul",
+            "variants": [
+                "standar",
+                "berat"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Kerja Lapangan",
+            "level4": "Sekop",
+            "variants": [
+                "pasir",
+                "cor",
+                "sekop kecil"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Kerja Lapangan",
+            "level4": "Ember",
+            "variants": [
+                "20 liter",
+                "25 liter"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Kerja Lapangan",
+            "level4": "Gerobak dorong",
+            "variants": [
+                "standar",
+                "heavy duty"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Manual",
+            "level3": "Alat Kerja Lapangan",
+            "level4": "Cetok",
+            "variants": [
+                "lurus",
+                "runcing",
+                "stainless"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Listrik",
+            "level3": "Power Tools",
+            "level4": "Bor listrik",
+            "variants": [
+                "10 mm",
+                "13 mm",
+                "impact",
+                "cordless"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Listrik",
+            "level3": "Power Tools",
+            "level4": "Gerinda tangan",
+            "variants": [
+                "4 inci",
+                "7 inci",
+                "cordless"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Listrik",
+            "level3": "Power Tools",
+            "level4": "Gergaji mesin",
+            "variants": [
+                "circular saw",
+                "jigsaw",
+                "cut off"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Listrik",
+            "level3": "Power Tools",
+            "level4": "Mesin potong keramik",
+            "variants": [
+                "manual",
+                "electric",
+                "60 cm",
+                "120 cm"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Listrik",
+            "level3": "Power Tools",
+            "level4": "Mesin las",
+            "variants": [
+                "450 watt",
+                "900 watt",
+                "inverter"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Berat",
+            "level3": "Earthmoving",
+            "level4": "Excavator",
+            "variants": [
+                "mini",
+                "0.2 m3",
+                "0.8 m3"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Berat",
+            "level3": "Earthmoving",
+            "level4": "Bulldozer",
+            "variants": [
+                "small",
+                "medium"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Berat",
+            "level3": "Earthmoving",
+            "level4": "Wheel loader",
+            "variants": [
+                "small",
+                "medium"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Berat",
+            "level3": "Transport & Angkat",
+            "level4": "Dump truck",
+            "variants": [
+                "6 m3",
+                "8 m3",
+                "10 m3"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Berat",
+            "level3": "Transport & Angkat",
+            "level4": "Crane",
+            "variants": [
+                "mobile crane",
+                "truck crane",
+                "25 ton",
+                "50 ton"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Alat Berat",
+            "level3": "Transport & Angkat",
+            "level4": "Hoist",
+            "variants": [
+                "0.5 ton",
+                "1 ton",
+                "2 ton"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Peralatan Beton",
+            "level4": "Molen beton",
+            "variants": [
+                "mixer kecil",
+                "mixer sedang",
+                "350 liter"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Peralatan Beton",
+            "level4": "Vibrator beton",
+            "variants": [
+                "portable",
+                "standar"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Peralatan Beton",
+            "level4": "Pompa beton",
+            "variants": [
+                "mini pump",
+                "standar"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Peralatan Besi",
+            "level4": "Bar cutter",
+            "variants": [
+                "manual",
+                "electric",
+                "32 mm"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Peralatan Besi",
+            "level4": "Bar bender",
+            "variants": [
+                "manual",
+                "electric",
+                "32 mm"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Akses Kerja",
+            "level4": "Scaffolding",
+            "variants": [
+                "main frame",
+                "cross brace",
+                "catwalk",
+                "jack base",
+                "set"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Akses Kerja",
+            "level4": "Tangga kerja",
+            "variants": [
+                "aluminium",
+                "fiberglass",
+                "2 m",
+                "3 m",
+                "4 m"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Pemadatan",
+            "level4": "Plate compactor",
+            "variants": [
+                "standar",
+                "heavy duty"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Proyek",
+            "level3": "Pemadatan",
+            "level4": "Stamper kodok",
+            "variants": [
+                "standar",
+                "heavy duty"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "APD",
+            "level4": "Helm proyek",
+            "variants": [
+                "putih",
+                "kuning",
+                "biru",
+                "merah"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "APD",
+            "level4": "Rompi safety",
+            "variants": [
+                "orange",
+                "hijau",
+                "mesh",
+                "reflective"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "APD",
+            "level4": "Sarung tangan",
+            "variants": [
+                "kain",
+                "karet",
+                "kulit",
+                "anti cut"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "APD",
+            "level4": "Sepatu safety",
+            "variants": [
+                "boots",
+                "low cut",
+                "steel toe"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "APD",
+            "level4": "Kacamata safety",
+            "variants": [
+                "clear",
+                "dark",
+                "anti fog"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "APD",
+            "level4": "Masker kerja",
+            "variants": [
+                "kain",
+                "KN95",
+                "respirator"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "Safety Support",
+            "level4": "Traffic cone",
+            "variants": [
+                "45 cm",
+                "70 cm"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "Safety Support",
+            "level4": "Body harness",
+            "variants": [
+                "single hook",
+                "double hook"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Keselamatan",
+            "level3": "Safety Support",
+            "level4": "Rambu proyek",
+            "variants": [
+                "warning",
+                "mandatory",
+                "custom"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Kantor",
+            "level3": "Office Support",
+            "level4": "Stapler",
+            "variants": [
+                "kecil",
+                "besar"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Kantor",
+            "level3": "Office Support",
+            "level4": "Perforator",
+            "variants": [
+                "2 hole",
+                "heavy duty"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Kantor",
+            "level3": "Office Support",
+            "level4": "Mesin laminating",
+            "variants": [
+                "A4",
+                "A3"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "Peralatan Kantor",
+            "level3": "Office Support",
+            "level4": "Mesin penghancur kertas",
+            "variants": [
+                "mini",
+                "office"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "IT & Elektronik",
+            "level3": "Device Pendukung",
+            "level4": "Mouse",
+            "variants": [
+                "wired",
+                "wireless"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "IT & Elektronik",
+            "level3": "Device Pendukung",
+            "level4": "Keyboard",
+            "variants": [
+                "wired",
+                "wireless",
+                "mechanical",
+                "membrane"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "IT & Elektronik",
+            "level3": "Device Pendukung",
+            "level4": "Router",
+            "variants": [
+                "single band",
+                "dual band"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "IT & Elektronik",
+            "level3": "Device Pendukung",
+            "level4": "HT",
+            "variants": [
+                "analog",
+                "digital"
+            ]
+        },
+        {
+            "level1": "Tools",
+            "level2": "IT & Elektronik",
+            "level3": "Device Pendukung",
+            "level4": "Printer portable",
+            "variants": [
+                "thermal",
+                "inkjet portable"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Kendaraan Proyek",
+            "level4": "Pickup proyek",
+            "variants": [
+                "single cabin",
+                "double cabin"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Kendaraan Proyek",
+            "level4": "Motor proyek",
+            "variants": [
+                "matic",
+                "manual"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Mesin Proyek",
+            "level4": "Genset",
+            "variants": [
+                "2500 watt",
+                "5000 watt",
+                "10000 watt",
+                "diesel"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Mesin Proyek",
+            "level4": "Mesin las besar",
+            "variants": [
+                "900 watt",
+                "inverter heavy duty"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Mesin Proyek",
+            "level4": "Pompa air proyek",
+            "variants": [
+                "125 watt",
+                "250 watt",
+                "submersible"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Peralatan Proyek",
+            "level4": "Scaffolding set",
+            "variants": [
+                "set kecil",
+                "set sedang",
+                "set besar"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Peralatan Proyek",
+            "level4": "Bekisting panel",
+            "variants": [
+                "panel baja",
+                "panel kayu",
+                "custom"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "K3 Proyek",
+            "level4": "APAR",
+            "variants": [
+                "1 kg",
+                "3 kg",
+                "6 kg",
+                "powder"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "K3 Proyek",
+            "level4": "Kotak P3K",
+            "variants": [
+                "kecil",
+                "sedang",
+                "besar"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Inventaris Proyek",
+            "level4": "Meja proyek",
+            "variants": [
+                "lipat",
+                "kayu",
+                "metal"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Inventaris Proyek",
+            "level4": "Kursi proyek",
+            "variants": [
+                "plastik",
+                "lipat",
+                "metal"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Proyek",
+            "level3": "Inventaris Proyek",
+            "level4": "Lemari proyek",
+            "variants": [
+                "metal",
+                "2 pintu"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Furniture Kantor",
+            "level4": "Meja kerja",
+            "variants": [
+                "120 cm",
+                "140 cm",
+                "160 cm",
+                "custom"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Furniture Kantor",
+            "level4": "Kursi kerja",
+            "variants": [
+                "staff",
+                "manager",
+                "ergonomis"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Furniture Kantor",
+            "level4": "Sofa kantor",
+            "variants": [
+                "1 seat",
+                "2 seat",
+                "3 seat"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Furniture Kantor",
+            "level4": "Lemari arsip",
+            "variants": [
+                "2 pintu",
+                "sliding",
+                "metal",
+                "kayu"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Furniture Kantor",
+            "level4": "Rak display",
+            "variants": [
+                "kayu",
+                "metal",
+                "custom"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Perangkat IT",
+            "level4": "Laptop",
+            "variants": [
+                "13 inci",
+                "14 inci",
+                "15 inci",
+                "16 inci"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Perangkat IT",
+            "level4": "Desktop PC",
+            "variants": [
+                "office",
+                "design",
+                "render"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Perangkat IT",
+            "level4": "Monitor",
+            "variants": [
+                "24 inci",
+                "27 inci",
+                "32 inci"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Perangkat IT",
+            "level4": "iPad",
+            "variants": [
+                "11 inci",
+                "13 inci",
+                "wifi",
+                "cellular"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Perangkat IT",
+            "level4": "NAS",
+            "variants": [
+                "2 bay",
+                "4 bay",
+                "8 bay"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Elektronik Kantor",
+            "level4": "Printer",
+            "variants": [
+                "inkjet",
+                "laser",
+                "A4",
+                "A3"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Elektronik Kantor",
+            "level4": "Scanner",
+            "variants": [
+                "flatbed",
+                "ADF"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Elektronik Kantor",
+            "level4": "Proyektor",
+            "variants": [
+                "portable",
+                "meeting room"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Elektronik Kantor",
+            "level4": "TV",
+            "variants": [
+                "43 inci",
+                "55 inci",
+                "65 inci"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Elektronik Kantor",
+            "level4": "AC",
+            "variants": [
+                "0.5 PK",
+                "1 PK",
+                "1.5 PK",
+                "2 PK"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Peralatan Studio",
+            "level4": "Kamera",
+            "variants": [
+                "mirrorless",
+                "DSLR",
+                "full frame"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Peralatan Studio",
+            "level4": "Tripod",
+            "variants": [
+                "kamera",
+                "lighting",
+                "heavy duty"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Peralatan Studio",
+            "level4": "Lighting",
+            "variants": [
+                "LED panel",
+                "softbox",
+                "portable light"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Peralatan Studio",
+            "level4": "Drone",
+            "variants": [
+                "mini",
+                "pro"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Inventaris Kantor",
+            "level4": "Whiteboard",
+            "variants": [
+                "60x90",
+                "90x120",
+                "standing"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Inventaris Kantor",
+            "level4": "Rak gudang",
+            "variants": [
+                "4 susun",
+                "5 susun",
+                "metal"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Inventaris Kantor",
+            "level4": "Coffee machine",
+            "variants": [
+                "manual",
+                "semi automatic"
+            ]
+        },
+        {
+            "level1": "Assets",
+            "level2": "Aset Kantor",
+            "level3": "Inventaris Kantor",
+            "level4": "Vacuum cleaner",
+            "variants": [
+                "portable",
+                "industri"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Konstruksi",
+            "level3": "Jasa Pelaksanaan",
+            "level4": "Jasa tukang harian",
+            "variants": [
+                "pekerja",
+                "tukang",
+                "kepala tukang",
+                "mandor"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Konstruksi",
+            "level3": "Jasa Pelaksanaan",
+            "level4": "Jasa pemasangan bata",
+            "variants": [
+                "bata merah",
+                "bata ringan"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Konstruksi",
+            "level3": "Jasa Pelaksanaan",
+            "level4": "Jasa pengecoran",
+            "variants": [
+                "manual",
+                "ready mix",
+                "slab",
+                "sloof",
+                "kolom"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Konstruksi",
+            "level3": "Jasa Pelaksanaan",
+            "level4": "Jasa pembesian",
+            "variants": [
+                "cutting",
+                "bending",
+                "install"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Konstruksi",
+            "level3": "Jasa Pelaksanaan",
+            "level4": "Jasa bekisting",
+            "variants": [
+                "kolom",
+                "balok",
+                "plat lantai"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Subkontraktor",
+            "level3": "Subkon Pekerjaan",
+            "level4": "Subkon struktur",
+            "variants": [
+                "pondasi",
+                "beton",
+                "baja"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Subkontraktor",
+            "level3": "Subkon Pekerjaan",
+            "level4": "Subkon arsitektur",
+            "variants": [
+                "dinding",
+                "lantai",
+                "plafon",
+                "pintu jendela"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Subkontraktor",
+            "level3": "Subkon Pekerjaan",
+            "level4": "Subkon MEP",
+            "variants": [
+                "plumbing",
+                "elektrikal",
+                "HVAC",
+                "fire protection"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Subkontraktor",
+            "level3": "Subkon Pekerjaan",
+            "level4": "Subkon interior",
+            "variants": [
+                "loose furniture",
+                "built in",
+                "paneling"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Subkontraktor",
+            "level3": "Subkon Pekerjaan",
+            "level4": "Subkon landscape",
+            "variants": [
+                "hardscape",
+                "softscape",
+                "irigasi taman"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Profesional",
+            "level3": "Jasa Konsultan",
+            "level4": "Jasa arsitek",
+            "variants": [
+                "konsep",
+                "gambar kerja",
+                "pengawasan"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Profesional",
+            "level3": "Jasa Konsultan",
+            "level4": "Jasa struktur",
+            "variants": [
+                "perencanaan",
+                "review",
+                "shop drawing"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Profesional",
+            "level3": "Jasa Konsultan",
+            "level4": "Jasa MEP",
+            "variants": [
+                "elektrikal",
+                "plumbing",
+                "HVAC"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Profesional",
+            "level3": "Jasa Konsultan",
+            "level4": "Jasa quantity surveyor",
+            "variants": [
+                "estimate",
+                "RAB",
+                "cost control"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Profesional",
+            "level3": "Jasa Konsultan",
+            "level4": "Jasa drafter",
+            "variants": [
+                "2D",
+                "3D",
+                "shop drawing",
+                "as built drawing"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Fabrikasi",
+            "level3": "Jasa Produksi",
+            "level4": "Jasa fabrikasi besi",
+            "variants": [
+                "canopy",
+                "railing",
+                "tangga",
+                "custom"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Fabrikasi",
+            "level3": "Jasa Produksi",
+            "level4": "Jasa fabrikasi kanopi",
+            "variants": [
+                "hollow",
+                "WF",
+                "polycarbonate",
+                "spandek"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Fabrikasi",
+            "level3": "Jasa Produksi",
+            "level4": "Jasa fabrikasi railing",
+            "variants": [
+                "besi",
+                "stainless",
+                "kaca"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Fabrikasi",
+            "level3": "Jasa Produksi",
+            "level4": "Jasa fabrikasi furniture",
+            "variants": [
+                "loose furniture",
+                "built in",
+                "custom"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Transportasi & Logistik",
+            "level3": "Jasa Pengiriman",
+            "level4": "Jasa trucking",
+            "variants": [
+                "CDD",
+                "tronton",
+                "pickup",
+                "engkel"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Transportasi & Logistik",
+            "level3": "Jasa Pengiriman",
+            "level4": "Jasa kurir",
+            "variants": [
+                "same day",
+                "regular",
+                "instant"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Transportasi & Logistik",
+            "level3": "Jasa Pengiriman",
+            "level4": "Jasa pengangkutan material",
+            "variants": [
+                "lokal",
+                "antar kota",
+                "heavy cargo"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Transportasi & Logistik",
+            "level3": "Jasa Pengiriman",
+            "level4": "Jasa bongkar muat",
+            "variants": [
+                "manual",
+                "forklift",
+                "crane assist"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Maintenance",
+            "level3": "Jasa Perawatan",
+            "level4": "Servis alat",
+            "variants": [
+                "ringan",
+                "berat",
+                "kalibrasi"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Maintenance",
+            "level3": "Jasa Perawatan",
+            "level4": "Servis AC",
+            "variants": [
+                "cuci",
+                "isi freon",
+                "perbaikan"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Maintenance",
+            "level3": "Jasa Perawatan",
+            "level4": "Perbaikan mesin",
+            "variants": [
+                "las",
+                "genset",
+                "pompa"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Maintenance",
+            "level3": "Jasa Perawatan",
+            "level4": "Kalibrasi alat",
+            "variants": [
+                "alat ukur",
+                "alat listrik"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Cleaning & Security",
+            "level3": "Jasa Support",
+            "level4": "Jasa cleaning service",
+            "variants": [
+                "harian",
+                "mingguan",
+                "bulanan"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Cleaning & Security",
+            "level3": "Jasa Support",
+            "level4": "Jasa security",
+            "variants": [
+                "shift siang",
+                "shift malam",
+                "24 jam"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Cleaning & Security",
+            "level3": "Jasa Support",
+            "level4": "Jasa pest control",
+            "variants": [
+                "bulanan",
+                "triwulan"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Rental",
+            "level3": "Sewa Alat & Fasilitas",
+            "level4": "Sewa scaffolding",
+            "variants": [
+                "harian",
+                "mingguan",
+                "bulanan"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Rental",
+            "level3": "Sewa Alat & Fasilitas",
+            "level4": "Sewa excavator",
+            "variants": [
+                "mini",
+                "0.2 m3",
+                "0.8 m3",
+                "harian"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Rental",
+            "level3": "Sewa Alat & Fasilitas",
+            "level4": "Sewa genset",
+            "variants": [
+                "2500 watt",
+                "5000 watt",
+                "10000 watt",
+                "harian"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Rental",
+            "level3": "Sewa Alat & Fasilitas",
+            "level4": "Sewa kendaraan",
+            "variants": [
+                "motor",
+                "pickup",
+                "mobil",
+                "bulanan"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Rental",
+            "level3": "Sewa Alat & Fasilitas",
+            "level4": "Sewa mess pekerja",
+            "variants": [
+                "harian",
+                "mingguan",
+                "bulanan"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Pengujian",
+            "level3": "Jasa Testing",
+            "level4": "Uji beton",
+            "variants": [
+                "slump test",
+                "kubus",
+                "silinder"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Pengujian",
+            "level3": "Jasa Testing",
+            "level4": "Uji tanah",
+            "variants": [
+                "sondir",
+                "bor log",
+                "lab soil"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Pengujian",
+            "level3": "Jasa Testing",
+            "level4": "Pengukuran topografi",
+            "variants": [
+                "site survey",
+                "staking out",
+                "as built"
+            ]
+        },
+        {
+            "level1": "Services",
+            "level2": "Pengujian",
+            "level3": "Jasa Testing",
+            "level4": "Commissioning MEP",
+            "variants": [
+                "elektrikal",
+                "pompa",
+                "AC",
+                "testing & balancing"
+            ]
+        }
+    ]
+}

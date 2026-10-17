@@ -1,0 +1,814 @@
+/* 🟢 IMPORT TOKEN DULU */
+@import "../shared/styles/tokens.css";
+@import "../shared/styles/typography.css";
+
+/* 🟢 Baru panggil Tailwind */
+@tailwind base;
+/* Force rebuild */
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* =========================================
+   ADIDAYAOS DESIGN TOKENS (LIGHT MODE)
+========================================= */
+:root {
+  /* BRAND COLORS (LIGHT MODE) */
+  --brand-red: #D91011;
+  --brand-red-soft: #FF6B63;
+  --brand-red-fade: #FCE8E7;
+  /* soft red wash background */
+
+  --brand-blue: #2176FF;
+  --brand-green: #20BF55;
+  --brand-yellow: #F8C537;
+
+  /* ACTION COLORS (BRIGHTER FOR LIGHT BACKGROUND) */
+  --action-primary: var(--brand-red);
+  --action-primary-hover: #C80F0F;
+  --action-primary-pressed: #980B0B;
+
+  --action-danger: #E11D48;
+  --action-warning: #CA8A04;
+  --action-success: #16A34A;
+  --action-info: #2563EB;
+
+  /* TEXT COLORS (LIGHT MODE) */
+  --text-primary: #1A1A1A;
+  /* Very dark grey */
+  --text-secondary: #4B5563;
+  /* Gray-600 */
+  --text-tertiary: #6B7280;
+  /* Gray-500 */
+  --text-muted: #9CA3AF;
+  /* Gray-400 */
+  --text-inverse: #FFFFFF;
+
+  /* BACKGROUND COLORS (LIGHT MODE) */
+  --bg-0: #FFFFFF;
+  /* Main page background */
+  --bg-100: #FAFAFA;
+  --bg-200: #F4F4F5;
+  --bg-300: #E5E7EB;
+  --bg-400: #D1D5DB;
+
+  --bg-surface: #FFFFFF;
+  /* Cards, panels */
+  --bg-raised: #F9FAFB;
+  /* Slightly raised elements */
+  --bg-overlay: rgba(0, 0, 0, 0.05);
+
+  /* BORDER COLORS (LIGHT MODE) */
+  --border-light: #E5E7EB;
+  --border-default: #D1D5DB;
+  --border-strong: #9CA3AF;
+
+  /* SYSTEM STATES (PASTEL BACKGROUNDS) */
+  --success-bg: #DFFDEB;
+  --warning-bg: #FFF6D5;
+  --danger-bg: #FFE5E7;
+  --info-bg: #E4F0FF;
+
+  /* SPACING */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-7: 28px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+
+  /* TYPOGRAPHY */
+  --font-family: "Inter", sans-serif;
+
+  --h1-size: 32px;
+  --h1-weight: 700;
+
+  --h2-size: 28px;
+  --h2-weight: 700;
+
+  --h3-size: 24px;
+  --h3-weight: 600;
+
+  --h4-size: 18px;
+  --h4-weight: 600;
+
+  --h5-size: 16px;
+  --h5-weight: 600;
+
+  --body-size: 16px;
+  --body-weight: 400;
+
+  --small-size: 12px;
+  --small-weight: 400;
+
+  /* RADIUS */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-full: 999px;
+
+  /* SHADOWS (LIGHT MODE — SOFT & REALISTIC) */
+  --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.07);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 12px rgba(217, 16, 17, 0.15);
+
+  /* DEFAULT PILLAR (FALLBACK) */
+  --bg-soft: var(--bg-100);
+}
+
+/* =========================================
+   DARK MODE OVERRIDES
+   ========================================= */
+.dark {
+  /* BACKGROUND COLORS (DARK MODE) */
+  --bg-0: #0a0a0a;
+  --bg-100: #0f0f0f;
+  --bg-200: #171717;
+  --bg-300: #262626;
+  --bg-400: #404040;
+
+  --bg-surface: #171717;
+  --bg-raised: #1a1a1a;
+  --bg-overlay: rgba(255, 255, 255, 0.05);
+
+  /* TEXT COLORS (DARK MODE) */
+  --text-primary: #f5f5f5;
+  --text-secondary: #a3a3a3;
+  --text-tertiary: #737373;
+  --text-muted: #525252;
+  --text-inverse: #0a0a0a;
+
+  /* BORDER COLORS (DARK MODE) */
+  --border-light: #262626;
+  --border-default: #333333;
+  --border-strong: #525252;
+
+  /* SYSTEM STATES (DARK BACKGROUNDS) */
+  --success-bg: rgba(34, 197, 94, 0.12);
+  --warning-bg: rgba(234, 179, 8, 0.12);
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --info-bg: rgba(59, 130, 246, 0.12);
+
+  /* SHADOWS (DARK MODE — MINIMAL) */
+  --shadow-soft: 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 12px rgba(217, 16, 17, 0.25);
+}
+
+/* DARK PILLAR THEMES */
+.dark .theme-frame {
+  --bg-soft: #1a1a1a;
+  --border-soft: #262626;
+}
+
+.dark .theme-flow {
+  --bg-soft: rgba(217, 16, 17, 0.08);
+  --border-soft: rgba(217, 16, 17, 0.15);
+}
+
+.dark .theme-feel {
+  --bg-soft: rgba(33, 118, 255, 0.08);
+  --border-soft: rgba(33, 118, 255, 0.15);
+}
+
+/* =========================================
+   GLOBAL DARK-MODE CLASS REMAPPINGS
+   Automatically converts the most common
+   Tailwind light-mode classes to dark equivalents.
+   Components with explicit dark: overrides
+   will still take priority.
+   ========================================= */
+
+/* --- BACKGROUNDS --- */
+.dark .bg-white:not([class*="dark\:bg-"]) {
+  background-color: #171717 !important;
+}
+
+.dark .bg-neutral-50:not([class*="dark\:bg-"]) {
+  background-color: #171717 !important;
+}
+
+.dark .bg-neutral-100:not([class*="dark\:bg-"]) {
+  background-color: #1f1f1f !important;
+}
+
+.dark .bg-neutral-200:not([class*="dark\:bg-"]) {
+  background-color: #262626 !important;
+}
+
+.dark .bg-gray-50:not([class*="dark\:bg-"]) {
+  background-color: #171717 !important;
+}
+
+.dark .bg-gray-100:not([class*="dark\:bg-"]) {
+  background-color: #1f1f1f !important;
+}
+
+/* Semi-transparent white backgrounds → dark equivalents */
+.dark .bg-white\/90 {
+  background-color: rgba(23, 23, 23, 0.9) !important;
+}
+
+.dark .bg-white\/80 {
+  background-color: rgba(23, 23, 23, 0.8) !important;
+}
+
+.dark .bg-white\/70 {
+  background-color: rgba(23, 23, 23, 0.7) !important;
+}
+
+.dark .bg-white\/60 {
+  background-color: rgba(23, 23, 23, 0.6) !important;
+}
+
+.dark .bg-white\/50 {
+  background-color: rgba(23, 23, 23, 0.5) !important;
+}
+
+.dark .bg-white\/40 {
+  background-color: rgba(23, 23, 23, 0.4) !important;
+}
+
+.dark .bg-white\/20 {
+  background-color: rgba(23, 23, 23, 0.2) !important;
+}
+
+.dark .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+.dark .bg-white\/95 {
+  background-color: rgba(23, 23, 23, 0.95) !important;
+}
+
+/* --- TEXT COLORS --- */
+.dark .text-neutral-900:not([class*="dark\:text-"]) {
+  color: #f5f5f5 !important;
+}
+
+.dark .text-neutral-800:not([class*="dark\:text-"]) {
+  color: #e5e5e5 !important;
+}
+
+.dark .text-neutral-700:not([class*="dark\:text-"]) {
+  color: #d4d4d4 !important;
+}
+
+.dark .text-neutral-600:not([class*="dark\:text-"]) {
+  color: #a3a3a3 !important;
+}
+
+.dark .text-neutral-500:not([class*="dark\:text-"]) {
+  color: #737373 !important;
+}
+
+.dark .text-neutral-400:not([class*="dark\:text-"]) {
+  color: #525252 !important;
+}
+
+.dark .text-gray-900:not([class*="dark\:text-"]) {
+  color: #f5f5f5 !important;
+}
+
+.dark .text-gray-800:not([class*="dark\:text-"]) {
+  color: #e5e5e5 !important;
+}
+
+.dark .text-gray-700:not([class*="dark\:text-"]) {
+  color: #d4d4d4 !important;
+}
+
+.dark .text-gray-600:not([class*="dark\:text-"]) {
+  color: #a3a3a3 !important;
+}
+
+.dark .text-gray-500:not([class*="dark\:text-"]) {
+  color: #737373 !important;
+}
+
+/* --- BORDERS --- */
+.dark .border-neutral-200:not([class*="dark\:border-"]) {
+  border-color: #2a2a2a !important;
+}
+
+.dark .border-neutral-100:not([class*="dark\:border-"]) {
+  border-color: #262626 !important;
+}
+
+.dark .border-neutral-300:not([class*="dark\:border-"]) {
+  border-color: #333333 !important;
+}
+
+.dark .border-neutral-50:not([class*="dark\:border-"]) {
+  border-color: #1f1f1f !important;
+}
+
+.dark .border-gray-200:not([class*="dark\:border-"]) {
+  border-color: #2a2a2a !important;
+}
+
+.dark .border-white:not([class*="dark\:border-"]) {
+  border-color: #262626 !important;
+}
+
+.dark .border-white\/60 {
+  border-color: rgba(64, 64, 64, 0.6) !important;
+}
+
+.dark .border-white\/50 {
+  border-color: rgba(64, 64, 64, 0.5) !important;
+}
+
+.dark .border-white\/40 {
+  border-color: rgba(64, 64, 64, 0.4) !important;
+}
+
+/* --- DIVIDE --- */
+.dark .divide-neutral-100> :not([hidden])~ :not([hidden]) {
+  border-color: #262626 !important;
+}
+
+.dark .divide-neutral-200> :not([hidden])~ :not([hidden]) {
+  border-color: #2a2a2a !important;
+}
+
+/* --- SHADOWS --- */
+.dark .shadow-sm {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3) !important;
+}
+
+.dark .shadow-md {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .shadow-lg {
+  box-shadow: 0 10px 15px rgba(0, 0, 0, 0.4) !important;
+}
+
+.dark .shadow-xl {
+  box-shadow: 0 20px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+.dark .shadow-2xl {
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* --- HOVER STATES --- */
+.dark .hover\:bg-neutral-50:hover {
+  background-color: #262626 !important;
+}
+
+.dark .hover\:bg-neutral-100:hover {
+  background-color: #2a2a2a !important;
+}
+
+.dark .hover\:bg-gray-50:hover {
+  background-color: #262626 !important;
+}
+
+.dark .hover\:bg-gray-100:hover {
+  background-color: #2a2a2a !important;
+}
+
+.dark .hover\:bg-neutral-200:hover {
+  background-color: #333333 !important;
+}
+
+/* --- RING (FOCUS STATES) --- */
+.dark .ring-neutral-200 {
+  --tw-ring-color: #333333 !important;
+}
+
+.dark .ring-neutral-100 {
+  --tw-ring-color: #262626 !important;
+}
+
+/* --- PLACEHOLDER --- */
+.dark .placeholder\:text-neutral-400::placeholder {
+  color: #525252 !important;
+}
+
+.dark .placeholder\:text-neutral-500::placeholder {
+  color: #404040 !important;
+}
+
+.dark .placeholder\:text-gray-400::placeholder {
+  color: #525252 !important;
+}
+
+/* --- PROSEMIRROR / TIPTAP DARK --- */
+.dark .ProseMirror h1,
+.dark .ProseMirror h2,
+.dark .ProseMirror h3 {
+  color: #f5f5f5;
+}
+
+.dark .ProseMirror p {
+  color: #a3a3a3;
+}
+
+.dark .prose blockquote {
+  border-left-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* --- HARDCODED HEX BACKGROUNDS (Tasks/Actions pages) --- */
+/* Main page background */
+.dark .bg-\[\#f8f9fa\] {
+  background-color: #0a0a0a !important;
+}
+
+.dark .bg-\[\#f8f9fa\]\/70 {
+  background-color: rgba(10, 10, 10, 0.7) !important;
+}
+
+/* Card theme backgrounds → darker tinted versions */
+.dark .bg-\[\#fcebef\] {
+  background-color: rgba(235, 82, 117, 0.12) !important;
+}
+
+/* pink */
+.dark .bg-\[\#fdf4e8\] {
+  background-color: rgba(242, 159, 75, 0.12) !important;
+}
+
+/* orange */
+.dark .bg-\[\#eef3fc\] {
+  background-color: rgba(84, 133, 234, 0.12) !important;
+}
+
+/* blue */
+.dark .bg-\[\#eaf5ec\] {
+  background-color: rgba(76, 176, 95, 0.12) !important;
+}
+
+/* green */
+.dark .bg-\[\#f4f4f5\] {
+  background-color: #1f1f1f !important;
+}
+
+/* gray */
+.dark .bg-\[\#eff4fc\] {
+  background-color: rgba(84, 133, 234, 0.12) !important;
+}
+
+/* blue alt */
+
+/* Card icon backgrounds */
+.dark .bg-\[\#f7d4dc\] {
+  background-color: rgba(235, 82, 117, 0.2) !important;
+}
+
+.dark .bg-\[\#fde2c9\] {
+  background-color: rgba(242, 159, 75, 0.2) !important;
+}
+
+.dark .bg-\[\#d4e1f8\] {
+  background-color: rgba(84, 133, 234, 0.2) !important;
+}
+
+.dark .bg-\[\#cfead4\] {
+  background-color: rgba(76, 176, 95, 0.2) !important;
+}
+
+.dark .bg-\[\#e4e4e7\] {
+  background-color: #2a2a2a !important;
+}
+
+/* Empty state / info backgrounds */
+.dark .bg-\[\#fcfcfd\] {
+  background-color: #171717 !important;
+}
+
+/* Modal backgrounds */
+.dark .bg-\[\#f0f0f0\] {
+  border-color: #333 !important;
+}
+
+/* Form elements */
+.dark .bg-gray-50 {
+  background-color: #1a1a1a !important;
+}
+
+/* Border overrides for custom hex borders */
+.dark .border-\[\#f0f0f0\] {
+  border-color: #333333 !important;
+}
+
+.dark .border-\[\#f7d4dc\] {
+  border-color: rgba(235, 82, 117, 0.25) !important;
+}
+
+.dark .border-\[\#fde2c9\] {
+  border-color: rgba(242, 159, 75, 0.25) !important;
+}
+
+.dark .border-\[\#e8effa\] {
+  border-color: rgba(84, 133, 234, 0.2) !important;
+}
+
+.dark .border-\[\#cfead4\] {
+  border-color: rgba(76, 176, 95, 0.2) !important;
+}
+
+.dark .border-blue-100 {
+  border-color: rgba(59, 130, 246, 0.15) !important;
+}
+
+/* Active tab pill backgrounds for scrolled state */
+.dark .bg-white\/60 {
+  background-color: rgba(38, 38, 38, 0.6) !important;
+}
+
+/* =========================================
+   PILLAR THEMES
+   ========================================= */
+
+/* FRAME: Identity (Black/Neutral) */
+.theme-frame {
+  --action-primary: #0F0F0F;
+  --action-primary-hover: #1C1C1C;
+  --action-primary-pressed: #000000;
+  --bg-soft: #F5F5F5;
+  --border-soft: #E5E7EB;
+}
+
+/* FLOW: Work (Red) */
+.theme-flow {
+  --action-primary: #D91011;
+  --action-primary-hover: #C80F0F;
+  --action-primary-pressed: #980B0B;
+  --bg-soft: #FCEAEA;
+  /* brand-red-fade */
+  --border-soft: #F5B5B5;
+}
+
+/* FEEL: People (Blue) */
+.theme-feel {
+  --action-primary: #2176FF;
+  --action-primary-hover: #185AD8;
+  --action-primary-pressed: #1040A0;
+  --bg-soft: #EAF1FF;
+  --border-soft: #BFDBFE;
+}
+
+
+/* TYPOGRAPHY HELPERS */
+.h1 {
+  font-size: var(--h1-size);
+  font-weight: var(--h1-weight);
+}
+
+.h2 {
+  font-size: var(--h2-size);
+  font-weight: var(--h2-weight);
+}
+
+.h3 {
+  font-size: var(--h3-size);
+  font-weight: var(--h3-weight);
+}
+
+.h4 {
+  font-size: var(--h4-size);
+  font-weight: var(--h4-weight);
+}
+
+.h5 {
+  font-size: var(--h5-size);
+  font-weight: var(--h5-weight);
+}
+
+.p {
+  font-size: var(--body-size);
+  line-height: 1.8;
+  color: var(--text-primary);
+}
+
+.small {
+  font-size: var(--small-size);
+  opacity: 0.75;
+}
+
+/* =========================================
+   TIPTAP (LIGHT MODE)
+========================================= */
+
+.ProseMirror ul {
+  list-style-type: disc !important;
+  padding-left: 1.4rem;
+}
+
+.ProseMirror ol {
+  list-style-type: decimal !important;
+  padding-left: 1.4rem;
+}
+
+/* Headings */
+.ProseMirror h1 {
+  font-size: 24px !important;
+  font-weight: 700 !important;
+  line-height: 1.3 !important;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ProseMirror h2 {
+  font-size: 18px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ProseMirror h3 {
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  line-height: 1.3 !important;
+  margin-top: 1rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ProseMirror p {
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0.2rem 0;
+  color: var(--text-secondary);
+}
+
+.prose blockquote {
+  border-left: 3px solid rgba(0, 0, 0, 0.25);
+  padding-left: 1rem;
+  margin-left: 0;
+  color: rgba(0, 0, 0, 0.6);
+  font-style: italic;
+}
+
+html,
+body {
+  overflow-x: hidden !important;
+}
+
+
+/* GLOBAL FOCUS OVERRIDE */
+*:focus-visible {
+  outline-color: var(--brand-red);
+  outline-width: 1px;
+  outline-style: solid;
+  outline-offset: 2px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none !important;
+  /* Let Tailwind ring handle it, or custom styles */
+  --tw-ring-color: var(--brand-red-soft);
+}
+
+/* Hide mobile bottom navigation when this class is on html/body */
+html.hide-mobile-nav .lg\:hidden.fixed.bottom-6 {
+  display: none !important;
+}
+
+/* =========================================
+   iOS SAFARI DATE INPUT OVERFLOW FIX
+   Safari uses Shadow DOM for date inputs,
+   which ignores Tailwind width utilities.
+   These global rules force containment.
+   ========================================= */
+input[type="date"],
+input[type="datetime-local"],
+input[type="time"],
+input[type="month"],
+input[type="week"] {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  display: flex;
+  align-items: center;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis;
+  font-size: 14px !important;
+  line-height: 1;
+}
+
+/* Target WebKit internal date-picker decoration to prevent expansion */
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  min-width: 0;
+}
+
+input[type="date"]::-webkit-datetime-edit {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+}
+
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  overflow: hidden;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  flex-shrink: 0;
+  margin-left: 2px;
+}
+
+/* Ensure parent containers of date inputs clip overflow */
+div:has(> input[type="date"]),
+div:has(> input[type="datetime-local"]) {
+  overflow: hidden !important;
+  min-width: 0 !important;
+}
+
+/* 🟢 FORCE SANS-SERIF ON ALL FORM ELEMENTS (ESPECIALLY SAFARI DROPDOWNS) */
+select,
+option,
+input,
+textarea,
+button,
+.font-sans,
+* {
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Segoe UI", Roboto, Helvetica, Arial, sans-serif !important;
+}
+
+/* =========================================
+   PRINT / PDF EXPORT MEDIA STYLES
+   ========================================= */
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 10mm;
+  }
+
+  /* Hide app navigation chrome, header, sidebar, editor panel, and controls */
+  header,
+  nav,
+  aside,
+  .no-print,
+  [role="navigation"] {
+    display: none !important;
+  }
+
+  /* Force display of the editor split grid container during print */
+  body,
+  main,
+  #app-root,
+  .grid,
+  .printable-document {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    overflow: visible !important;
+  }
+
+  /* Hide the left editor panel (column 4) when printing */
+  .lg\:col-span-4 {
+    display: none !important;
+  }
+
+  /* Make preview panel (column 8) span full width */
+  .lg\:col-span-8 {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: block !important;
+  }
+
+  /* Ensure card container overflow is unclipped */
+  .max-h-\[85vh\] {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+}
