@@ -1,3 +1,4 @@
+import PeopleSetupDetailScreen from '@/app/people-setup/[id]';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View,
@@ -203,11 +204,20 @@ export interface ClockSetupDetailScreenProps {
     onClose?: () => void;
 }
 
+export default function ClockSetupDetailScreen(props: ClockSetupDetailScreenProps = {}) {
+    const params = useLocalSearchParams<{ id: string }>();
+    const moduleId = props.moduleId || params.id;
+    if (moduleId === 'work_schedules' || moduleId === 'leave_policies') {
+        return <PeopleSetupDetailScreen moduleId={moduleId} isEmbedded={props.isEmbedded} onClose={props.onClose} />;
+    }
+    return <ClockOnlySetupDetailScreen {...props} />;
+}
+
 export function ClockSetupDetailPane(props: ClockSetupDetailScreenProps) {
     return <ClockSetupDetailScreen {...props} isEmbedded={true} />;
 }
 
-export default function ClockSetupDetailScreen({ moduleId: propModuleId, isEmbedded, onClose }: ClockSetupDetailScreenProps = {}) {
+function ClockOnlySetupDetailScreen({ moduleId: propModuleId, isEmbedded, onClose }: ClockSetupDetailScreenProps = {}) {
     const params = useLocalSearchParams<{ id: string }>();
     const id = propModuleId || params.id;
     const insets = useSafeAreaInsets();
@@ -459,12 +469,13 @@ export default function ClockSetupDetailScreen({ moduleId: propModuleId, isEmbed
                 getClockSetting('APPROVAL_WORKFLOWS', DEFAULT_APPROVAL_WORKFLOWS, tenantId),
             ]);
 
-            if (scheds) setWorkSchedules(scheds);
-            if (leaves) setLeavePolicies(leaves);
-            if (deptsData) setOrgDepartments(deptsData);
-            if (posData) setOrgPositions(posData);
-            if (contractsData) setContractTypes(contractsData);
-            if (levelsData) setOrgLevels(levelsData);
+            const isItemActive = (item: any) => item && String(item.status || 'Active').toLowerCase() === 'active';
+            if (scheds) setWorkSchedules(scheds.filter(isItemActive));
+            if (leaves) setLeavePolicies(leaves.filter(isItemActive));
+            if (deptsData) setOrgDepartments(deptsData.filter(isItemActive));
+            if (posData) setOrgPositions(posData.filter(isItemActive));
+            if (contractsData) setContractTypes(contractsData.filter(isItemActive));
+            if (levelsData) setOrgLevels(levelsData.filter(isItemActive));
             if (savedRemoteWork) setRemoteWorkConfig(savedRemoteWork);
             if (savedApprovalWorkflows) setApprovalConfig(savedApprovalWorkflows);
 

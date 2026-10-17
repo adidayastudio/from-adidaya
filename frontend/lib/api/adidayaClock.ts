@@ -178,6 +178,16 @@ async function legacyClockAction(userId: string, type: "IN" | "OUT", metadata?: 
             return { error: "Clock OUT time cannot be before Clock IN time." };
         }
 
+        // Fetch current record to preserve check-in data
+        const { data: currentRecord, error: currentRecordError } = await supabase.from("attendance_records")
+            .select("check_in_photo_url, check_in_latitude, check_in_longitude, check_in_location_code, check_in_location_type, check_in_remote_mode, check_in_location_status, check_in_notes")
+            .eq("user_id", userId)
+            .eq("date", dateStr)
+            .maybeSingle();
+
+        if (currentRecordError) throw currentRecordError;
+
+
         // Calculate duration for this session
         const sessionDuration = Math.floor((now.getTime() - clockInTime.getTime()) / 60000);
 
@@ -235,13 +245,6 @@ async function legacyClockAction(userId: string, type: "IN" | "OUT", metadata?: 
             if (checkInTime < limitOnTime) status = "ontime";
             else if (checkInTime < limitInTime) status = "intime";
 
-            // Fetch current record to preserve check-in data
-            const { data: currentRecord } = await supabase.from("attendance_records")
-                .select("check_in_photo_url, check_in_latitude, check_in_longitude, check_in_location_code, check_in_location_type, check_in_remote_mode, check_in_location_status, check_in_notes")
-                .eq("user_id", userId)
-                .eq("date", dateStr)
-                .maybeSingle();
-
             const upsertData: any = {
                 user_id: userId,
                 date: dateStr,
@@ -251,7 +254,7 @@ async function legacyClockAction(userId: string, type: "IN" | "OUT", metadata?: 
                 total_minutes: totalRegularMinutes,
                 overtime_minutes: totalOvertimeMinutes,
                 // Preserve check-in data
-                check_in_photo_url: currentRecord?.check_in_photo_url || (firstSess.id === lastSession.id ? metadata?.photoUrl : null),
+                check_in_photo_url: currentRecord?.check_in_photo_url || firstSess.photo_url || null,
                 check_in_latitude: currentRecord?.check_in_latitude,
                 check_in_longitude: currentRecord?.check_in_longitude,
                 check_in_location_code: currentRecord?.check_in_location_code,
