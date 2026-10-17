@@ -578,7 +578,7 @@ export function CrewRequestsTab({
                                         </View>
 
                                         {/* Action Buttons Row */}
-                                        <View style={s.actionRowCombined}>
+                                        {!onEditRequest && <View style={s.actionRowCombined}>
                                             {/* Delete */}
                                             <TouchableOpacity
                                                 style={[
@@ -606,7 +606,7 @@ export function CrewRequestsTab({
                                                 onPress={() => (onEditRequest || onSelectRequest)(req)}
                                                 activeOpacity={0.7}
                                             >
-                                                <Ionicons name="pencil-outline" size={15} color={textColor} /><Text style={{ color: textColor, marginLeft: 6, fontWeight: '600' }}>Edit</Text>
+                                                <Ionicons name="pencil-outline" size={15} color={textColor} />
                                             </TouchableOpacity>
 
                                             {/* Reject & Approve */}
@@ -632,7 +632,7 @@ export function CrewRequestsTab({
                                                     />
                                                 </>
                                             )}
-                                        </View>
+                                        </View>}
                                     </View>);
     };
     const selectedRequest = requests.find(req => req.id === selectedRequestId);
@@ -998,7 +998,7 @@ export function CrewRequestsTab({
                             <Ionicons name="close" size={22} color={textColor} />
                         </TouchableOpacity>
                     </View>
-                    <ScrollView contentContainerStyle={{ padding: 24, maxWidth: 820, width: '100%', alignSelf: 'center', gap: 20 }}>
+                    <ScrollView style={{ flex: 1, minHeight: 0 }} contentContainerStyle={{ padding: 24, maxWidth: 820, width: '100%', alignSelf: 'center', gap: 20 }}>
                         <View style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: 1, borderRadius: 20, padding: 20, gap: 12 }}>
                             <Text style={{ color: textColor, fontSize: 22, fontWeight: '700' }}>{toTitleCase(selectedRequest.crewName)}</Text>
                             <Text style={{ color: subtextColor, fontSize: 14 }}>{CREW_ROLE_LABELS[selectedRequest.crewRole]} · {selectedRequest.projectCode}</Text>
@@ -1011,6 +1011,18 @@ export function CrewRequestsTab({
                         </View>
                         {renderRequestDetail(selectedRequest)}
                     </ScrollView>
+                    <View style={{ padding: 20, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: cardBorder, flexShrink: 0 }}>
+                        <View style={{ gap: 10, maxWidth: 772, width: '100%', alignSelf: 'center' }}>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <PillButton label="Delete" size="lg" variant="muted" color="red" noShadow style={{ flex: 1 }} onPress={() => handleDeletePress(selectedRequest.id)} icon={<Ionicons name="trash-outline" size={18} color="#FF3B30" />} />
+                                <PillButton label="Edit" size="lg" variant="muted" color="neutral" noShadow style={{ flex: 1 }} onPress={() => onEditRequest?.(selectedRequest)} icon={<Ionicons name="pencil-outline" size={18} color={textColor} />} />
+                                {selectedRequest.status === 'PENDING' && <PillButton label="Reject" size="lg" variant="muted" color="red" noShadow style={{ flex: 1 }} onPress={() => handleRejectPress(selectedRequest.id)} icon={<Ionicons name="close-circle-outline" size={18} color="#FF3B30" />} />}
+                            </View>
+                            {selectedRequest.status === 'PENDING' && <View style={{ flexDirection: 'row', gap: 12 }}>
+                                <PillButton label="Approve" size="lg" color="green" noShadow style={{ flex: 1 }} onPress={() => handleApprovePress(selectedRequest.id)} icon={<Ionicons name="checkmark-circle-outline" size={18} color="#FFFFFF" />} />
+                            </View>}
+                        </View>
+                    </View>
                 </View>, detailContainer
             )}
 
