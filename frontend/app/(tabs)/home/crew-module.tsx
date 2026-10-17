@@ -256,30 +256,23 @@ export default function CrewScreen() {
     const [preselectedCrewIdForAssign, setPreselectedCrewIdForAssign] = useState<string | undefined>(undefined);
     const [assignmentModalVisible, setAssignmentModalVisible] = useState(false);
 
+    const [selectedPayrollCrewId, setSelectedPayrollCrewId] = useState<string | null>(null);
+    const [requestDetailContainer, setRequestDetailContainer] = useState<HTMLElement | null>(null);
+    const [payrollDetailContainer, setPayrollDetailContainer] = useState<HTMLElement | null>(null);
+
     const [selectedRequestForEdit, setSelectedRequestForEdit] = useState<CrewRequest | null>(null);
     const [requestModalVisible, setRequestModalVisible] = useState(false);
 
-    // Desktop auto-selection
-    useEffect(() => {
-        if (!isDesktopWeb) return;
-        if (activeSegment === 'directory' && crewMembers.length > 0 && !selectedMemberForDetail) {
-            setSelectedMemberForDetail(crewMembers[0]);
+    const handleSegmentChange = (segment: string) => {
+        if (segment !== activeSegment) {
+            setSelectedPayrollCrewId(null);
+            setRequestModalVisible(false);
+            setSelectedMemberForDetail(null);
+            setSelectedAssignmentForEdit(null);
+            setSelectedRequestForEdit(null);
         }
-    }, [isDesktopWeb, activeSegment, crewMembers, selectedMemberForDetail]);
-
-    useEffect(() => {
-        if (!isDesktopWeb) return;
-        if (activeSegment === 'assignment' && assignments.length > 0 && !selectedAssignmentForEdit) {
-            setSelectedAssignmentForEdit(assignments[0]);
-        }
-    }, [isDesktopWeb, activeSegment, assignments, selectedAssignmentForEdit]);
-
-    useEffect(() => {
-        if (!isDesktopWeb) return;
-        if (activeSegment === 'requests' && requests.length > 0 && !selectedRequestForEdit) {
-            setSelectedRequestForEdit(requests[0]);
-        }
-    }, [isDesktopWeb, activeSegment, requests, selectedRequestForEdit]);
+        setActiveSegment(segment);
+    };
 
     // Directory filter visibility (controlled from header)
     const [directoryFiltersVisible, setDirectoryFiltersVisible] = useState(false);
@@ -363,7 +356,7 @@ export default function CrewScreen() {
             );
             if (request && !action.includes('delete')) {
                 setSelectedRequestForEdit(request);
-                setRequestModalVisible(true);
+                setRequestModalVisible(!isDesktopWeb);
             }
         }
     }, [notificationParams, isLoading, crewMembers, assignments, requests]);
@@ -875,6 +868,7 @@ export default function CrewScreen() {
                 });
             }
             setRequests(prev => prev.filter(r => r.id !== id));
+            setSelectedRequestForEdit(current => current?.id === id ? null : current);
         } catch (err) {
             Alert.alert('Error', 'Gagal menghapus request');
         }
@@ -1110,7 +1104,9 @@ export default function CrewScreen() {
                             setMemberModalVisible(true);
                         }}
                         onSelectMember={(member) => {
-                            setSelectedMemberForDetail(member);
+                            setSelectedMemberForDetail(current =>
+                                isDesktopWeb && current?.id === member.id ? null : member
+                            );
                             if (!isDesktopWeb) {
                                 setDetailModalVisible(true);
                             }
@@ -1138,7 +1134,9 @@ export default function CrewScreen() {
                             setAssignmentModalVisible(true);
                         }}
                         onSelectAssignment={(assign) => {
-                            setSelectedAssignmentForEdit(assign);
+                            setSelectedAssignmentForEdit(current =>
+                                isDesktopWeb && current?.id === assign.id ? null : assign
+                            );
                             setPreselectedCrewIdForAssign(undefined);
                             if (!isDesktopWeb) {
                                 setAssignmentModalVisible(true);
@@ -1175,6 +1173,9 @@ export default function CrewScreen() {
 
                 <View style={{ display: activeSegment === 'payroll' ? 'flex' : 'none' }}>
                     <CrewPayrollTab
+                        detailContainer={isDesktopWeb ? payrollDetailContainer : null}
+                        selectedCrewId={selectedPayrollCrewId}
+                        onSelectCrew={isDesktopWeb ? setSelectedPayrollCrewId : undefined}
                         crewMembers={crewMembers}
                         dailyLogs={dailyLogs}
                         requests={requests}
@@ -1193,6 +1194,9 @@ export default function CrewScreen() {
 
                 <View style={{ display: activeSegment === 'requests' ? 'flex' : 'none' }}>
                     <CrewRequestsTab
+                        detailContainer={isDesktopWeb ? requestDetailContainer : null}
+                        onCloseDetail={() => setSelectedRequestForEdit(null)}
+                        onEditRequest={isDesktopWeb ? (req) => { setSelectedRequestForEdit(req); setRequestModalVisible(true); } : undefined}
                         requests={requests}
                         projects={projects}
                         selectedRequestId={selectedRequestForEdit?.id}
@@ -1203,7 +1207,10 @@ export default function CrewScreen() {
                         onApproveRequest={handleApproveRequest}
                         onRejectRequest={handleRejectRequest}
                         onSelectRequest={(req) => {
-                            setSelectedRequestForEdit(req);
+                            if (isDesktopWeb) setRequestModalVisible(false);
+                            setSelectedRequestForEdit(current =>
+                                isDesktopWeb && current?.id === req.id ? null : req
+                            );
                             if (!isDesktopWeb) {
                                 setRequestModalVisible(true);
                             }
@@ -1337,12 +1344,12 @@ export default function CrewScreen() {
         }
 
         if (activeSegment === 'requests') {
-            if (selectedRequestForEdit) {
+            if (requestModalVisible) {
                 return (
                     <CrewRequestModal
-                        key={`desktop-req-${selectedRequestForEdit.id}`}
+                        key={`desktop-req-${selectedRequestForEdit?.id || 'new'}`}
                         visible={true}
-                        onClose={() => setSelectedRequestForEdit(null)}
+                        onClose={() => setRequestModalVisible(false)}
                         onSave={handleSaveRequest}
                         request={selectedRequestForEdit}
                         crewMembers={crewMembers}
@@ -1351,6 +1358,7 @@ export default function CrewScreen() {
                     />
                 );
             }
+            if (selectedRequestForEdit) return <View ref={setRequestDetailContainer as any} style={{ flex: 1 }} />;
             return (
                 <View style={s.desktopEmptyPane}>
                     <View style={[s.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
@@ -1394,6 +1402,15 @@ export default function CrewScreen() {
                     </Text>
                 </View>
             );
+        }
+
+        if (activeSegment === 'payroll') {
+            return <View ref={setPayrollDetailContainer as any} style={{ flex: 1 }}>
+                {!selectedPayrollCrewId && <View style={s.desktopEmptyPane}>
+                    <Text style={[s.desktopEmptyTitle, { color: textColor }]}>Select a Payroll</Text>
+                    <Text style={[s.desktopEmptySubtitle, { color: subtextColor }]}>Choose a crew member to review their payroll breakdown.</Text>
+                </View>}
+            </View>;
         }
 
         return (
@@ -1446,13 +1463,13 @@ export default function CrewScreen() {
                         <SegmentedControl
                             segments={SEGMENTS}
                             activeSegment={activeSegment}
-                            onSegmentChange={setActiveSegment}
+                            onSegmentChange={handleSegmentChange}
                         />
                     }
                 />
             )}
 
-            <SwipeTabWrapper segments={SEGMENTS} activeSegment={activeSegment} onSegmentChange={setActiveSegment}>
+            <SwipeTabWrapper segments={SEGMENTS} activeSegment={activeSegment} onSegmentChange={handleSegmentChange}>
                 {isDesktopWeb ? (
                     <View style={[s.splitRoot, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}>
                         {/* Left Pane (flex: 1.1) */}
@@ -1486,7 +1503,7 @@ export default function CrewScreen() {
                                         style={{ width: '100%' }}
                                         segments={SEGMENTS}
                                         activeSegment={activeSegment}
-                                        onSegmentChange={setActiveSegment}
+                                        onSegmentChange={handleSegmentChange}
                                     />
                                 </View>
                             </View>
@@ -1532,7 +1549,7 @@ export default function CrewScreen() {
                                 <SegmentedControl
                                     segments={SEGMENTS}
                                     activeSegment={activeSegment}
-                                    onSegmentChange={setActiveSegment}
+                                    onSegmentChange={handleSegmentChange}
                                 />
                             </View>
                         )}

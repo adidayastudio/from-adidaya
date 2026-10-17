@@ -1,3 +1,5 @@
+import { PillButton } from '@/components/ui/PillButton';
+import { DESKTOP_PANEL_HEADER, DESKTOP_PANEL_TITLE, DESKTOP_PANEL_ACTION } from '@/constants/desktopLayout';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     StyleSheet,
@@ -43,6 +45,9 @@ interface CrewPayrollTabProps {
     projects?: Project[];
     onViewDocument?: (html: string, title: string) => void;
     onExportRegister?: (exportFn: () => void) => void;
+    detailContainer?: HTMLElement | null;
+    selectedCrewId?: string | null;
+    onSelectCrew?: (id: string | null) => void;
     weeklyStartDate: string;
     onWeeklyStartDateChange: (date: string) => void;
 }
@@ -120,6 +125,9 @@ export function CrewPayrollTab({
     onExportRegister,
     weeklyStartDate,
     onWeeklyStartDateChange,
+    detailContainer,
+    selectedCrewId,
+    onSelectCrew,
 }: CrewPayrollTabProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
@@ -206,7 +214,7 @@ export function CrewPayrollTab({
                     daysWorked += 0.5;
                 }
             }
-            
+
             otPay += (log.ot1Hours * member.otRate1) +
                      (log.ot2Hours * member.otRate2) +
                      (log.ot3Hours * member.otRate3);
@@ -257,7 +265,7 @@ export function CrewPayrollTab({
                     return true;
                 }
             }
-            
+
             // Define selected period date range
             const startDate = weeklyStartDate;
             const endDate = weeklyEndDate;
@@ -401,10 +409,10 @@ export function CrewPayrollTab({
 
             const { uri } = await Print.printToFileAsync({ html: htmlContent });
             const customUri = `${FileSystem.cacheDirectory}${filename}`;
-            
+
             // Rename by copying to local cache path with custom filename
             await FileSystem.copyAsync({ from: uri, to: customUri });
-            
+
             await Sharing.shareAsync(customUri, { mimeType: 'application/pdf', dialogTitle: `Payroll_Report_${period}` });
         } catch (error) {
             console.error('Error exporting payroll summary:', error);
@@ -538,7 +546,7 @@ export function CrewPayrollTab({
                             <div class="logo">PT MAHARDIKA ADIDAYA</div>
                             <div class="title">Crew Salary Slip</div>
                         </div>
-                        
+
                         <table class="meta-table">
                             <tr>
                                 <td class="meta-label">Nama Pekerja</td>
@@ -619,10 +627,10 @@ export function CrewPayrollTab({
 
             const { uri } = await Print.printToFileAsync({ html: htmlContent });
             const customUri = `${FileSystem.cacheDirectory}${filename}`;
-            
+
             // Rename by copying to local cache path with custom filename
             await FileSystem.copyAsync({ from: uri, to: customUri });
-            
+
             await Sharing.shareAsync(customUri, { mimeType: 'application/pdf', dialogTitle: `Slip_${member.name.replace(/\s+/g, '_')}` });
         } catch (error) {
             console.error('Error exporting slip:', error);
@@ -644,20 +652,20 @@ export function CrewPayrollTab({
         const r = parseInt(cleanHex.substring(0, 2), 16);
         const g = parseInt(cleanHex.substring(2, 4), 16);
         const b = parseInt(cleanHex.substring(4, 6), 16);
-        
+
         const alpha = isDarkColor ? 0.14 : 0.08;
         const bgR = isDarkColor ? 28 : 255;
         const bgG = isDarkColor ? 28 : 255;
         const bgB = isDarkColor ? 30 : 255;
-        
+
         const blendedR = Math.round(alpha * r + (1 - alpha) * bgR);
         const blendedG = Math.round(alpha * g + (1 - alpha) * bgG);
         const blendedB = Math.round(alpha * b + (1 - alpha) * bgB);
-        
+
         const hexR = blendedR.toString(16).padStart(2, '0');
         const hexG = blendedG.toString(16).padStart(2, '0');
         const hexB = blendedB.toString(16).padStart(2, '0');
-        
+
         return `#${hexR}${hexG}${hexB}`;
     };
 
@@ -676,6 +684,87 @@ export function CrewPayrollTab({
     const searchBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
 
     console.log('[CrewPayrollTab] Rendering top summary metrics row first...');
+    const renderPayrollDetail = (member: CrewMember, payroll: ReturnType<typeof calculateMemberPayroll>, isPanel = false) => (<>
+                                        <View style={[s.payoutDetails, isPanel && { paddingHorizontal: 20, paddingVertical: 6, gap: 0 }]}>
+                                            <View style={[s.detailRow, isPanel && { minHeight: 50, paddingVertical: 14, gap: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cardBorder }]}>
+                                                <Text style={[s.detailLabel, { color: subtextColor }, isPanel && { flex: 1, fontSize: 14, fontWeight: '400' }]}>Base Earnings ({payroll.daysWorked}d)</Text>
+                                                <Text style={[s.detailValue, isPanel && { fontSize: 14, fontVariant: ['tabular-nums'] }, { color: textColor }]}>
+                                                    {formatCurrency(payroll.basePay)}
+                                                </Text>
+                                            </View>
+                                            <View style={[s.detailRow, isPanel && { minHeight: 50, paddingVertical: 14, gap: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cardBorder }]}>
+                                                <Text style={[s.detailLabel, { color: subtextColor }, isPanel && { flex: 1, fontSize: 14, fontWeight: '400' }]}>Holiday Earnings ({payroll.holidayDaysWorked}d)</Text>
+                                                <Text style={[s.detailValue, isPanel && { fontSize: 14, fontVariant: ['tabular-nums'] }, { color: textColor }]}>
+                                                    {formatCurrency(payroll.holidayPay)}
+                                                </Text>
+                                            </View>
+                                            <View style={[s.detailRow, isPanel && { minHeight: 50, paddingVertical: 14, gap: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cardBorder }]}>
+                                                <Text style={[s.detailLabel, { color: subtextColor }, isPanel && { flex: 1, fontSize: 14, fontWeight: '400' }]}>Overtime ({payroll.otHours}h)</Text>
+                                                <Text style={[s.detailValue, isPanel && { fontSize: 14, fontVariant: ['tabular-nums'] }, { color: textColor }]}>
+                                                    {formatCurrency(payroll.otPay)}
+                                                </Text>
+                                            </View>
+                                            <View style={[s.detailRow, isPanel && { minHeight: 50, paddingVertical: 14, gap: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cardBorder }]}>
+                                                <Text style={[s.detailLabel, { color: subtextColor }, isPanel && { flex: 1, fontSize: 14, fontWeight: '400' }]}>Reimbursements</Text>
+                                                <Text style={[s.detailValue, isPanel && { fontSize: 14, fontVariant: ['tabular-nums'] }, { color: isPanel && payroll.reimburse === 0 ? textColor : '#34C759' }]}>
+                                                    {isPanel && payroll.reimburse === 0 ? '' : '+'}{formatCurrency(payroll.reimburse)}
+                                                </Text>
+                                            </View>
+                                            <View style={[s.detailRow, isPanel && { minHeight: 50, paddingVertical: 14, gap: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cardBorder }]}>
+                                                <Text style={[s.detailLabel, { color: subtextColor }, isPanel && { flex: 1, fontSize: 14, fontWeight: '400' }]}>Cash Advance (Kasbon)</Text>
+                                                <Text style={[s.detailValue, isPanel && { fontSize: 14, fontVariant: ['tabular-nums'] }, { color: isPanel && payroll.kasbon === 0 ? textColor : '#FF3B30' }]}>
+                                                    {isPanel && payroll.kasbon === 0 ? '' : '-'}{formatCurrency(payroll.kasbon)}
+                                                </Text>
+                                            </View>
+                                            <View style={[s.detailRow, isPanel && { minHeight: 50, paddingVertical: 14, gap: 20, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: cardBorder }]}>
+                                                <Text style={[s.detailLabel, { color: subtextColor }, isPanel && { flex: 1, fontSize: 14, fontWeight: '400' }]}>Adjustment</Text>
+                                                <Text style={[s.detailValue, isPanel && { fontSize: 14, fontVariant: ['tabular-nums'] }, { color: isPanel && payroll.adjustment === 0 ? textColor : payroll.adjustment >= 0 ? '#34C759' : '#FF3B30' }]}>
+                                                    {payroll.adjustment > 0 ? '+' : ''}{formatCurrency(payroll.adjustment)}
+                                                </Text>
+                                            </View>
+                                            {payroll.adjustmentReason ? (
+                                                <View style={s.adjustmentReasonContainer}>
+                                                    <Ionicons name="information-circle-outline" size={12} color={subtextColor} />
+                                                    <Text style={[s.adjustmentReasonText, { color: subtextColor }]}>
+                                                        Reason: {payroll.adjustmentReason}
+                                                    </Text>
+                                                    {payroll.adjustmentProofName ? (
+                                                        <Text style={[s.adjustmentProofText, { color: '#007AFF' }]} numberOfLines={1}>
+                                                            📎 {payroll.adjustmentProofName}
+                                                        </Text>
+                                                    ) : null}
+                                                </View>
+                                            ) : null}
+                                        </View>
+
+                                        {/* Card Actions */}
+                                        {!isPanel && <View style={s.cardActions}>
+                                            <TouchableOpacity
+                                                style={[s.adjustTextBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
+                                                onPress={() => {
+                                                    setSelectedCrewForAdjustment(member);
+                                                    setAdjustmentModalVisible(true);
+                                                }}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Text style={[s.adjustTextBtnLabel, { color: isDark ? '#EBEBF5' : '#3C3C43' }]}>Adjust</Text>
+                                            </TouchableOpacity>
+
+                                            <TouchableOpacity
+                                                style={[s.slipBtn, { backgroundColor: isDark ? 'rgba(0,122,255,0.15)' : 'rgba(0,122,255,0.08)' }]}
+                                                onPress={() => handleExportSlip(member, payroll)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Ionicons name="document-text" size={14} color="#007AFF" />
+                                                <Text style={s.slipBtnText}>Slip</Text>
+                                            </TouchableOpacity>
+                                        </View>}
+                                    </>);
+    const selectedPayroll = payrollList.find(item => item.member.id === selectedCrewId);
+    useEffect(() => {
+        if (onSelectCrew && selectedCrewId && !selectedPayroll) onSelectCrew(null);
+    }, [onSelectCrew, selectedCrewId, selectedPayroll]);
+
     return (
         <View style={s.container}>
             <ScrollView
@@ -689,8 +778,8 @@ export function CrewPayrollTab({
                     <View style={[s.metricIconContainer, { backgroundColor: 'rgba(52,199,89,0.15)' }]}>
                         <Ionicons name="cash" size={18} color="#34C759" />
                     </View>
-                    <Text 
-                        style={[s.metricValue, { color: '#34C759' }]} 
+                    <Text
+                        style={[s.metricValue, { color: '#34C759' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.5}
@@ -705,8 +794,8 @@ export function CrewPayrollTab({
                     <View style={[s.metricIconContainer, { backgroundColor: 'rgba(0,122,255,0.15)' }]}>
                         <Ionicons name="business" size={18} color="#007AFF" />
                     </View>
-                    <Text 
-                        style={[s.metricValue, { color: '#007AFF' }]} 
+                    <Text
+                        style={[s.metricValue, { color: '#007AFF' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.5}
@@ -721,8 +810,8 @@ export function CrewPayrollTab({
                     <View style={[s.metricIconContainer, { backgroundColor: 'rgba(175,82,222,0.15)' }]}>
                         <Ionicons name="time" size={18} color="#AF52DE" />
                     </View>
-                    <Text 
-                        style={[s.metricValue, { color: '#AF52DE' }]} 
+                    <Text
+                        style={[s.metricValue, { color: '#AF52DE' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.5}
@@ -737,8 +826,8 @@ export function CrewPayrollTab({
                     <View style={[s.metricIconContainer, { backgroundColor: 'rgba(255,59,48,0.15)' }]}>
                         <Ionicons name="trending-down" size={18} color="#FF3B30" />
                     </View>
-                    <Text 
-                        style={[s.metricValue, { color: '#FF3B30' }]} 
+                    <Text
+                        style={[s.metricValue, { color: '#FF3B30' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.5}
@@ -753,8 +842,8 @@ export function CrewPayrollTab({
                     <View style={[s.metricIconContainer, { backgroundColor: 'rgba(52,199,89,0.15)' }]}>
                         <Ionicons name="trending-up" size={18} color="#34C759" />
                     </View>
-                    <Text 
-                        style={[s.metricValue, { color: '#34C759' }]} 
+                    <Text
+                        style={[s.metricValue, { color: '#34C759' }]}
                         numberOfLines={1}
                         adjustsFontSizeToFit
                         minimumFontScale={0.5}
@@ -781,8 +870,8 @@ export function CrewPayrollTab({
 
                 {/* Date Navigator */}
                 <View style={[s.dateNavigatorPillSide, { minWidth: isCompact ? 120 : 140, backgroundColor: cardBg, borderColor: searchBorder }]}>
-                    <TouchableOpacity 
-                        style={s.navArrow} 
+                    <TouchableOpacity
+                        style={s.navArrow}
                         hitSlop={10}
                         onPress={() => {
                             onWeeklyStartDateChange(addDays(weeklyStartDate, -7));
@@ -793,8 +882,8 @@ export function CrewPayrollTab({
                     <Text style={[s.dateTextCompact, { color: textColor }]} numberOfLines={1}>
                         {isCompact ? formatWeekRangeCompact(weeklyStartDate, weeklyEndDate) : formatWeekRange(weeklyStartDate, weeklyEndDate)}
                     </Text>
-                    <TouchableOpacity 
-                        style={s.navArrow} 
+                    <TouchableOpacity
+                        style={s.navArrow}
                         hitSlop={10}
                         onPress={() => {
                             onWeeklyStartDateChange(addDays(weeklyStartDate, 7));
@@ -852,12 +941,12 @@ export function CrewPayrollTab({
             {payrollList.length > 0 ? (
                 <View style={s.list}>
                     {payrollList.map(({ member, payroll }) => {
-                        const isExpanded = expandedCrewId === member.id;
+                        const isExpanded = (onSelectCrew ? selectedCrewId : expandedCrewId) === member.id;
                         return (
-                            <View key={member.id} style={[s.payoutCard, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                            <View key={member.id} style={[s.payoutCard, { backgroundColor: cardBg, borderColor: isExpanded ? '#8B5CF6' : cardBorder }]}>
                                 <TouchableOpacity
                                     style={s.payoutHeader}
-                                    onPress={() => setExpandedCrewId(isExpanded ? null : member.id)}
+                                    onPress={() => onSelectCrew ? onSelectCrew(isExpanded ? null : member.id) : setExpandedCrewId(isExpanded ? null : member.id)}
                                     activeOpacity={0.7}
                                 >
                                     <View style={s.crewInfo}>
@@ -884,15 +973,15 @@ export function CrewPayrollTab({
                                     </View>
                                     <View style={s.payoutAmount}>
                                         <View style={s.payoutTextCol}>
-                                            <Text 
+                                            <Text
                                                 style={[
-                                                    s.netPayoutText, 
-                                                    { 
-                                                        color: payroll.netPayout === 0 
-                                                            ? textColor 
-                                                            : payroll.netPayout > 0 
-                                                                ? '#34C759' 
-                                                                : '#FF3B30' 
+                                                    s.netPayoutText,
+                                                    {
+                                                        color: payroll.netPayout === 0
+                                                            ? textColor
+                                                            : payroll.netPayout > 0
+                                                                ? '#34C759'
+                                                                : '#FF3B30'
                                                     }
                                                 ]}
                                                 numberOfLines={1}
@@ -906,84 +995,7 @@ export function CrewPayrollTab({
                                 </TouchableOpacity>
 
                                 {/* Flat Receipt-style Details & Card Actions */}
-                                {isExpanded && (
-                                    <>
-                                        <View style={s.payoutDetails}>
-                                            <View style={s.detailRow}>
-                                                <Text style={[s.detailLabel, { color: subtextColor }]}>Base Earnings ({payroll.daysWorked}d)</Text>
-                                                <Text style={[s.detailValue, { color: textColor }]}>
-                                                    {formatCurrency(payroll.basePay)}
-                                                </Text>
-                                            </View>
-                                            <View style={s.detailRow}>
-                                                <Text style={[s.detailLabel, { color: subtextColor }]}>Holiday Earnings ({payroll.holidayDaysWorked}d)</Text>
-                                                <Text style={[s.detailValue, { color: textColor }]}>
-                                                    {formatCurrency(payroll.holidayPay)}
-                                                </Text>
-                                            </View>
-                                            <View style={s.detailRow}>
-                                                <Text style={[s.detailLabel, { color: subtextColor }]}>Overtime ({payroll.otHours}h)</Text>
-                                                <Text style={[s.detailValue, { color: textColor }]}>
-                                                    {formatCurrency(payroll.otPay)}
-                                                </Text>
-                                            </View>
-                                            <View style={s.detailRow}>
-                                                <Text style={[s.detailLabel, { color: subtextColor }]}>Reimbursements</Text>
-                                                <Text style={[s.detailValue, { color: '#34C759' }]}>
-                                                    +{formatCurrency(payroll.reimburse)}
-                                                </Text>
-                                            </View>
-                                            <View style={s.detailRow}>
-                                                <Text style={[s.detailLabel, { color: subtextColor }]}>Cash Advance (Kasbon)</Text>
-                                                <Text style={[s.detailValue, { color: '#FF3B30' }]}>
-                                                    -{formatCurrency(payroll.kasbon)}
-                                                </Text>
-                                            </View>
-                                            <View style={s.detailRow}>
-                                                <Text style={[s.detailLabel, { color: subtextColor }]}>Adjustment</Text>
-                                                <Text style={[s.detailValue, { color: payroll.adjustment >= 0 ? '#34C759' : '#FF3B30' }]}>
-                                                    {payroll.adjustment >= 0 ? '+' : ''}{formatCurrency(payroll.adjustment)}
-                                                </Text>
-                                            </View>
-                                            {payroll.adjustmentReason ? (
-                                                <View style={s.adjustmentReasonContainer}>
-                                                    <Ionicons name="information-circle-outline" size={12} color={subtextColor} />
-                                                    <Text style={[s.adjustmentReasonText, { color: subtextColor }]}>
-                                                        Reason: {payroll.adjustmentReason}
-                                                    </Text>
-                                                    {payroll.adjustmentProofName ? (
-                                                        <Text style={[s.adjustmentProofText, { color: '#007AFF' }]} numberOfLines={1}>
-                                                            📎 {payroll.adjustmentProofName}
-                                                        </Text>
-                                                    ) : null}
-                                                </View>
-                                            ) : null}
-                                        </View>
-
-                                        {/* Card Actions */}
-                                        <View style={s.cardActions}>
-                                            <TouchableOpacity
-                                                style={[s.adjustTextBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}
-                                                onPress={() => {
-                                                    setSelectedCrewForAdjustment(member);
-                                                    setAdjustmentModalVisible(true);
-                                                }}
-                                                activeOpacity={0.7}
-                                            >
-                                                <Text style={[s.adjustTextBtnLabel, { color: isDark ? '#EBEBF5' : '#3C3C43' }]}>Adjust</Text>
-                                            </TouchableOpacity>
-
-                                            <TouchableOpacity
-                                                style={[s.slipBtn, { backgroundColor: isDark ? 'rgba(0,122,255,0.15)' : 'rgba(0,122,255,0.08)' }]}
-                                                onPress={() => handleExportSlip(member, payroll)}
-                                                activeOpacity={0.7}
-                                            >
-                                                <Ionicons name="document-text" size={14} color="#007AFF" />
-                                                <Text style={s.slipBtnText}>Slip</Text>
-                                            </TouchableOpacity>
-                                        </View>
-                                    </>
-                                )}
+                                {isExpanded && !onSelectCrew && renderPayrollDetail(member, payroll)}
                             </View>
                         );
                     })}
@@ -993,6 +1005,48 @@ export function CrewPayrollTab({
                     <Ionicons name="cash-outline" size={48} color={subtextColor} style={{ opacity: 0.5 }} />
                     <Text style={[s.emptyText, { color: subtextColor }]}>No payroll data available</Text>
                 </View>
+            )}
+
+            {Platform.OS === 'web' && detailContainer && selectedPayroll && require('react-dom').createPortal(
+                <View style={{ flex: 1 }}>
+                    <View style={[DESKTOP_PANEL_HEADER, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+                        <Text style={[DESKTOP_PANEL_TITLE, { flex: 1, color: textColor }]}>{selectedPayroll.member.name}</Text>
+                        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close payroll details" onPress={() => onSelectCrew?.(null)} style={[DESKTOP_PANEL_ACTION, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                            <Ionicons name="close" size={24} color={textColor} />
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView contentContainerStyle={s.panelContent}>
+                        <View style={[s.panelIdentity, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                            <View style={[s.panelAvatar, { backgroundColor: isDark ? 'rgba(139,92,246,0.16)' : 'rgba(139,92,246,0.1)' }]}>
+                                <Text style={{ fontSize: 21, fontWeight: '700', color: '#8B5CF6' }}>{selectedPayroll.member.initials}</Text>
+                            </View>
+                            <View style={{ flex: 1, gap: 4 }}>
+                                <Text style={{ color: textColor, fontSize: 17, fontWeight: '600' }}>{selectedPayroll.member.name}</Text>
+                                <Text style={{ color: subtextColor, fontSize: 13 }}>{CREW_ROLE_LABELS[selectedPayroll.member.role as CrewRole] || selectedPayroll.member.role}{selectedPayroll.member.projectCode ? ' · ' + selectedPayroll.member.projectCode : ''}</Text>
+                            </View>
+                        </View>
+                        <View style={[s.panelTotal, { backgroundColor: isDark ? 'rgba(139,92,246,0.09)' : 'rgba(139,92,246,0.06)', borderColor: isDark ? 'rgba(139,92,246,0.2)' : 'rgba(139,92,246,0.15)' }]}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 12 }}>
+                                <Text style={{ color: subtextColor, fontSize: 13, fontWeight: '500' }}>NET PAYOUT</Text>
+                                <Text style={{ color: subtextColor, fontSize: 13 }}>{formatWeekRange(weeklyStartDate, weeklyEndDate)}</Text>
+                            </View>
+                            <Text style={{ color: selectedPayroll.payroll.netPayout < 0 ? '#FF3B30' : textColor, fontSize: 34, fontWeight: '700', letterSpacing: -0.8, marginTop: 16, fontVariant: ['tabular-nums'] }}>{formatCurrency(selectedPayroll.payroll.netPayout)}</Text>
+                            <Text style={{ color: subtextColor, fontSize: 13, marginTop: 6 }}>Weekly earnings after additions and deductions</Text>
+                        </View>
+                        <Text style={s.panelSectionLabel}>PAYROLL BREAKDOWN</Text>
+                        <View style={[s.panelBreakdown, { backgroundColor: cardBg, borderColor: cardBorder }]}>
+                            {renderPayrollDetail(selectedPayroll.member, selectedPayroll.payroll, true)}
+                            <View style={{ paddingHorizontal: 20, paddingVertical: 18, flexDirection: 'row', justifyContent: 'space-between', gap: 16 }}>
+                                <Text style={{ fontSize: 15, fontWeight: '700', color: textColor }}>Net Payout</Text>
+                                <Text style={{ fontSize: 16, fontWeight: '700', color: textColor, fontVariant: ['tabular-nums'] }}>{formatCurrency(selectedPayroll.payroll.netPayout)}</Text>
+                            </View>
+                        </View>
+                    </ScrollView>
+                    <View style={[s.panelFooter, { borderTopColor: cardBorder }]}>
+                        <PillButton label="Adjust" size="lg" variant="muted" color="neutral" noShadow style={{ flex: 1 }} icon={<Ionicons name="options-outline" size={18} color={textColor} />} onPress={() => { setSelectedCrewForAdjustment(selectedPayroll.member); setAdjustmentModalVisible(true); }} />
+                        <PillButton label="View Slip" size="lg" color="neutral" noShadow textColor="#FFFFFF" style={{ flex: 1, backgroundColor: '#8B5CF6' }} icon={<Ionicons name="document-text-outline" size={18} color="#FFFFFF" />} onPress={() => handleExportSlip(selectedPayroll.member, selectedPayroll.payroll)} />
+                    </View>
+                </View>, detailContainer
             )}
 
             {/* Bottom Sheet Picker */}
@@ -1051,6 +1105,13 @@ export function CrewPayrollTab({
 }
 
 const s = StyleSheet.create({
+    panelContent: { padding: 24, paddingBottom: 32, gap: 16, maxWidth: 800, width: '100%', alignSelf: 'center' },
+    panelIdentity: { flexDirection: 'row', alignItems: 'center', gap: 14, padding: 18, borderRadius: 20, borderWidth: 1 },
+    panelAvatar: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
+    panelTotal: { padding: 22, borderRadius: 20, borderWidth: 1 },
+    panelSectionLabel: { fontSize: 12, fontWeight: '600', color: '#8E8E93', letterSpacing: 1, marginTop: 10, marginLeft: 4 },
+    panelBreakdown: { borderRadius: 20, borderWidth: 1, overflow: 'hidden' },
+    panelFooter: { flexDirection: 'row', gap: 12, padding: 20, borderTopWidth: StyleSheet.hairlineWidth },
     container: {
         flex: 1,
     },

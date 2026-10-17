@@ -1,3 +1,4 @@
+import { DESKTOP_PANEL_HEADER, DESKTOP_PANEL_TITLE, DESKTOP_PANEL_ACTION } from '@/constants/desktopLayout';
 import React, { useState, useMemo, useEffect } from 'react';
 import {
     StyleSheet,
@@ -98,6 +99,9 @@ interface CrewRequestsTabProps {
     onDeleteRequest: (id: string) => void;
     onViewDocument?: (html: string, title: string) => void;
     selectedRequestId?: string;
+    detailContainer?: HTMLElement | null;
+    onEditRequest?: (request: CrewRequest) => void;
+    onCloseDetail?: () => void;
 }
 
 export function CrewRequestsTab({
@@ -114,6 +118,9 @@ export function CrewRequestsTab({
     onDeleteRequest,
     onViewDocument,
     selectedRequestId,
+    detailContainer,
+    onEditRequest,
+    onCloseDetail,
 }: CrewRequestsTabProps) {
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
@@ -401,6 +408,11 @@ export function CrewRequestsTab({
     const searchBorder = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)';
 
     const handleRejectPress = (id: string) => {
+        if (Platform.OS === 'web') {
+            const reason = window.prompt('Enter the reason for rejecting this request:');
+            if (reason !== null) onRejectRequest(id, reason);
+            return;
+        }
         if (Platform.OS === 'ios') {
             Alert.prompt(
                 'Reject Request',
@@ -432,6 +444,10 @@ export function CrewRequestsTab({
     };
 
     const handleDeletePress = (id: string) => {
+        if (Platform.OS === 'web') {
+            if (window.confirm('Delete this request? This cannot be undone.')) onDeleteRequest(id);
+            return;
+        }
         Alert.alert(
             'Delete Request',
             'Are you sure you want to delete this request? This action cannot be undone.',
@@ -447,6 +463,10 @@ export function CrewRequestsTab({
     };
 
     const handleApprovePress = (id: string) => {
+        if (Platform.OS === 'web') {
+            if (window.confirm('Approve this request?')) onApproveRequest(id);
+            return;
+        }
         Alert.alert(
             'Approve Request',
             'Are you sure you want to approve this request?',
@@ -459,6 +479,163 @@ export function CrewRequestsTab({
             ],
         );
     };
+
+    const renderRequestDetail = (req: CrewRequest) => {
+        const typeBadgeColor = req.type === 'LEAVE' ? '#AF52DE' : req.type === 'KASBON' ? '#FF3B30' : '#FF9500';
+        return (<View style={s.cardBodyExpanded}>
+                                        {/* Unified Details Box (Notes, Attachments, Rejection Reason, Date) */}
+                                        <View style={[
+                                            s.unifiedDetailsBox,
+                                            {
+                                                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)',
+                                                borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                            }
+                                        ]}>
+                                            {/* Notes Section */}
+                                            <View style={s.boxSection}>
+                                                <Text style={[s.boxSectionTitle, { color: subtextColor }]}>Notes</Text>
+                                                <Text style={[s.reasonText, { color: textColor }]}>
+                                                    {req.reason}
+                                                </Text>
+                                            </View>
+
+                                            {/* Proof Attachments Section */}
+                                            {req.proofUrl && (
+                                                <View style={[s.boxSection, s.boxSectionBorder, { borderColor: cardBorder }]}>
+                                                    <Text style={[s.boxSectionTitle, { color: subtextColor }]}>Attachments</Text>
+                                                    <View style={s.proofList}>
+                                                        {req.proofUrl.split(',').filter(Boolean).map((url, idx) => {
+                                                            const cleanUrl = url.trim();
+                                                            const filename = cleanUrl.split('/').pop()?.split('?')[0] || `Proof ${idx + 1}`;
+                                                            return (
+                                                                <TouchableOpacity
+                                                                    key={idx}
+                                                                    style={[
+                                                                        s.proofPill,
+                                                                        {
+                                                                            backgroundColor: isDark ? `${typeBadgeColor}1A` : `${typeBadgeColor}0A`,
+                                                                            borderColor: isDark ? `${typeBadgeColor}33` : `${typeBadgeColor}1F`,
+                                                                            borderWidth: 1,
+                                                                        }
+                                                                    ]}
+                                                                    onPress={() => setPreviewImageUrl(cleanUrl)}
+                                                                    activeOpacity={0.7}
+                                                                >
+                                                                    <Ionicons name="document-attach" size={14} color={typeBadgeColor} style={{ marginRight: 6 }} />
+                                                                    <Text style={[s.proofPillText, { color: typeBadgeColor }]} numberOfLines={1}>
+                                                                        {filename}
+                                                                    </Text>
+                                                                </TouchableOpacity>
+                                                            );
+                                                        })}
+                                                    </View>
+                                                </View>
+                                            )}
+
+                                            {/* Rejection Reason Box */}
+                                            {req.rejectReason && (
+                                                <View style={[s.boxSection, s.boxSectionBorder, { borderColor: cardBorder }]}>
+                                                    <Text style={[s.boxSectionTitle, { color: '#FF3B30' }]}>Rejection Reason</Text>
+                                                    <Text style={[s.rejectBoxText, { color: '#FF3B30' }]}>{req.rejectReason}</Text>
+                                                </View>
+                                            )}
+
+                                            {/* Requested Date (inside box) */}
+                                            <View style={[s.boxSection, s.boxSectionBorder, { borderColor: cardBorder }]}>
+                                                <Text style={[s.footerDateText, { color: subtextColor }]}>
+                                                    Requested on {formatLeaveDate(req.createdAt)}{req.movedToPeriod ? `, moved to periode ${req.movedToPeriod}` : ''}
+                                                </Text>
+                                            </View>
+
+                                            {req.status === 'PENDING' && (req.startDate < weeklyStartDate || (req.endDate || req.startDate) > weeklyEndDate) && (
+                                                <View style={{ marginTop: 12, marginBottom: 4 }}>
+                                                    <PillButton
+                                                        label="Move to Current Period"
+                                                        onPress={() => {
+                                                            if (Platform.OS === 'web') {
+                                                                if (window.confirm('Move this pending request to the current payroll week?')) onMoveRequestToWeek(req.id);
+                                                                return;
+                                                            }
+                                                            Alert.alert(
+                                                                'Move Request',
+                                                                'Are you sure you want to move this pending request to the current payroll week?',
+                                                                [
+                                                                    { text: 'Cancel', style: 'cancel' },
+                                                                    {
+                                                                        text: 'Move',
+                                                                        onPress: () => onMoveRequestToWeek(req.id),
+                                                                    },
+                                                                ],
+                                                            );
+                                                        }}
+                                                        variant="solid"
+                                                        color="blue"
+                                                        noShadow
+                                                        icon={<Ionicons name="swap-horizontal" size={15} color="#FFFFFF" />}
+                                                    />
+                                                </View>
+                                            )}
+                                        </View>
+
+                                        {/* Action Buttons Row */}
+                                        <View style={s.actionRowCombined}>
+                                            {/* Delete */}
+                                            <TouchableOpacity
+                                                style={[
+                                                    s.circleActionBtn,
+                                                    {
+                                                        backgroundColor: isDark ? 'rgba(255,59,48,0.12)' : 'rgba(255,59,48,0.08)',
+                                                        borderColor: isDark ? 'rgba(255,59,48,0.2)' : 'rgba(255,59,48,0.15)'
+                                                    }
+                                                ]}
+                                                onPress={() => handleDeletePress(req.id)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Ionicons name="trash-outline" size={16} color="#FF3B30" />
+                                            </TouchableOpacity>
+
+                                            {/* Edit */}
+                                            <TouchableOpacity
+                                                style={[
+                                                    s.circleActionBtn,
+                                                    {
+                                                        borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
+                                                        backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)'
+                                                    }
+                                                ]}
+                                                onPress={() => (onEditRequest || onSelectRequest)(req)}
+                                                activeOpacity={0.7}
+                                            >
+                                                <Ionicons name="pencil-outline" size={15} color={textColor} /><Text style={{ color: textColor, marginLeft: 6, fontWeight: '600' }}>Edit</Text>
+                                            </TouchableOpacity>
+
+                                            {/* Reject & Approve */}
+                                            {req.status === 'PENDING' && (
+                                                <>
+                                                    <PillButton
+                                                        label="Reject"
+                                                        onPress={() => handleRejectPress(req.id)}
+                                                        variant="muted"
+                                                        color="red"
+                                                        style={{ flex: 1 }}
+                                                        noShadow
+                                                        icon={<Ionicons name="close-circle" size={15} color="#FF3B30" />}
+                                                    />
+                                                    <PillButton
+                                                        label="Approve"
+                                                        onPress={() => handleApprovePress(req.id)}
+                                                        variant="solid"
+                                                        color="green"
+                                                        style={{ flex: 1 }}
+                                                        noShadow
+                                                        icon={<Ionicons name="checkmark-circle" size={15} color="#FFFFFF" />}
+                                                    />
+                                                </>
+                                            )}
+                                        </View>
+                                    </View>);
+    };
+    const selectedRequest = requests.find(req => req.id === selectedRequestId);
 
     return (
         <View style={s.container}>
@@ -721,7 +898,7 @@ export function CrewRequestsTab({
                                     style={s.cardHeaderTouch}
                                     onPress={() => {
                                         onSelectRequest(req);
-                                        setExpandedRequestId(expandedRequestId === req.id ? null : req.id);
+                                        if (!onEditRequest) setExpandedRequestId(expandedRequestId === req.id ? null : req.id);
                                     }}
                                     activeOpacity={0.7}
                                 >
@@ -774,156 +951,7 @@ export function CrewRequestsTab({
                                     </View>
                                 </TouchableOpacity>
 
-                                {expandedRequestId === req.id && (
-                                    <View style={s.cardBodyExpanded}>
-                                        {/* Unified Details Box (Notes, Attachments, Rejection Reason, Date) */}
-                                        <View style={[
-                                            s.unifiedDetailsBox,
-                                            {
-                                                backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)',
-                                                borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
-                                            }
-                                        ]}>
-                                            {/* Notes Section */}
-                                            <View style={s.boxSection}>
-                                                <Text style={[s.boxSectionTitle, { color: subtextColor }]}>Notes</Text>
-                                                <Text style={[s.reasonText, { color: textColor }]}>
-                                                    {req.reason}
-                                                </Text>
-                                            </View>
-
-                                            {/* Proof Attachments Section */}
-                                            {req.proofUrl && (
-                                                <View style={[s.boxSection, s.boxSectionBorder, { borderColor: cardBorder }]}>
-                                                    <Text style={[s.boxSectionTitle, { color: subtextColor }]}>Attachments</Text>
-                                                    <View style={s.proofList}>
-                                                        {req.proofUrl.split(',').filter(Boolean).map((url, idx) => {
-                                                            const cleanUrl = url.trim();
-                                                            const filename = cleanUrl.split('/').pop()?.split('?')[0] || `Proof ${idx + 1}`;
-                                                            return (
-                                                                <TouchableOpacity
-                                                                    key={idx}
-                                                                    style={[
-                                                                        s.proofPill,
-                                                                        {
-                                                                            backgroundColor: isDark ? `${typeBadgeColor}1A` : `${typeBadgeColor}0A`,
-                                                                            borderColor: isDark ? `${typeBadgeColor}33` : `${typeBadgeColor}1F`,
-                                                                            borderWidth: 1,
-                                                                        }
-                                                                    ]}
-                                                                    onPress={() => setPreviewImageUrl(cleanUrl)}
-                                                                    activeOpacity={0.7}
-                                                                >
-                                                                    <Ionicons name="document-attach" size={14} color={typeBadgeColor} style={{ marginRight: 6 }} />
-                                                                    <Text style={[s.proofPillText, { color: typeBadgeColor }]} numberOfLines={1}>
-                                                                        {filename}
-                                                                    </Text>
-                                                                </TouchableOpacity>
-                                                            );
-                                                        })}
-                                                    </View>
-                                                </View>
-                                            )}
-
-                                            {/* Rejection Reason Box */}
-                                            {req.rejectReason && (
-                                                <View style={[s.boxSection, s.boxSectionBorder, { borderColor: cardBorder }]}>
-                                                    <Text style={[s.boxSectionTitle, { color: '#FF3B30' }]}>Rejection Reason</Text>
-                                                    <Text style={[s.rejectBoxText, { color: '#FF3B30' }]}>{req.rejectReason}</Text>
-                                                </View>
-                                            )}
-
-                                            {/* Requested Date (inside box) */}
-                                            <View style={[s.boxSection, s.boxSectionBorder, { borderColor: cardBorder }]}>
-                                                <Text style={[s.footerDateText, { color: subtextColor }]}>
-                                                    Requested on {formatLeaveDate(req.createdAt)}{req.movedToPeriod ? `, moved to periode ${req.movedToPeriod}` : ''}
-                                                </Text>
-                                            </View>
-
-                                            {req.status === 'PENDING' && (req.startDate < weeklyStartDate || (req.endDate || req.startDate) > weeklyEndDate) && (
-                                                <View style={{ marginTop: 12, marginBottom: 4 }}>
-                                                    <PillButton
-                                                        label="Move to Current Period"
-                                                        onPress={() => {
-                                                            Alert.alert(
-                                                                'Move Request',
-                                                                'Are you sure you want to move this pending request to the current payroll week?',
-                                                                [
-                                                                    { text: 'Cancel', style: 'cancel' },
-                                                                    {
-                                                                        text: 'Move',
-                                                                        onPress: () => onMoveRequestToWeek(req.id),
-                                                                    },
-                                                                ],
-                                                            );
-                                                        }}
-                                                        variant="solid"
-                                                        color="blue"
-                                                        noShadow
-                                                        icon={<Ionicons name="swap-horizontal" size={15} color="#FFFFFF" />}
-                                                    />
-                                                </View>
-                                            )}
-                                        </View>
-
-                                        {/* Action Buttons Row */}
-                                        <View style={s.actionRowCombined}>
-                                            {/* Delete */}
-                                            <TouchableOpacity
-                                                style={[
-                                                    s.circleActionBtn,
-                                                    {
-                                                        backgroundColor: isDark ? 'rgba(255,59,48,0.12)' : 'rgba(255,59,48,0.08)',
-                                                        borderColor: isDark ? 'rgba(255,59,48,0.2)' : 'rgba(255,59,48,0.15)'
-                                                    }
-                                                ]}
-                                                onPress={() => handleDeletePress(req.id)}
-                                                activeOpacity={0.7}
-                                            >
-                                                <Ionicons name="trash-outline" size={16} color="#FF3B30" />
-                                            </TouchableOpacity>
-
-                                            {/* Edit */}
-                                            <TouchableOpacity
-                                                style={[
-                                                    s.circleActionBtn,
-                                                    {
-                                                        borderColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.1)',
-                                                        backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.02)'
-                                                    }
-                                                ]}
-                                                onPress={() => onSelectRequest(req)}
-                                                activeOpacity={0.7}
-                                            >
-                                                <Ionicons name="pencil-outline" size={15} color={textColor} />
-                                            </TouchableOpacity>
-
-                                            {/* Reject & Approve */}
-                                            {req.status === 'PENDING' && (
-                                                <>
-                                                    <PillButton
-                                                        label="Reject"
-                                                        onPress={() => handleRejectPress(req.id)}
-                                                        variant="muted"
-                                                        color="red"
-                                                        style={{ flex: 1 }}
-                                                        noShadow
-                                                        icon={<Ionicons name="close-circle" size={15} color="#FF3B30" />}
-                                                    />
-                                                    <PillButton
-                                                        label="Approve"
-                                                        onPress={() => handleApprovePress(req.id)}
-                                                        variant="solid"
-                                                        color="green"
-                                                        style={{ flex: 1 }}
-                                                        noShadow
-                                                        icon={<Ionicons name="checkmark-circle" size={15} color="#FFFFFF" />}
-                                                    />
-                                                </>
-                                            )}
-                                        </View>
-                                    </View>
-                                )}
+                                {!onEditRequest && expandedRequestId === req.id && renderRequestDetail(req)}
                             </View>
                         );
                     })}
@@ -961,6 +989,30 @@ export function CrewRequestsTab({
                 selectedId={typeFilter}
                 tintColor="#AF52DE"
             />
+
+            {Platform.OS === 'web' && detailContainer && selectedRequest && require('react-dom').createPortal(
+                <View style={{ flex: 1 }}>
+                    <View style={[DESKTOP_PANEL_HEADER, { flexDirection: 'row', alignItems: 'center', gap: 12 }]}>
+                        <Text style={[DESKTOP_PANEL_TITLE, { flex: 1, color: textColor }]}>Request Details</Text>
+                        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close request details" onPress={onCloseDetail} style={[DESKTOP_PANEL_ACTION, { backgroundColor: cardBg }]}>
+                            <Ionicons name="close" size={22} color={textColor} />
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView contentContainerStyle={{ padding: 24, maxWidth: 820, width: '100%', alignSelf: 'center', gap: 20 }}>
+                        <View style={{ backgroundColor: cardBg, borderColor: cardBorder, borderWidth: 1, borderRadius: 20, padding: 20, gap: 12 }}>
+                            <Text style={{ color: textColor, fontSize: 22, fontWeight: '700' }}>{toTitleCase(selectedRequest.crewName)}</Text>
+                            <Text style={{ color: subtextColor, fontSize: 14 }}>{CREW_ROLE_LABELS[selectedRequest.crewRole]} · {selectedRequest.projectCode}</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 16 }}>
+                                <Text style={{ color: '#8B5CF6', fontWeight: '700', fontSize: 13 }}>{selectedRequest.type === 'KASBON' ? 'CASH ADVANCE' : selectedRequest.type}</Text>
+                                <Text style={{ color: selectedRequest.status === 'APPROVED' ? '#34C759' : selectedRequest.status === 'REJECTED' ? '#FF3B30' : '#FF9500', fontWeight: '700', fontSize: 13 }}>{selectedRequest.status}</Text>
+                            </View>
+                            <Text style={{ color: textColor, fontSize: 28, fontWeight: '700' }}>{selectedRequest.type === 'LEAVE' ? formatLeaveDate(selectedRequest.startDate) + ' → ' + (selectedRequest.endDate ? formatLeaveDate(selectedRequest.endDate) : 'Ongoing') : formatCurrency(selectedRequest.amount || 0)}</Text>
+                            {selectedRequest.type !== 'LEAVE' && <Text style={{ color: subtextColor, fontSize: 14 }}>Request date · {formatLeaveDate(selectedRequest.startDate)}</Text>}
+                        </View>
+                        {renderRequestDetail(selectedRequest)}
+                    </ScrollView>
+                </View>, detailContainer
+            )}
 
             {/* Image Preview Component */}
             <SwiftUIImagePreviewSheet
