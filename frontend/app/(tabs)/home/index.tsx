@@ -370,7 +370,7 @@ export default function HomeScreen() {
                                 </View>
                             ) : (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                                    <Text style={{ flex: 1, fontSize: 13, color: isDark ? '#A1A1A6' : '#6E6E73' }}>Beranda belum dapat dimuat.</Text>
+                                    <Text style={{ flex: 1, fontSize: 13, color: isDark ? '#A1A1A6' : '#6E6E73' }}>Home could not be loaded.</Text>
                                     <TouchableOpacity accessibilityRole="button" accessibilityLabel="Muat ulang beranda" onPress={() => { void refreshTenants(); }} style={{ padding: 10, borderRadius: 999, backgroundColor: isDark ? '#1C1C1E' : '#E5E5EA' }}>
                                         <PlatformIcon name="arrow.clockwise" size={18} tintColor={textColor} />
                                     </TouchableOpacity>

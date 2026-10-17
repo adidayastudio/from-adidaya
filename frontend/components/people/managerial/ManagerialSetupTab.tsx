@@ -8,7 +8,6 @@ import {
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { GlassView } from '@/components/ui/GlassView';
 import { PlatformIcon } from '@/components/ui/PlatformIcon';
 
 export type SetupModule =
@@ -26,6 +25,8 @@ interface ManagerialSetupTabProps {
     isDark: boolean;
     textColor: string;
     subtextColor: string;
+    selectedModule?: SetupModule;
+    onSelectModule?: (id: SetupModule) => void;
 }
 
 interface MenuItem {
@@ -46,8 +47,8 @@ const MENU_ITEMS: MenuItem[] = [
         title: 'Departments',
         subtitle: 'Teams, divisions & codes',
         icon: 'square.grid.2x2.fill',
-        color: '#007AFF',
-        gradientColors: ['#007AFF', '#0056B3'],
+        color: '#1677D2',
+        gradientColors: ['#1677D2', '#0D47A1'],
     },
     {
         id: 'positions',
@@ -125,7 +126,13 @@ const MENU_ITEMS: MenuItem[] = [
     },
 ];
 
-export function ManagerialSetupTab({ isDark, textColor, subtextColor }: ManagerialSetupTabProps) {
+export function ManagerialSetupTab({
+    isDark,
+    textColor,
+    subtextColor,
+    selectedModule,
+    onSelectModule,
+}: ManagerialSetupTabProps) {
     const router = useRouter();
 
     const orgItems = MENU_ITEMS.filter((item) => item.group === 'org');
@@ -134,29 +141,44 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
 
     const handlePressItem = (id: SetupModule) => {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        router.push(`/people-setup/${id}` as any);
+        if (onSelectModule) {
+            onSelectModule(id);
+        } else {
+            router.push(`/people-setup/${id}` as any);
+        }
     };
+
+    const PEOPLE_ACCENT = '#1677D2';
 
     return (
         <View style={s.container}>
             {/* Section 1: Organization Structure */}
             <View style={s.menuListContainer}>
                 <Text style={[s.menuListHeader, { color: subtextColor }]}>Organization Structure</Text>
-                <GlassView
-                    intensity={isDark ? 10 : 25}
+                <View
                     style={[
                         s.menuList,
                         {
-                            backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)',
+                            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                            borderWidth: 1,
+                            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                         },
                     ]}
                 >
                     {orgItems.map((item, index) => {
                         const isLast = index === orgItems.length - 1;
+                        const isSelected = selectedModule === item.id;
                         return (
                             <View key={item.id}>
                                 <TouchableOpacity
-                                    style={s.menuRow}
+                                    style={[
+                                        s.menuRow,
+                                        isSelected && {
+                                            backgroundColor: isDark
+                                                ? 'rgba(22, 119, 210, 0.16)'
+                                                : 'rgba(22, 119, 210, 0.08)',
+                                        },
+                                    ]}
                                     onPress={() => handlePressItem(item.id)}
                                     activeOpacity={0.7}
                                 >
@@ -169,7 +191,9 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                                         <PlatformIcon name={item.icon as any} size={16} tintColor={isDark ? item.color : '#FFF'} />
                                     </LinearGradient>
                                     <View style={s.menuRowContent}>
-                                        <Text style={[s.menuRowTitle, { color: textColor }]}>{item.title}</Text>
+                                        <Text style={[s.menuRowTitle, { color: textColor, fontWeight: isSelected ? '600' : '500' }]}>
+                                            {item.title}
+                                        </Text>
                                         <Text style={[s.menuRowSubtitle, { color: subtextColor }]} numberOfLines={1}>
                                             {item.subtitle}
                                         </Text>
@@ -177,10 +201,10 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                                     <PlatformIcon
                                         name="chevron.right"
                                         size={14}
-                                        tintColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'}
+                                        tintColor={isSelected ? PEOPLE_ACCENT : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)')}
                                     />
                                 </TouchableOpacity>
-                                {!isLast && (
+                                {!isLast && !isSelected && (
                                     <View
                                         style={[
                                             s.indentedDivider,
@@ -191,27 +215,36 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                             </View>
                         );
                     })}
-                </GlassView>
+                </View>
             </View>
 
             {/* Section 2: Employment */}
             <View style={s.menuListContainer}>
                 <Text style={[s.menuListHeader, { color: subtextColor }]}>Employment</Text>
-                <GlassView
-                    intensity={isDark ? 10 : 25}
+                <View
                     style={[
                         s.menuList,
                         {
-                            backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)',
+                            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                            borderWidth: 1,
+                            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                         },
                     ]}
                 >
                     {employmentItems.map((item, index) => {
                         const isLast = index === employmentItems.length - 1;
+                        const isSelected = selectedModule === item.id;
                         return (
                             <View key={item.id}>
                                 <TouchableOpacity
-                                    style={s.menuRow}
+                                    style={[
+                                        s.menuRow,
+                                        isSelected && {
+                                            backgroundColor: isDark
+                                                ? 'rgba(22, 119, 210, 0.16)'
+                                                : 'rgba(22, 119, 210, 0.08)',
+                                        },
+                                    ]}
                                     onPress={() => handlePressItem(item.id)}
                                     activeOpacity={0.7}
                                 >
@@ -224,7 +257,9 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                                         <PlatformIcon name={item.icon as any} size={16} tintColor={isDark ? item.color : '#FFF'} />
                                     </LinearGradient>
                                     <View style={s.menuRowContent}>
-                                        <Text style={[s.menuRowTitle, { color: textColor }]}>{item.title}</Text>
+                                        <Text style={[s.menuRowTitle, { color: textColor, fontWeight: isSelected ? '600' : '500' }]}>
+                                            {item.title}
+                                        </Text>
                                         <Text style={[s.menuRowSubtitle, { color: subtextColor }]} numberOfLines={1}>
                                             {item.subtitle}
                                         </Text>
@@ -232,10 +267,10 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                                     <PlatformIcon
                                         name="chevron.right"
                                         size={14}
-                                        tintColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'}
+                                        tintColor={isSelected ? PEOPLE_ACCENT : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)')}
                                     />
                                 </TouchableOpacity>
-                                {!isLast && (
+                                {!isLast && !isSelected && (
                                     <View
                                         style={[
                                             s.indentedDivider,
@@ -246,27 +281,36 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                             </View>
                         );
                     })}
-                </GlassView>
+                </View>
             </View>
 
             {/* Section 3: System */}
             <View style={s.menuListContainer}>
                 <Text style={[s.menuListHeader, { color: subtextColor }]}>System</Text>
-                <GlassView
-                    intensity={isDark ? 10 : 25}
+                <View
                     style={[
                         s.menuList,
                         {
-                            backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)',
+                            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                            borderWidth: 1,
+                            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                         },
                     ]}
                 >
                     {systemItems.map((item, index) => {
                         const isLast = index === systemItems.length - 1;
+                        const isSelected = selectedModule === item.id;
                         return (
                             <View key={item.id}>
                                 <TouchableOpacity
-                                    style={s.menuRow}
+                                    style={[
+                                        s.menuRow,
+                                        isSelected && {
+                                            backgroundColor: isDark
+                                                ? 'rgba(22, 119, 210, 0.16)'
+                                                : 'rgba(22, 119, 210, 0.08)',
+                                        },
+                                    ]}
                                     onPress={() => handlePressItem(item.id)}
                                     activeOpacity={0.7}
                                 >
@@ -279,7 +323,9 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                                         <PlatformIcon name={item.icon as any} size={16} tintColor={isDark ? item.color : '#FFF'} />
                                     </LinearGradient>
                                     <View style={s.menuRowContent}>
-                                        <Text style={[s.menuRowTitle, { color: textColor }]}>{item.title}</Text>
+                                        <Text style={[s.menuRowTitle, { color: textColor, fontWeight: isSelected ? '600' : '500' }]}>
+                                            {item.title}
+                                        </Text>
                                         <Text style={[s.menuRowSubtitle, { color: subtextColor }]} numberOfLines={1}>
                                             {item.subtitle}
                                         </Text>
@@ -287,10 +333,10 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                                     <PlatformIcon
                                         name="chevron.right"
                                         size={14}
-                                        tintColor={isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)'}
+                                        tintColor={isSelected ? PEOPLE_ACCENT : (isDark ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.25)')}
                                     />
                                 </TouchableOpacity>
-                                {!isLast && (
+                                {!isLast && !isSelected && (
                                     <View
                                         style={[
                                             s.indentedDivider,
@@ -301,7 +347,7 @@ export function ManagerialSetupTab({ isDark, textColor, subtextColor }: Manageri
                             </View>
                         );
                     })}
-                </GlassView>
+                </View>
             </View>
         </View>
     );

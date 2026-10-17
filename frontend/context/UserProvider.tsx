@@ -14,7 +14,7 @@ import { supabase } from "../lib/supabase";
 
 import { computeEmployeeIdentifiersHelper, formatScheduleDetail } from "../components/people/member-profile/types";
 
-export type UserRole = "superadmin" | "admin" | "administrator" | "supervisor" | "manager" | "hr" | "pm" | "management" | "ceo" | "owner" | "finance" | "member" | "staff";
+export type UserRole = "superadmin" | "admin" | "administrator" | "supervisor" | "manager" | "hr" | "pm" | "management" | "ceo" | "owner" | "finance" | "member" | "staff" | "viewer" | "system";
 export const MANAGEMENT_ROLES: UserRole[] = ["superadmin", "admin", "administrator", "supervisor", "manager", "hr", "pm", "management", "ceo", "owner", "finance"];
 
 export interface UserProfile {
@@ -216,8 +216,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
             // 3. Normalize role cleanly
             const rawRole = roleData?.role || (profileData as any)?.role || 'staff';
             const normalizeRole = (raw?: string | null): UserRole => {
-                const role = raw?.toLowerCase();
-                const roles = ['superadmin', 'admin', 'administrator', 'supervisor', 'manager', 'hr', 'pm', 'management', 'ceo', 'owner', 'finance'];
+                const role = raw?.trim().toLowerCase().replace(/[\s_-]+/g, '');
+                const roles = ['superadmin', 'admin', 'administrator', 'supervisor', 'manager', 'hr', 'pm', 'management', 'ceo', 'owner', 'finance', 'viewer', 'system', 'member'];
                 return role && roles.includes(role) ? role as UserRole : 'staff';
             };
 

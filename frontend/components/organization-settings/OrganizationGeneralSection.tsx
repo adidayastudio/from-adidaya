@@ -136,7 +136,7 @@ export const OrganizationGeneralSection: React.FC<OrganizationGeneralSectionProp
                             { color: isDark ? '#94A3B8' : '#64748B' },
                         ]}
                     >
-                        View-only access. General settings can only be modified by Superadmin.
+                        View-only access. General settings can only be modified by organization administrators.
                     </Text>
                 </View>
             )}
@@ -223,7 +223,7 @@ export const OrganizationGeneralSection: React.FC<OrganizationGeneralSectionProp
                     <View style={styles.formRow}>
                         <View style={styles.rowLeft}>
                             <PlatformIcon name="number" size={16} tintColor={subtextColor} style={styles.rowIcon} />
-                            <Text style={[styles.rowLabel, { color: textColor }]}>Code (3 Letters)</Text>
+                            <Text style={[styles.rowLabel, { color: textColor }]}>Code (Fixed)</Text>
                         </View>
                         <TextInput
                             style={[styles.rowInput, { color: textColor, fontWeight: '700', letterSpacing: 1.5 }]}
@@ -233,7 +233,7 @@ export const OrganizationGeneralSection: React.FC<OrganizationGeneralSectionProp
                             onChangeText={(t) => setCompanyCode(t.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3))}
                             maxLength={3}
                             autoCapitalize="characters"
-                            editable={!readOnly}
+                            editable={false}
                         />
                     </View>
 
@@ -323,7 +323,7 @@ export const OrganizationGeneralSection: React.FC<OrganizationGeneralSectionProp
                                 placeholderTextColor={subtextColor}
                                 value={customHex}
                                 onChangeText={(val) => {
-                                    const clean = val.replace('#', '').slice(0, 6);
+                                    const clean = val.replace('#', '').replace(/[^0-9a-f]/gi, '').slice(0, 6);
                                     setCustomHex(clean);
                                     if (clean.length === 6) {
                                         setPrimaryColor(`#${clean}`);

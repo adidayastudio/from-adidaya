@@ -51,6 +51,9 @@ test('role normalization preserves finance/staff, and unknown roles never become
   assert.equal(normalize('finance'), 'finance');
   assert.equal(normalize('administrator'), 'administrator');
   assert.equal(normalize('owner'), 'owner');
+  for (const alias of ['SUPER ADMIN', 'super_admin', 'Super-Admin']) assert.equal(normalize(alias), 'superadmin');
+  assert.equal(normalize('supervisor'), 'supervisor');
+  assert.equal(normalize('admin assistant'), 'staff');
 });
 
 function queryClient() {

@@ -234,6 +234,7 @@ export interface SwiftUISetupItemSheetProps {
     isSubmitting: boolean;
     customTitle?: string;
     customSubmitLabel?: string;
+    onDelete?: (item: any) => Promise<void> | void;
 }
 
 export const SwiftUISetupItemSheet: React.FC<SwiftUISetupItemSheetProps> = ({
@@ -432,14 +433,21 @@ export const SwiftUISetupItemSheet: React.FC<SwiftUISetupItemSheetProps> = ({
             const matchedVis = VISIBILITY_OPTIONS.find((v) => v.toLowerCase() === curVis.toLowerCase());
             setVisibility(matchedVis || 'Public');
 
-            const cfg = editingItem.days_config || {};
+            let cfg = editingItem.days_config || {};
+            if (typeof cfg === 'string') {
+                try {
+                    cfg = JSON.parse(cfg);
+                } catch {
+                    cfg = {};
+                }
+            }
             const workingDaysList = Array.isArray(cfg.working_days) ? cfg.working_days : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
             const custom = cfg.custom_hours || {};
             const hasCustomHours = Object.keys(custom).length > 0;
             const defaultStart = editingItem.start_time?.substring(0, 5) || '09:00';
             const defaultEnd = editingItem.end_time?.substring(0, 5) || '17:00';
 
-            if (editingItem.type === 'Fixed' && hasCustomHours) {
+            if (editingItem.type === 'Custom' || (editingItem.type === 'Fixed' && hasCustomHours)) {
                 setScheduleType('Custom');
             } else {
                 setScheduleType(editingItem.type || 'Fixed');
@@ -687,10 +695,14 @@ export const SwiftUISetupItemSheet: React.FC<SwiftUISetupItemSheetProps> = ({
     const statusColorIndex = Math.max(0, STATUS_COLOR_OPTIONS.findIndex((c) => c.hex.toLowerCase() === statusColor.toLowerCase()));
     const visibilityIndex = Math.max(0, VISIBILITY_OPTIONS.indexOf(visibility as any));
 
-    const departmentNames = departmentsList.map((d) => d.name || d.code || 'Dept');
+    const activeDepartmentsList = departmentsList.filter((d: any) => {
+        const st = String(d.status || 'Active').toLowerCase();
+        return st === 'active' || d.id === departmentId;
+    });
+    const departmentNames = activeDepartmentsList.map((d) => d.name || d.code || 'Dept');
     const selectedDeptIndex = Math.max(
         0,
-        departmentsList.findIndex((d) => d.id === departmentId)
+        activeDepartmentsList.findIndex((d) => d.id === departmentId)
     );
 
     const handleSave = () => {
@@ -1047,13 +1059,13 @@ export const SwiftUISetupItemSheet: React.FC<SwiftUISetupItemSheetProps> = ({
                         {moduleType === 'positions' && (
                             <>
                                 <Section title="Department Assignment">
-                                    {departmentsList.length > 0 ? (
+                                    {activeDepartmentsList.length > 0 ? (
                                         <Picker
                                             label="Department"
                                             options={departmentNames as any}
                                             selectedIndex={selectedDeptIndex}
                                             onOptionSelected={(e) => {
-                                                const sel = departmentsList[e.nativeEvent.index];
+                                                const sel = activeDepartmentsList[e.nativeEvent.index];
                                                 if (sel) {
                                                     setDepartmentId(sel.id);
                                                     if (!isEditMode) {

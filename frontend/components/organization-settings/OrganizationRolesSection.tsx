@@ -168,7 +168,7 @@ export const OrganizationRolesSection: React.FC<OrganizationRolesSectionProps> =
     currentRole = 'member',
 }) => {
     const normalized = (currentRole || '').toLowerCase().trim();
-    const userRoleId: RoleId = normalized.includes('super')
+    const userRoleId: RoleId = normalized.replace(/[\s_-]+/g, '') === 'superadmin'
         ? 'super_admin'
         : normalized.includes('admin') || normalized.includes('owner')
         ? 'admin'

@@ -28,6 +28,7 @@ import { ValuesTab } from '@/components/people/personal/ValuesTab';
 import { ManagerialDirectoryTab, DirectoryMember } from '@/components/people/managerial/ManagerialDirectoryTab';
 import { ManagerialPerformanceTab } from '@/components/people/managerial/ManagerialPerformanceTab';
 import { ManagerialSetupTab } from '@/components/people/managerial/ManagerialSetupTab';
+import { PeopleSetupDetailPane, SetupModuleId } from '@/app/people-setup/[id]';
 import { CrewDocumentPreview } from '@/components/crew/CrewDocumentPreview';
 import { SwiftUIExportSheet } from '@/components/people/SwiftUIExportSheet';
 import { MemberProfileView } from '@/components/people/member-profile/MemberProfileView';
@@ -134,6 +135,7 @@ export default function PeopleScreen() {
     const [activeMeSegment, setActiveMeSegment] = useState(ME_SEGMENTS[0].id);
     const [activeTeamSegment, setActiveTeamSegment] = useState(TEAM_SEGMENTS[0].id);
     const [selectedMember, setSelectedMember] = useState<DirectoryMember | null>(null);
+    const [selectedSetupModule, setSelectedSetupModule] = useState<SetupModuleId>('departments');
     const [meDetailTab, setMeDetailTab] = useState('account');
 
     // Export feature states
@@ -1053,6 +1055,8 @@ export default function PeopleScreen() {
                                             isDark={isDark}
                                             textColor={textColor}
                                             subtextColor={subtextColor}
+                                            selectedModule={selectedSetupModule}
+                                            onSelectModule={setSelectedSetupModule}
                                         />
                                     )}
                                 </>
@@ -1095,7 +1099,9 @@ export default function PeopleScreen() {
                         </ScrollView>
                     </View>
                     <View style={s.splitRightPane}>
-                        {selectedMember ? (
+                        {isAuthenticated && !isMe && activeTeamSegment === 'setup' ? (
+                            <PeopleSetupDetailPane moduleId={selectedSetupModule} onModuleChange={setSelectedSetupModule} />
+                        ) : isAuthenticated && selectedMember ? (
                             <MemberProfileView 
                                 params={{
                                     id: selectedMember.user_id || selectedMember.id,

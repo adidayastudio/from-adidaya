@@ -1,4 +1,5 @@
 import React from 'react';
+import { organizationRoleLabel } from '@/lib/organizationSettings';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import Animated, { FadeIn } from 'react-native-reanimated';
@@ -29,7 +30,7 @@ export const OrganizationAccountSection: React.FC<OrganizationAccountSectionProp
     const effectiveRole = tenantRole || profile?.role || 'MEMBER';
     const getRoleColor = (roleStr: string | null) => {
         const r = (roleStr || '').toLowerCase();
-        if (r.includes('super')) return '#EF4444';
+        if (r.replace(/[\s_-]+/g, '') === 'superadmin') return '#EF4444';
         if (r.includes('admin')) return '#3B82F6';
         if (r.includes('member') || r.includes('staff')) return '#10B981';
         if (r.includes('view')) return '#F59E0B';
@@ -39,14 +40,7 @@ export const OrganizationAccountSection: React.FC<OrganizationAccountSectionProp
 
     const roleColor = getRoleColor(effectiveRole);
 
-    const displayRole = (() => {
-        const raw = (effectiveRole || '').toLowerCase().trim().replace(/[\s\-_]+/g, '');
-        if (raw.includes('super')) return 'SUPER ADMIN';
-        if (raw.includes('admin')) return 'ADMIN';
-        if (raw.includes('manager')) return 'MANAGER';
-        if (raw.includes('staff') || raw.includes('member')) return 'MEMBER';
-        return effectiveRole.toUpperCase();
-    })();
+    const displayRole = organizationRoleLabel(effectiveRole);
 
     return (
         <Animated.View entering={FadeIn.duration(200)}>

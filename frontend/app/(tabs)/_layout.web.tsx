@@ -305,7 +305,7 @@ export default function ResponsiveWebLayout() {
                     ) : (
                       <View style={{ justifyContent: 'center' }}>
                         <Text style={[styles.brandNameText, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>
-                          Forma
+                          Adidaya Studio
                         </Text>
                         <Text style={[styles.tenantSubtitle, { color: isDark ? '#94A3B8' : '#64748B', marginTop: 1 }]} numberOfLines={1}>
                           {(activeTenant.branding_name || activeTenant.name || 'Workspace').trim()}
@@ -549,7 +549,7 @@ export default function ResponsiveWebLayout() {
               <View>
                 {!isAuthenticated || !activeTenant ? (
                   <Text style={[styles.brandNameText, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>
-                    Forma
+                    Adidaya Studio
                   </Text>
                 ) : isAdidaya ? (
                   <Text style={[styles.brandNameText, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>
@@ -558,7 +558,7 @@ export default function ResponsiveWebLayout() {
                 ) : (
                   <View style={{ justifyContent: 'center' }}>
                     <Text style={[styles.brandNameText, { color: isDark ? '#FFFFFF' : '#0F172A' }]} numberOfLines={1}>
-                      Forma
+                      Adidaya Studio
                     </Text>
                     <Text style={[styles.tenantSubtitle, { color: isDark ? '#94A3B8' : '#64748B', marginTop: 1 }]} numberOfLines={1}>
                       {(activeTenant.branding_name || activeTenant.name || 'Workspace').trim()}

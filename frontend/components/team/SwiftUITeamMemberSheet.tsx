@@ -29,12 +29,12 @@ import Animated, {
 
 import ContextMenu, { ContextMenuAction } from '@/components/ui/PlatformContextMenu';
 
-const ROLE_OPTIONS = ['Member', 'Super Admin', 'Admin', 'Viewer', 'System'] as const;
+import { organizationRoleOptions, resolveOrganizationRole } from '@/lib/organizationSettings';
 const STATUS_OPTIONS = ['Active', 'Inactive', 'Archived'] as const;
 
 const getRoleColor = (roleStr?: string) => {
     const r = (roleStr || '').toLowerCase();
-    if (r.includes('super')) return '#EF4444';
+    if (r.replace(/[\s_-]+/g, '') === 'superadmin') return '#EF4444';
     if (r.includes('admin')) return '#3B82F6';
     if (r.includes('member') || r.includes('staff')) return '#10B981';
     if (r.includes('view')) return '#F59E0B';
@@ -75,6 +75,7 @@ export const SwiftUITeamMemberSheet: React.FC<SwiftUITeamMemberSheetProps> = (pr
     const { resolvedTheme } = useTheme();
     const isDark = props.isDark ?? resolvedTheme === 'dark';
 
+    const ROLE_OPTIONS = organizationRoleOptions(editMember?.role);
     const isEditMode = !!editMember?.id;
     const textColor = isDark ? '#FFFFFF' : '#000000';
     const subtextColor = isDark ? '#A1A1A6' : '#8E8E93';
@@ -92,9 +93,9 @@ export const SwiftUITeamMemberSheet: React.FC<SwiftUITeamMemberSheetProps> = (pr
         if (editMember) {
             setFullName(editMember.profile?.full_name || editMember.profile?.username || '');
             setEmail(editMember.profile?.email || editMember.email || '');
-            const currentRole = (editMember.role || '').toLowerCase();
+            const currentRole = resolveOrganizationRole(null, editMember.role);
             const matched = ROLE_OPTIONS.find(
-                (r) => r.toLowerCase() === currentRole || (r === 'System' && currentRole === 'sistem')
+                (r) => resolveOrganizationRole(null, r) === currentRole
             );
             setRole(matched || 'Member');
             const currentStatus = (editMember.status || 'active').toLowerCase();

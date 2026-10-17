@@ -1,3 +1,4 @@
+import { canEditOrganization, organizationRoleLabel, saveOrganizationMember } from '@/lib/organizationSettings';
 import { DESKTOP_LIST_PANE } from '@/constants/desktopLayout';
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
@@ -157,7 +158,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
     const router = useRouter();
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
-    const { activeTenant, updateTenant, tenantRole, isSuperAdmin } = useTenantContext();
+    const { activeTenant, updateTenant, tenantRole, isSuperAdmin, refreshTenants } = useTenantContext();
     const { user, profile, signOut } = useUserContext();
 
     const [activeCategory, setActiveCategory] = useState<string>(initialCategory || 'general');
@@ -178,11 +179,7 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
 
     // Permissions & Roles
     const normalizedRole = (tenantRole || '').toLowerCase().trim();
-    const isSuperOrAdmin = isSuperAdmin ||
-        normalizedRole.includes('admin') ||
-        normalizedRole.includes('owner') ||
-        normalizedRole.includes('super') ||
-        normalizedRole.includes('lead');
+    const isSuperOrAdmin = canEditOrganization(tenantRole);
     const isViewer = !isSuperOrAdmin && normalizedRole.includes('view');
     const canEditGeneral = isSuperOrAdmin;
     const isGeneralReadOnly = !canEditGeneral;
@@ -217,7 +214,8 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
     const [joinCode, setJoinCode] = useState('');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [primaryColor, setPrimaryColor] = useState('#007AFF');
-    const [customHex, setCustomHex] = useState('0036F8');
+    const [customHex, setCustomHex] = useState('007AFF');
+    const [saveError, setSaveError] = useState('');
     const [address, setAddress] = useState('');
     const [gmapsUrl, setGmapsUrl] = useState('');
     const [latitudeInput, setLatitudeInput] = useState('');
@@ -239,8 +237,8 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
             setCustomHex(color.replace('#', ''));
             setAddress(activeTenant.address || '');
             setGmapsUrl(activeTenant.gmaps_url || '');
-            if ((activeTenant as any).latitude != null) setLatitudeInput(String((activeTenant as any).latitude));
-            if ((activeTenant as any).longitude != null) setLongitudeInput(String((activeTenant as any).longitude));
+            setLatitudeInput(activeTenant.latitude != null ? String(activeTenant.latitude) : '');
+            setLongitudeInput(activeTenant.longitude != null ? String(activeTenant.longitude) : '');
             if ((activeTenant as any).attendance_radius != null) setSelectedRadius(Number((activeTenant as any).attendance_radius));
             setContactPhone(activeTenant.contact_phone || '');
             setContactEmail(activeTenant.contact_email || '');
@@ -254,8 +252,8 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
         primaryColor.toUpperCase() !== (activeTenant.primary_color || '#007AFF').toUpperCase() ||
         address !== (activeTenant.address || '') ||
         gmapsUrl !== (activeTenant.gmaps_url || '') ||
-        latitudeInput !== String((activeTenant as any).latitude || '') ||
-        longitudeInput !== String((activeTenant as any).longitude || '') ||
+        latitudeInput !== String((activeTenant as any).latitude ?? '') ||
+        longitudeInput !== String((activeTenant as any).longitude ?? '') ||
         selectedRadius !== Number((activeTenant as any).attendance_radius || 50) ||
         contactPhone !== (activeTenant.contact_phone || '') ||
         contactEmail !== (activeTenant.contact_email || '')
@@ -325,6 +323,8 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
 
     const handleSaveGeneralChanges = async () => {
         if (!activeTenant?.id) return;
+        if (savingGeneral) return;
+        setSaveError('');
         setSavingGeneral(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -346,16 +346,11 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
             };
 
             const res = await updateTenant(activeTenant.id, updates);
-            if (res?.error) {
-                console.error('Update tenant error:', res.error);
-                Alert.alert('Error', res.error);
-                return;
-            }
+            if (res?.error) throw new Error(res.error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             showToast('Organization settings saved');
         } catch (err: any) {
-            console.error('Save changes error:', err);
-            Alert.alert('Error', err.message || 'Failed to save changes.');
+            setSaveError(err.message || 'Failed to save changes.');
         } finally {
             setSavingGeneral(false);
         }
@@ -378,63 +373,17 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
         try {
             const tenantId = activeTenant?.id || '00000000-0000-0000-0000-000000000001';
 
-            // 1. Fetch tenant_members and profiles in parallel
-            const [{ data: tmData, error: tmErr }, { data: allProfiles, error: profErr }] = await Promise.all([
-                supabase
-                    .from('tenant_members')
-                    .select('*')
-                    .order('created_at', { ascending: false }),
-                supabase
-                    .from('profiles')
-                    .select('*'),
-            ]);
-
-            if (tmErr) console.warn('tenant_members query warning:', tmErr);
-            if (profErr) console.warn('profiles query warning:', profErr);
-
-            const profileMap = new Map<string, any>();
-            (allProfiles || []).forEach((p: any) => {
-                if (p?.id) profileMap.set(p.id, p);
-            });
-
+            const { data: allProfiles, error: profErr } = await supabase.from('profiles')
+                .select('*');
+            if (profErr) throw profErr;
+            let { data: memberships, error: rolesError } = await supabase.from('adidaya_organization_members').select('user_id, role, status');
+            if (rolesError?.code === 'PGRST205' || rolesError?.code === '42P01') {
+                const legacy = await supabase.from('user_roles').select('user_id, role');
+                memberships = legacy.data as any; rolesError = legacy.error;
+            }
+            if (rolesError) throw rolesError;
+            const rolesByUser = new Map((memberships || []).map((m: any) => [m.user_id, m]));
             const memberMap = new Map<string, TeamMember>();
-
-            // Filter tenant members strictly for active tenant
-            const filteredTm = (tmData || []).filter((m: any) => !activeTenant?.id || m.tenant_id === activeTenant.id);
-
-            // Populate from tenant_members
-            filteredTm.forEach((m: any) => {
-                const uid = m.user_id || m.id;
-                if (!uid) return;
-                const p = profileMap.get(uid) || {};
-                const isTest = (p.full_name || '').toLowerCase().includes('test_') ||
-                               (p.email || m.email || '').toLowerCase().includes('test_') ||
-                               (p.email || m.email || '').toLowerCase().includes('testuser');
-                if (isTest) return;
-
-                let resolvedName = p.full_name || p.display_name || p.name || p.username;
-                if (!resolvedName && (p.email || m.email)) {
-                    const emailStr = p.email || m.email || '';
-                    resolvedName = emailStr.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-                }
-                if (!resolvedName) resolvedName = 'Team Member';
-
-                const resolvedRole = m.role || (p.role === 'superadmin' ? 'Super Admin' : p.role === 'admin' ? 'Admin' : 'Member');
-
-                memberMap.set(uid, {
-                    id: m.id || uid,
-                    user_id: uid,
-                    email: p.email || m.email || 'No email',
-                    role: resolvedRole,
-                    status: (m.status || p.status || 'active') as any,
-                    profile: {
-                        id: p.id || uid,
-                        full_name: resolvedName,
-                        avatar_url: p.avatar_url || p.avatarUrl,
-                        email: p.email || m.email,
-                    },
-                });
-            });
 
             // Populate profiles explicitly linked to this tenant
             if (activeTenant?.id) {
@@ -445,20 +394,20 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                                    (p.email || '').toLowerCase().includes('testuser');
                     if (isTest) return;
 
-                    if (p.tenant_id === activeTenant.id || p.workspace_id === activeTenant.id) {
+                    { // Adidaya is a dedicated installation; legacy profiles may not have tenant_id.
                         let resolvedName = p.full_name || p.display_name || p.name || p.username;
                         if (!resolvedName && p.email) {
                             resolvedName = p.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
                         }
                         if (!resolvedName) resolvedName = 'Team Member';
 
-                        const resolvedRole = p.role === 'superadmin' ? 'Super Admin' : p.role === 'admin' ? 'Admin' : 'Member';
+                        const resolvedRole = organizationRoleLabel((rolesByUser.get(p.id) as any)?.role || p.role);
                         memberMap.set(p.id, {
                             id: p.id,
                             user_id: p.id,
                             email: p.email || 'No email',
                             role: resolvedRole,
-                            status: (p.status || 'active') as any,
+                            status: ((rolesByUser.get(p.id) as any)?.status || p.status || 'active') as any,
                             profile: {
                                 id: p.id,
                                 full_name: resolvedName,
@@ -467,29 +416,6 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                             },
                         });
                     }
-                });
-            }
-
-            // Ensure logged in user is present if user context exists and has membership
-            if (user?.id && !memberMap.has(user.id) && isSuperAdmin) {
-                let currentName = profile?.full_name || profile?.nickname || profile?.username;
-                if (!currentName && user.email) {
-                    currentName = user.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase());
-                }
-                if (!currentName) currentName = 'Team Member';
-
-                memberMap.set(user.id, {
-                    id: user.id,
-                    user_id: user.id,
-                    email: user.email || 'No email',
-                    role: 'Super Admin',
-                    status: 'active',
-                    profile: {
-                        id: user.id,
-                        full_name: currentName,
-                        avatar_url: profile?.avatarUrl,
-                        email: user.email,
-                    },
                 });
             }
 
@@ -508,7 +434,16 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
     }, [activeCategory, fetchTeamMembers]);
 
     const handleSaveMember = async (data: { fullName?: string; name?: string; email: string; role: string; password?: string; status?: string }) => {
-        const tenantId = activeTenant?.id || '00000000-0000-0000-0000-000000000001';
+        const tenantId = activeTenant?.id;
+        if (isSubmittingMember) return;
+        if (!tenantId || !isSuperOrAdmin) {
+            const message = 'Your Adidaya administrator role could not be verified. Reload your account before saving.';
+            setSaveError(message);
+            if (Platform.OS === 'web') window.alert(message);
+            else Alert.alert('Error', message);
+            return;
+        }
+        setSaveError('');
         setIsSubmittingMember(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -521,26 +456,12 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
             if (editingMember) {
                 const uid = editingMember.user_id || editingMember.id;
 
-                // 1. Update or upsert tenant_members
-                await supabase
-                    .from('tenant_members')
-                    .upsert({
-                        tenant_id: tenantId,
-                        user_id: uid,
-                        role,
-                        status,
-                    }, { onConflict: 'tenant_id,user_id' });
-
-                // 2. Update profile name and status
-                if (uid) {
-                    await supabase
-                        .from('profiles')
-                        .update({
-                            full_name: memberName,
-                            status,
-                        })
-                        .eq('id', uid);
-                }
+                await saveOrganizationMember(supabase, tenantId, uid, role, status);
+                const { data: savedProfile, error: profileError } = await supabase
+                    .from('profiles').update({ full_name: memberName }).eq('id', uid).select('id').maybeSingle();
+                if (profileError) throw profileError;
+                if (!savedProfile) throw new Error('Role saved, but profile changes were not saved.');
+                if (uid === user?.id) await refreshTenants();
 
                 showToast('Member updated successfully');
             } else {
@@ -616,7 +537,10 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
             setEditingMember(null);
             fetchTeamMembers();
         } catch (err: any) {
-            Alert.alert('Error', err.message || 'Failed to save member.');
+            const message = err.message || 'Failed to save member.';
+            setSaveError(message);
+            if (Platform.OS === 'web') window.alert(message);
+            else Alert.alert('Error', message);
         } finally {
             setIsSubmittingMember(false);
         }
@@ -1406,10 +1330,14 @@ export const OrganizationSettingsMasterDetail: React.FC<OrganizationSettingsMast
                             isDark={isDark}
                             textColor={textColor}
                             maxDirectActions={3}
-                            primaryActionTextColor="#007AFF"
+                            primaryActionBgColor="#007AFF"
+                            primaryActionTextColor="#FFFFFF"
+                            primaryActionShadow={false}
                         />
                     )}
                 </View>
+
+                {saveError ? <Text accessibilityRole="alert" style={{ color: '#FF3B30', paddingHorizontal: 24, paddingBottom: 12 }}>{saveError}</Text> : null}
 
                 {/* Floating Search Bar for Team (Truly floating solid pill, no transparency clipping) */}
                 {activeCategory === 'team' && isSearchVisible && (

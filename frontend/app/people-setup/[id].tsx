@@ -17,6 +17,7 @@ import {
     StatusBar as RNStatusBar,
     Image,
     Share,
+    useWindowDimensions,
 } from 'react-native';
 import Animated, {
     useSharedValue,
@@ -28,7 +29,6 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { HeaderBlurBackground } from '@/components/ui/HeaderBlurBackground';
-import { GlassView } from '@/components/ui/GlassView';
 import { PlatformIcon } from '@/components/ui/PlatformIcon';
 import { HeaderToolbar } from '@/components/ui/HeaderToolbar';
 import { BouncyGlassButton } from '@/components/ui/BouncyGlassButton';
@@ -39,10 +39,12 @@ import ContextMenu, { ContextMenuAction } from '@/components/ui/PlatformContextM
 import { supabase } from '@/lib/supabase';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
-import { useUserContext } from '@/context/UserProvider';
+import { useUserContext, MANAGEMENT_ROLES } from '@/context/UserProvider';
+import { UnauthenticatedView } from '@/components/ui/UnauthenticatedView';
 import { WorkSchedulePresetModal } from '@/components/clock/setup/WorkSchedulePresetModal';
 import { WorkSchedulePreset, WORK_SCHEDULE_PRESETS } from '@/lib/data/workSchedulePresets';
 import { LeavePolicyPresetModal, LeavePolicyPresetItem } from '@/components/clock/setup/LeavePolicyPresetModal';
+import { confirmDestructiveAction } from '@/lib/alertUtils';
 import {
     AuditLogDetailSheet,
     AuditLogItem,
@@ -89,7 +91,7 @@ const MODULE_CONFIGS: Record<SetupModuleId, ModuleConfig> = {
         singularTitle: 'Department',
         subtitle: 'Teams, divisions & codes',
         icon: 'square.grid.2x2.fill',
-        color: '#007AFF',
+        color: '#1677D2',
     },
     positions: {
         id: 'positions',
@@ -179,17 +181,36 @@ const EMPLOYMENT_SEGMENTS: Segment[] = [
     { id: 'leave_policies', label: 'Leave', icon: 'calendar.badge.clock' },
 ];
 
-export default function PeopleSetupDetailScreen() {
-    const { id } = useLocalSearchParams<{ id: string }>();
+export interface PeopleSetupDetailScreenProps {
+    moduleId?: SetupModuleId;
+    isEmbedded?: boolean;
+    onClose?: () => void;
+    onModuleChange?: (id: SetupModuleId) => void;
+}
+
+export function PeopleSetupDetailPane(props: PeopleSetupDetailScreenProps) {
+    return <PeopleSetupDetailScreen {...props} isEmbedded={true} />;
+}
+
+export default function PeopleSetupDetailScreen({
+    moduleId: propModuleId,
+    isEmbedded,
+    onClose,
+    onModuleChange,
+}: PeopleSetupDetailScreenProps = {}) {
+    const params = useLocalSearchParams<{ id: string }>();
+    const id = propModuleId || params.id;
     const insets = useSafeAreaInsets();
+    const { width: windowWidth } = useWindowDimensions();
+    const isTabletOrDesktop = (Platform.OS === 'web' && windowWidth >= 768) || (Platform.OS === 'ios' && Platform.isPad) || windowWidth >= 768 || isEmbedded;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
     const textColor = Colors[resolvedTheme].text;
     const subtextColor = isDark ? '#A1A1A6' : '#8E8E93';
     const borderColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
-    const intensity = isDark ? 10 : 25;
 
-    const { profile } = useUserContext();
+    const { profile, user, isAuthenticated } = useUserContext();
+    const canManageSetup = isAuthenticated && !!user && !!profile && MANAGEMENT_ROLES.includes(profile.role);
 
     const [activeModule, setActiveModule] = useState<SetupModuleId>(
         (id as SetupModuleId) || 'departments'
@@ -403,11 +424,18 @@ export default function PeopleSetupDetailScreen() {
     };
 
     useEffect(() => {
-        if (id && (id in MODULE_CONFIGS)) {
-            setActiveModule(id as SetupModuleId);
+        if (propModuleId && propModuleId !== activeModule) {
+            setActiveModule(propModuleId);
             setSearchQuery('');
         }
-    }, [id]);
+    }, [propModuleId]);
+
+    useEffect(() => {
+        if (!propModuleId && params.id && (params.id in MODULE_CONFIGS)) {
+            setActiveModule(params.id as SetupModuleId);
+            setSearchQuery('');
+        }
+    }, [propModuleId, params.id]);
 
     const currentConfig = MODULE_CONFIGS[activeModule] || MODULE_CONFIGS.departments;
     const isOrg = currentConfig.group === 'org';
@@ -415,6 +443,7 @@ export default function PeopleSetupDetailScreen() {
 
     // Fetch live data from Supabase
     const fetchData = useCallback(async () => {
+        if (!canManageSetup) { setLoading(false); setRefreshing(false); return; }
         try {
             setLoading(true);
             const [
@@ -492,7 +521,7 @@ export default function PeopleSetupDetailScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [canManageSetup]);
 
     useEffect(() => {
         fetchData();
@@ -523,6 +552,7 @@ export default function PeopleSetupDetailScreen() {
 
     // Save record to DB via SwiftUISetupItemSheet
     const handleSave = async (payload: any) => {
+        if (!canManageSetup) throw new Error('People setup access is required.');
         try {
             setSaving(true);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -624,37 +654,25 @@ export default function PeopleSetupDetailScreen() {
     };
 
     // Delete record from DB
+    const executeDelete = async (item: any) => {
+        if (!canManageSetup) throw new Error('People setup access is required.');
+        const tables: Record<string, string> = { departments: 'organization_departments', positions: 'organization_positions', levels: 'organization_levels', contract_types: 'employment_types', work_statuses: 'work_status', work_schedules: 'work_schedules', employment_policies: 'employment_policies', leave_policies: 'leave_policies' };
+        const table = tables[activeModule];
+        if (!table || !item?.id) return;
+        // Keep existing Adidaya relations intact; referenced records must be resolved explicitly.
+        const { error } = await supabase.from(table).delete().eq('id', item.id);
+        if (error) throw error;
+        await fetchData();
+    };
+
     const handleDelete = (item: any) => {
         const itemType = currentConfig.singularTitle || 'Record';
-        Alert.alert(`Delete ${itemType}`, `Are you sure you want to delete "${item.name || item.code}"?`, [
-            { text: 'Cancel', style: 'cancel' },
-            {
-                text: 'Delete',
-                style: 'destructive',
-                onPress: async () => {
-                    try {
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
-                        let table = '';
-                        if (activeModule === 'departments') table = 'organization_departments';
-                        else if (activeModule === 'positions') table = 'organization_positions';
-                        else if (activeModule === 'levels') table = 'organization_levels';
-                        else if (activeModule === 'contract_types') table = 'employment_types';
-                        else if (activeModule === 'work_statuses') table = 'work_status';
-                        else if (activeModule === 'work_schedules') table = 'work_schedules';
-                        else if (activeModule === 'employment_policies') table = 'employment_policies';
-                        else if (activeModule === 'leave_policies') table = 'leave_policies';
-
-                        if (table) {
-                            const { error } = await supabase.from(table).delete().eq('id', item.id);
-                            if (error) throw error;
-                            await fetchData();
-                        }
-                    } catch (e: any) {
-                        Alert.alert('Error', e.message || 'Failed to delete record.');
-                    }
-                },
-            },
-        ]);
+        confirmDestructiveAction({
+            title: `Delete ${itemType}`,
+            message: `Are you sure you want to delete "${item.name || item.code}"?`,
+            confirmLabel: 'Delete',
+            onConfirm: async () => { try { await executeDelete(item); } catch (e: any) { Alert.alert('Error', e.message || 'Failed to delete record.'); } },
+        });
     };
 
     // Long press action menu
@@ -1028,7 +1046,11 @@ export default function PeopleSetupDetailScreen() {
                 ? '30 Days'
                 : 'This Month';
 
-        return (
+                const isTypeFiltered = selectedAuditCategory !== 'All';
+                const isTimeFiltered = auditTimeFilter !== 'all';
+                const isFiltered = Boolean(auditSearchQuery.trim()) || isTypeFiltered || isTimeFiltered;
+
+                return (
             <View style={{ gap: 12 }}>
                 {/* Unified Toolbar: Search | Type Menu | Time Menu */}
                 <View style={s.unifiedMemberToolbar}>
@@ -1036,11 +1058,12 @@ export default function PeopleSetupDetailScreen() {
                         style={[
                             s.unifiedSearchBar,
                             {
-                                backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                                borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                             },
                         ]}
                     >
-                        <PlatformIcon name="magnifyingglass" size={13} tintColor={subtextColor} />
+                        <PlatformIcon name="magnifyingglass" size={14} tintColor={subtextColor} />
                         <TextInput
                             style={[s.unifiedSearchInput, { color: textColor }]}
                             placeholder="Search..."
@@ -1050,6 +1073,17 @@ export default function PeopleSetupDetailScreen() {
                             clearButtonMode="while-editing"
                             autoCapitalize="none"
                         />
+                        {auditSearchQuery.length > 0 && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    Haptics.selectionAsync();
+                                    setAuditSearchQuery('');
+                                }}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                            >
+                                <PlatformIcon name="xmark.circle.fill" size={14} tintColor={subtextColor} />
+                            </TouchableOpacity>
+                        )}
                     </View>
 
                     <ContextMenu
@@ -1069,9 +1103,12 @@ export default function PeopleSetupDetailScreen() {
                             style={[
                                 s.toolbarFilterBtn,
                                 {
-                                    backgroundColor: isDark
-                                        ? 'rgba(255,255,255,0.06)'
-                                        : 'rgba(0,0,0,0.04)',
+                                    backgroundColor: isTypeFiltered
+                                        ? (isDark ? 'rgba(0,122,255,0.15)' : 'rgba(0,122,255,0.08)')
+                                        : (isDark ? '#1C1C1E' : '#FFFFFF'),
+                                    borderColor: isTypeFiltered
+                                        ? (isDark ? 'rgba(0,122,255,0.4)' : 'rgba(0,122,255,0.25)')
+                                        : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
                                 },
                             ]}
                         >
@@ -1079,8 +1116,8 @@ export default function PeopleSetupDetailScreen() {
                                 style={[
                                     s.toolbarFilterBtnText,
                                     {
-                                        color: textColor,
-                                        fontWeight: '600',
+                                        color: isTypeFiltered ? '#007AFF' : textColor,
+                                        fontWeight: isTypeFiltered ? '600' : '500',
                                     },
                                 ]}
                                 numberOfLines={1}
@@ -1090,7 +1127,7 @@ export default function PeopleSetupDetailScreen() {
                             <PlatformIcon
                                 name="chevron.down"
                                 size={10}
-                                tintColor={subtextColor}
+                                tintColor={isTypeFiltered ? '#007AFF' : subtextColor}
                             />
                         </View>
                     </ContextMenu>
@@ -1111,9 +1148,12 @@ export default function PeopleSetupDetailScreen() {
                             style={[
                                 s.toolbarFilterBtn,
                                 {
-                                    backgroundColor: isDark
-                                        ? 'rgba(255,255,255,0.06)'
-                                        : 'rgba(0,0,0,0.04)',
+                                    backgroundColor: isTimeFiltered
+                                        ? (isDark ? 'rgba(0,122,255,0.15)' : 'rgba(0,122,255,0.08)')
+                                        : (isDark ? '#1C1C1E' : '#FFFFFF'),
+                                    borderColor: isTimeFiltered
+                                        ? (isDark ? 'rgba(0,122,255,0.4)' : 'rgba(0,122,255,0.25)')
+                                        : (isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)'),
                                 },
                             ]}
                         >
@@ -1121,8 +1161,8 @@ export default function PeopleSetupDetailScreen() {
                                 style={[
                                     s.toolbarFilterBtnText,
                                     {
-                                        color: textColor,
-                                        fontWeight: '600',
+                                        color: isTimeFiltered ? '#007AFF' : textColor,
+                                        fontWeight: isTimeFiltered ? '600' : '500',
                                     },
                                 ]}
                                 numberOfLines={1}
@@ -1132,70 +1172,62 @@ export default function PeopleSetupDetailScreen() {
                             <PlatformIcon
                                 name="chevron.down"
                                 size={10}
-                                tintColor={subtextColor}
+                                tintColor={isTimeFiltered ? '#007AFF' : subtextColor}
                             />
                         </View>
                     </ContextMenu>
                 </View>
 
                 {/* Cards */}
-                <View style={{ gap: 10 }}>
+                <View style={{ gap: 12 }}>
                     {filteredAuditLogs.length === 0 ? (
-                        <GlassView
-                            intensity={intensity}
-                            style={[
-                                s.remoteModeCard,
-                                {
-                                    backgroundColor: isDark
-                                        ? 'rgba(255,255,255,0.02)'
-                                        : 'rgba(255,255,255,0.7)',
-                                    paddingVertical: 36,
-                                    paddingHorizontal: 20,
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    gap: 8,
-                                },
-                            ]}
-                        >
+                        <View style={s.emptyStateBox}>
                             <View
-                                style={{
-                                    width: 48,
-                                    height: 48,
-                                    borderRadius: 24,
-                                    backgroundColor: isDark
-                                        ? 'rgba(255,255,255,0.06)'
-                                        : 'rgba(0,0,0,0.04)',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                }}
+                                style={[
+                                    s.emptyIconCircle,
+                                    {
+                                        backgroundColor: isDark
+                                            ? 'rgba(255,255,255,0.05)'
+                                            : 'rgba(0,0,0,0.035)',
+                                    },
+                                ]}
                             >
                                 <PlatformIcon
-                                    name="clock.arrow.circlepath"
-                                    size={22}
+                                    name={isFiltered ? 'line.3.horizontal.decrease.circle' : 'clock.arrow.circlepath'}
+                                    size={28}
                                     tintColor={subtextColor}
                                 />
                             </View>
-                            <Text
-                                style={{
-                                    fontSize: 15,
-                                    fontWeight: '600',
-                                    color: textColor,
-                                    textAlign: 'center',
-                                }}
-                            >
-                                No Audit Logs
+                            <Text style={[s.emptyTitle, { color: textColor }]}>
+                                {isFiltered ? 'No Matching Logs' : 'No Audit Logs'}
                             </Text>
-                            <Text
-                                style={{
-                                    fontSize: 13,
-                                    color: subtextColor,
-                                    textAlign: 'center',
-                                    maxWidth: 260,
-                                }}
-                            >
-                                System event trail and managerial setup history will appear here.
+                            <Text style={[s.emptySubtitle, { color: subtextColor }]}>
+                                {isFiltered
+                                    ? 'No system activity matches your filter criteria. Try adjusting your search query or filters.'
+                                    : 'System event trail and managerial setup history will appear here.'}
                             </Text>
-                        </GlassView>
+                            {isFiltered && (
+                                <TouchableOpacity
+                                    style={[
+                                        s.emptyAddBtn,
+                                        {
+                                            backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                                            marginTop: 4,
+                                        },
+                                    ]}
+                                    onPress={() => {
+                                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                        setAuditSearchQuery('');
+                                        setSelectedAuditCategory('All');
+                                        setAuditTimeFilter('all');
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <PlatformIcon name="arrow.counterclockwise" size={13} tintColor={textColor} />
+                                    <Text style={[s.emptyAddBtnText, { color: textColor }]}>Reset Filters</Text>
+                                </TouchableOpacity>
+                            )}
+                        </View>
                     ) : (
                         filteredAuditLogs.map((item) => {
                             const categoryColor = getAuditCategoryColor(item.category);
@@ -1216,14 +1248,12 @@ export default function PeopleSetupDetailScreen() {
                                         setAuditDetailVisible(true);
                                     }}
                                 >
-                                    <GlassView
-                                        intensity={intensity}
+                                    <View
                                         style={[
                                             s.remoteModeCard,
                                             {
-                                                backgroundColor: isDark
-                                                    ? 'rgba(255,255,255,0.025)'
-                                                    : 'rgba(255,255,255,0.75)',
+                                                backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                                                borderWidth: 1,
                                                 borderColor: isDark
                                                     ? 'rgba(255,255,255,0.08)'
                                                     : 'rgba(0,0,0,0.06)',
@@ -1344,7 +1374,7 @@ export default function PeopleSetupDetailScreen() {
                                         >
                                             {item.time}
                                         </Text>
-                                    </GlassView>
+                                    </View>
                                 </TouchableOpacity>
                             );
                         })
@@ -1354,74 +1384,144 @@ export default function PeopleSetupDetailScreen() {
         );
     };
 
+    if (!isAuthenticated || !user) {
+        return <UnauthenticatedView title="People Setup" description="Sign in to your Adidaya account to manage People setup." buttonText="Sign In" />;
+    }
+    if (!canManageSetup) {
+        return <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24 }}><Text style={{ color: textColor }}>People setup access is required.</Text></View>;
+    }
+
     return (
         <>
             <RNStatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
-            <Stack.Screen
-                options={{
-                    headerShown: true,
-                    title: currentConfig.title,
-                    headerLargeTitle: false,
-                    headerTransparent: Platform.OS === 'ios',
-                    headerStyle: { backgroundColor: Platform.OS === 'ios' ? 'transparent' : (isDark ? '#000000' : '#F2F2F7') },
-                    headerTintColor: textColor,
-                    headerTitleStyle: { color: textColor, fontWeight: '600' },
-                    headerShadowVisible: false,
-                    headerBackButtonDisplayMode: 'minimal',
-                    headerBackTitle: ' ',
-                    headerRight: () => (
-                        <View style={{ marginRight: Platform.OS === 'web' ? 16 : 0 }}>
-                            <HeaderToolbar
-                                actions={
-                                    activeModule === 'audit_logs'
-                                        ? [
-                                              {
-                                                  id: 'export',
-                                                  icon: 'share-outline',
-                                                  image: 'square.and.arrow.up',
-                                                  title: 'Export',
-                                                  tintColor: textColor,
-                                                  onPress: () => {
-                                                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                                      if (Platform.OS === 'ios') {
-                                                          ActionSheetIOS.showActionSheetWithOptions(
-                                                              {
-                                                                  options: ['Cancel', 'Export as CSV', 'Export as JSON', 'Export Summary Report'],
-                                                                  cancelButtonIndex: 0,
-                                                                  userInterfaceStyle: isDark ? 'dark' : 'light',
-                                                                  title: 'Export Audit Logs',
-                                                              },
-                                                              (buttonIndex) => {
-                                                                  if (buttonIndex === 1) handleExportAuditLogs('csv');
-                                                                  else if (buttonIndex === 2) handleExportAuditLogs('json');
-                                                                  else if (buttonIndex === 3) handleExportAuditLogs('summary');
-                                                              }
-                                                          );
-                                                      } else {
-                                                          handleExportAuditLogs('csv');
-                                                      }
+            {!isEmbedded && (
+                <Stack.Screen
+                    options={{
+                        headerShown: true,
+                        title: currentConfig.title,
+                        headerLargeTitle: false,
+                        headerTransparent: Platform.OS === 'ios',
+                        headerStyle: { backgroundColor: Platform.OS === 'ios' ? 'transparent' : (isDark ? '#000000' : '#F2F2F7') },
+                        headerTintColor: textColor,
+                        headerTitleStyle: { color: textColor, fontWeight: '600' },
+                        headerShadowVisible: false,
+                        headerBackButtonDisplayMode: 'minimal',
+                        headerBackTitle: ' ',
+                        headerRight: () => (
+                            <View style={{ marginRight: Platform.OS === 'web' ? 16 : 0 }}>
+                                <HeaderToolbar primaryActionBgColor="#1677D2" primaryActionShadow={false}
+                                    actions={
+                                        activeModule === 'audit_logs'
+                                            ? [
+                                                  {
+                                                      id: 'export',
+                                                      icon: 'share-outline',
+                                                      image: 'square.and.arrow.up',
+                                                      title: 'Export',
+                                                      tintColor: textColor,
+                                                      onPress: () => {
+                                                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                                                          if (Platform.OS === 'ios') {
+                                                              ActionSheetIOS.showActionSheetWithOptions(
+                                                                  {
+                                                                      options: ['Cancel', 'Export as CSV', 'Export as JSON', 'Export Summary Report'],
+                                                                      cancelButtonIndex: 0,
+                                                                      userInterfaceStyle: isDark ? 'dark' : 'light',
+                                                                      title: 'Export Audit Logs',
+                                                                  },
+                                                                  (buttonIndex) => {
+                                                                      if (buttonIndex === 1) handleExportAuditLogs('csv');
+                                                                      else if (buttonIndex === 2) handleExportAuditLogs('json');
+                                                                      else if (buttonIndex === 3) handleExportAuditLogs('summary');
+                                                                  }
+                                                              );
+                                                          } else {
+                                                              handleExportAuditLogs('csv');
+                                                          }
+                                                      },
                                                   },
-                                              },
-                                          ]
-                                        : [
-                                              {
-                                                  id: 'add',
-                                                  icon: 'add',
-                                                  image: 'plus',
-                                                  title: 'Add',
-                                                  isPrimary: true,
-                                                  tintColor: '#007AFF',
-                                                  onPress: handleOpenAdd,
-                                              },
-                                          ]
-                                }
-                                isDark={isDark}
-                                textColor={textColor}
-                            />
-                        </View>
-                    ),
-                }}
-            />
+                                              ]
+                                            : [
+                                                  {
+                                                      id: 'add',
+                                                      icon: 'add',
+                                                      image: 'plus',
+                                                      title: 'Add',
+                                                      isPrimary: true,
+                                                      tintColor: '#1677D2',
+                                                      onPress: handleOpenAdd,
+                                                  },
+                                              ]
+                                    }
+                                    isDark={isDark}
+                                    textColor={textColor}
+                                />
+                            </View>
+                        ),
+                    }}
+                />
+            )}
+
+            {isEmbedded && (
+                <View style={s.embeddedHeader}>
+                    <View style={{ flex: 1 }}>
+                        <Text style={[s.embeddedHeaderTitle, { color: textColor }]} numberOfLines={1}>
+                            {currentConfig.title}
+                        </Text>
+                        <Text style={[s.embeddedHeaderSubtitle, { color: subtextColor }]} numberOfLines={1}>
+                            {currentConfig.subtitle}
+                        </Text>
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {activeModule === 'audit_logs' ? (
+                            <TouchableOpacity
+                                onPress={() => handleExportAuditLogs('csv')}
+                                style={[
+                                    s.headerActionButton,
+                                    {
+                                        backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+                                        borderWidth: isDark ? 0 : 1,
+                                        borderColor: isDark ? 'transparent' : 'rgba(0,0,0,0.08)',
+                                    },
+                                ]}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                activeOpacity={0.7}
+                            >
+                                <PlatformIcon name="square.and.arrow.up" size={16} tintColor={textColor} />
+                            </TouchableOpacity>
+                        ) : (
+                            <TouchableOpacity
+                                onPress={handleOpenAdd}
+                                style={[
+                                    s.headerActionButton,
+                                    {
+                                        backgroundColor: '#1677D2',
+                                    },
+                                ]}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                activeOpacity={0.7}
+                            >
+                                <PlatformIcon name="plus" size={17} tintColor="#FFFFFF" />
+                            </TouchableOpacity>
+                        )}
+                        {onClose && (
+                            <TouchableOpacity
+                                onPress={onClose}
+                                style={[
+                                    s.headerActionButton,
+                                    {
+                                        backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+                                        borderWidth: isDark ? 0 : 1,
+                                        borderColor: isDark ? 'transparent' : 'rgba(0,0,0,0.08)',
+                                    },
+                                ]}
+                            >
+                                <PlatformIcon name="xmark" size={16} tintColor={textColor} />
+                            </TouchableOpacity>
+                        )}
+                    </View>
+                </View>
+            )}
 
             <ScrollView
                 style={[s.container, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}
@@ -1429,24 +1529,26 @@ export default function PeopleSetupDetailScreen() {
                 contentContainerStyle={[
                     s.scrollContent,
                     {
-                        paddingTop: Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) + 16 : 16,
-                        paddingBottom: insets.bottom + 40,
+                        paddingTop: isEmbedded ? 8 : (Platform.OS === 'android' ? (RNStatusBar.currentHeight || 24) + 16 : 16),
+                        paddingBottom: isEmbedded ? 40 : insets.bottom + 40,
                     },
                 ]}
                 showsVerticalScrollIndicator={false}
                 refreshControl={
-                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#007AFF" />
+                    <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#1677D2" />
                 }
             >
-                {/* Segmented Control Bar */}
-                {activeModule !== 'audit_logs' && (
+                {/* Segmented Control Bar (hidden on iPad & desktop, preserved on mobile) */}
+                {!isTabletOrDesktop && activeModule !== 'audit_logs' && (
                     <SegmentedControl
                         segments={currentSegments}
                         activeSegment={activeModule}
                         onSegmentChange={(newId) => {
                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                            setActiveModule(newId as SetupModuleId);
+                            const nextModule = newId as SetupModuleId;
+                            setActiveModule(nextModule);
                             setSearchQuery('');
+                            onModuleChange?.(nextModule);
                         }}
                     />
                 )}
@@ -1458,7 +1560,8 @@ export default function PeopleSetupDetailScreen() {
                             style={[
                                 s.searchBarContainer,
                                 {
-                                    backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                    backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                                    borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                                 },
                             ]}
                         >
@@ -1479,7 +1582,8 @@ export default function PeopleSetupDetailScreen() {
                                 style={[
                                     s.criteriaBtn,
                                     {
-                                        backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
+                                        backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
+                                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
                                     },
                                 ]}
                                 onPress={handleOpenPositionSortCriteriaMenu}
@@ -1488,7 +1592,7 @@ export default function PeopleSetupDetailScreen() {
                                 <PlatformIcon
                                     name="slider.horizontal.3"
                                     size={15}
-                                    tintColor={positionSortMode !== 'dept' ? '#007AFF' : subtextColor}
+                                    tintColor={positionSortMode !== 'dept' ? '#1677D2' : subtextColor}
                                 />
                             </TouchableOpacity>
                         )}
@@ -1505,7 +1609,7 @@ export default function PeopleSetupDetailScreen() {
                 {/* Content Lists */}
                 {loading && !refreshing && activeModule !== 'audit_logs' ? (
                     <View style={s.centerLoader}>
-                        <ActivityIndicator size="small" color="#007AFF" />
+                        <ActivityIndicator size="small" color="#1677D2" />
                         <Text style={[s.loaderText, { color: subtextColor }]}>Loading {currentConfig.title}...</Text>
                     </View>
                 ) : (
@@ -1526,16 +1630,15 @@ export default function PeopleSetupDetailScreen() {
                                             onLongPress={() => handleCardLongPress(item)}
                                             delayLongPress={300}
                                         >
-                                            <GlassView
-                                                intensity={intensity}
+                                            <View
                                                 style={[
                                                     s.itemCard,
-                                                    { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                    { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                 ]}
                                             >
                                                 <View style={s.cardTopRow}>
-                                                    <View style={[s.codePill, { backgroundColor: 'rgba(0,122,255,0.1)' }]}>
-                                                        <Text style={[s.codePillText, { color: '#007AFF' }]}>
+                                                    <View style={[s.codePill, { backgroundColor: 'rgba(22, 119, 210, 0.1)' }]}>
+                                                        <Text style={[s.codePillText, { color: '#1677D2' }]}>
                                                             {item.code ? `${item.cluster_code ?? 1}-${item.code}` : 'DEPT'}
                                                         </Text>
                                                     </View>
@@ -1551,7 +1654,7 @@ export default function PeopleSetupDetailScreen() {
                                                 <Text style={[s.cardDeptTitle, { color: textColor }]}>
                                                     {item.name}
                                                 </Text>
-                                            </GlassView>
+                                            </View>
                                         </TouchableOpacity>
                                     ))
                                 )}
@@ -1606,11 +1709,10 @@ export default function PeopleSetupDetailScreen() {
                                                                 onLongPress={() => handleCardLongPress(item)}
                                                                 delayLongPress={300}
                                                             >
-                                                                <GlassView
-                                                                    intensity={intensity}
+                                                                <View
                                                                     style={[
                                                                         s.itemCard,
-                                                                        { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                                        { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                                     ]}
                                                                 >
                                                                     <View style={s.cardTopRow}>
@@ -1631,7 +1733,7 @@ export default function PeopleSetupDetailScreen() {
                                                                     <Text style={[s.cardDeptTitle, { color: textColor }]}>
                                                                         {item.name}
                                                                     </Text>
-                                                                </GlassView>
+                                                                </View>
                                                             </TouchableOpacity>
                                                         ))}
                                                     </View>
@@ -1648,11 +1750,10 @@ export default function PeopleSetupDetailScreen() {
                                             onLongPress={() => handleCardLongPress(item)}
                                             delayLongPress={300}
                                         >
-                                            <GlassView
-                                                intensity={intensity}
+                                            <View
                                                 style={[
                                                     s.itemCard,
-                                                    { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                    { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                 ]}
                                             >
                                                 <View style={s.cardTopRow}>
@@ -1676,7 +1777,7 @@ export default function PeopleSetupDetailScreen() {
                                                 <Text style={[s.cardMetaText, { color: subtextColor, marginTop: 4 }]} numberOfLines={1}>
                                                     {item.organization_departments?.name || 'General Department'}
                                                 </Text>
-                                            </GlassView>
+                                            </View>
                                         </TouchableOpacity>
                                     ))
                                 )}
@@ -1697,11 +1798,10 @@ export default function PeopleSetupDetailScreen() {
                                             onLongPress={() => handleCardLongPress(item)}
                                             delayLongPress={300}
                                         >
-                                            <GlassView
-                                                intensity={intensity}
+                                            <View
                                                 style={[
                                                     s.itemCard,
-                                                    { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                    { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                 ]}
                                             >
                                                 <View style={s.cardTopRow}>
@@ -1722,7 +1822,7 @@ export default function PeopleSetupDetailScreen() {
                                                 <Text style={[s.cardDeptTitle, { color: textColor }]}>
                                                     {item.roman_code && item.roman_code !== '0' ? `${item.roman_code} • ${item.name}` : item.name}
                                                 </Text>
-                                            </GlassView>
+                                            </View>
                                         </TouchableOpacity>
                                     ))
                                 )}
@@ -1743,11 +1843,10 @@ export default function PeopleSetupDetailScreen() {
                                             onLongPress={() => handleCardLongPress(item)}
                                             delayLongPress={300}
                                         >
-                                            <GlassView
-                                                intensity={intensity}
+                                            <View
                                                 style={[
                                                     s.itemCard,
-                                                    { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                    { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                 ]}
                                             >
                                                 <View style={s.cardTopRow}>
@@ -1778,7 +1877,7 @@ export default function PeopleSetupDetailScreen() {
                                                 <Text style={[s.cardMetaText, { color: subtextColor, marginTop: 4 }]} numberOfLines={1}>
                                                     Eligible Levels: Lv {item.min_level_code ?? 0} - Lv {item.max_level_code ?? 8}
                                                 </Text>
-                                            </GlassView>
+                                            </View>
                                         </TouchableOpacity>
                                     ))
                                 )}
@@ -1801,11 +1900,10 @@ export default function PeopleSetupDetailScreen() {
                                                 onLongPress={() => handleCardLongPress(item)}
                                                 delayLongPress={300}
                                             >
-                                                <GlassView
-                                                    intensity={intensity}
+                                                <View
                                                     style={[
                                                         s.itemCard,
-                                                        { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                        { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                     ]}
                                                 >
                                                     <View style={s.cardTopRow}>
@@ -1836,7 +1934,7 @@ export default function PeopleSetupDetailScreen() {
                                                             {item.name}
                                                         </Text>
                                                     </View>
-                                                </GlassView>
+                                                </View>
                                             </TouchableOpacity>
                                         );
                                     })
@@ -1861,7 +1959,6 @@ export default function PeopleSetupDetailScreen() {
                                             <BouncyGlassButton
                                                 key={preset.id}
                                                 isPill
-                                                isGlass
                                                 isDark={isDark}
                                                 textColor={textColor}
                                                 onPress={() => handleSelectPresetTemplate(preset)}
@@ -1994,11 +2091,10 @@ export default function PeopleSetupDetailScreen() {
                                                 onLongPress={() => handleCardLongPress(item)}
                                                 delayLongPress={300}
                                             >
-                                                <GlassView
-                                                    intensity={intensity}
+                                                <View
                                                     style={[
                                                         s.itemCard,
-                                                        { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                        { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                     ]}
                                                 >
                                                     <View style={s.cardTopRow}>
@@ -2035,7 +2131,7 @@ export default function PeopleSetupDetailScreen() {
                                                             </View>
                                                         ))}
                                                     </View>
-                                                </GlassView>
+                                                </View>
                                             </TouchableOpacity>
                                         );
                                     })
@@ -2057,11 +2153,10 @@ export default function PeopleSetupDetailScreen() {
                                             onLongPress={() => handleCardLongPress(item)}
                                             delayLongPress={300}
                                         >
-                                            <GlassView
-                                                intensity={intensity}
+                                            <View
                                                 style={[
                                                     s.itemCard,
-                                                    { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                    { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                 ]}
                                             >
                                                 <Text style={[s.cardDeptTitle, { color: textColor }]}>
@@ -2081,7 +2176,7 @@ export default function PeopleSetupDetailScreen() {
                                                         </Text>
                                                     )}
                                                 </View>
-                                            </GlassView>
+                                            </View>
                                         </TouchableOpacity>
                                     ))
                                 )}
@@ -2105,7 +2200,6 @@ export default function PeopleSetupDetailScreen() {
                                             <BouncyGlassButton
                                                 key={preset.id}
                                                 isPill
-                                                isGlass
                                                 isDark={isDark}
                                                 textColor={textColor}
                                                 onPress={() => handleSelectLeavePresetTemplate(preset)}
@@ -2161,11 +2255,10 @@ export default function PeopleSetupDetailScreen() {
                                                 onLongPress={() => handleCardLongPress(item)}
                                                 delayLongPress={300}
                                             >
-                                                <GlassView
-                                                    intensity={intensity}
+                                                <View
                                                     style={[
                                                         s.itemCard,
-                                                        { backgroundColor: isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)' },
+                                                        { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' },
                                                         isInactive && { opacity: 0.65 },
                                                     ]}
                                                 >
@@ -2209,7 +2302,7 @@ export default function PeopleSetupDetailScreen() {
                                                             </Text>
                                                         )}
                                                     </View>
-                                                </GlassView>
+                                                </View>
                                             </TouchableOpacity>
                                         );
                                     })
@@ -2241,6 +2334,11 @@ export default function PeopleSetupDetailScreen() {
                 customTitle={customSheetTitle}
                 customSubmitLabel={customSheetSubmitLabel}
                 onSubmit={handleSave}
+                onDelete={async (item) => {
+                    await executeDelete(item);
+                    setSheetVisible(false);
+                    setEditingItem(null);
+                }}
                 isSubmitting={saving}
             />
 
@@ -2416,8 +2514,8 @@ function SmoothSortButton({
             progress.value,
             [0, 1],
             [
-                isDark ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)',
-                isDark ? 'rgba(0, 122, 255, 0.22)' : 'rgba(0, 122, 255, 0.12)',
+                isDark ? '#1C1C1E' : '#FFFFFF',
+                isDark ? 'rgba(22, 119, 210, 0.22)' : 'rgba(22, 119, 210, 0.12)',
             ]
         );
         return {
@@ -2437,12 +2535,20 @@ function SmoothSortButton({
 
     return (
         <TouchableOpacity activeOpacity={0.7} onPress={handlePress}>
-            <Animated.View style={[s.sortButton, animatedBoxStyle]}>
+            <Animated.View
+                style={[
+                    s.sortButton,
+                    {
+                        borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                    },
+                    animatedBoxStyle,
+                ]}
+            >
                 <Animated.View style={[StyleSheet.absoluteFill, s.centerIcon, neutralIconStyle]}>
-                    <PlatformIcon name={iconName} size={16} tintColor={subtextColor} />
+                    <PlatformIcon name={iconName} size={15} tintColor={subtextColor} />
                 </Animated.View>
                 <Animated.View style={[StyleSheet.absoluteFill, s.centerIcon, activeIconStyle]}>
-                    <PlatformIcon name={iconName} size={16} tintColor="#007AFF" />
+                    <PlatformIcon name={iconName} size={15} tintColor="#1677D2" />
                 </Animated.View>
             </Animated.View>
         </TouchableOpacity>
@@ -2452,6 +2558,28 @@ function SmoothSortButton({
 const s = StyleSheet.create({
     container: {
         flex: 1,
+    },
+    embeddedHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingHorizontal: 20,
+        paddingVertical: 14,
+    },
+    embeddedHeaderTitle: {
+        fontSize: 16,
+        fontWeight: '700',
+    },
+    embeddedHeaderSubtitle: {
+        fontSize: 12,
+        marginTop: 2,
+    },
+    headerActionButton: {
+        width: 34,
+        height: 34,
+        borderRadius: 17,
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     scrollView: {
         flex: 1,
@@ -2476,29 +2604,32 @@ const s = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        borderRadius: 999,
+        borderRadius: 21,
         paddingHorizontal: 14,
-        height: 40,
+        height: 42,
         gap: 8,
+        borderWidth: 1,
     },
     sortButton: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 42,
+        height: 42,
+        borderRadius: 21,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
+        borderWidth: 1,
     },
     centerIcon: {
         alignItems: 'center',
         justifyContent: 'center',
     },
     criteriaBtn: {
-        width: 40,
-        height: 40,
-        borderRadius: 20,
+        width: 42,
+        height: 42,
+        borderRadius: 21,
         alignItems: 'center',
         justifyContent: 'center',
+        borderWidth: 1,
     },
     deptGroupSection: {
         gap: 8,
@@ -2534,7 +2665,7 @@ const s = StyleSheet.create({
         fontWeight: '500',
     },
     deptGroupItems: {
-        gap: 10,
+        gap: 12,
     },
     searchInput: {
         flex: 1,
@@ -2553,7 +2684,7 @@ const s = StyleSheet.create({
         gap: 12,
     },
     itemsContainer: {
-        gap: 10,
+        gap: 12,
     },
     itemCard: {
         borderRadius: 18,
@@ -2734,35 +2865,37 @@ const s = StyleSheet.create({
     unifiedMemberToolbar: {
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 6,
+        gap: 8,
         width: '100%',
-        marginBottom: 8,
+        marginBottom: 10,
     },
     unifiedSearchBar: {
         flex: 1,
-        height: 34,
-        borderRadius: 17,
+        height: 40,
+        borderRadius: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        paddingHorizontal: 10,
+        paddingHorizontal: 12,
+        borderWidth: 1,
+        gap: 8,
     },
     unifiedSearchInput: {
         flex: 1,
-        fontSize: 13,
-        marginLeft: 5,
+        fontSize: 13.5,
         paddingVertical: 0,
     },
     toolbarFilterBtn: {
-        height: 34,
-        paddingHorizontal: 10,
-        borderRadius: 17,
+        height: 40,
+        paddingHorizontal: 13,
+        borderRadius: 20,
         flexDirection: 'row',
         alignItems: 'center',
-        gap: 4,
-        maxWidth: 120,
+        gap: 5,
+        maxWidth: 140,
+        borderWidth: 1,
     },
     toolbarFilterBtnText: {
-        fontSize: 12,
+        fontSize: 13,
         fontWeight: '500',
     },
     remoteModeCard: {
@@ -2770,5 +2903,6 @@ const s = StyleSheet.create({
         padding: 14,
         overflow: 'hidden',
         borderWidth: StyleSheet.hairlineWidth,
+        borderColor: 'rgba(0,0,0,0.06)',
     },
 });

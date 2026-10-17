@@ -6,6 +6,7 @@ import {
     Alert,
     StatusBar as RNStatusBar,
     View,
+    Text,
     Keyboard,
     LayoutAnimation,
     Animated,
@@ -14,6 +15,7 @@ import {
 import { Stack, useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '@/context/ThemeContext';
+import { canEditOrganization } from '@/lib/organizationSettings';
 import { useTenantContext } from '@/context/TenantContext';
 import { supabase } from '@/lib/supabase';
 import * as Haptics from 'expo-haptics';
@@ -114,9 +116,7 @@ export default function OrganizationGeneralScreen() {
     }, []);
 
     const normalizedRole = (tenantRole || '').toLowerCase().trim();
-    const canEditGeneral = isSuperAdmin || 
-        normalizedRole.includes('owner') || 
-        normalizedRole.includes('super');
+    const canEditGeneral = canEditOrganization(tenantRole);
     const isViewer = !canEditGeneral && normalizedRole.includes('view');
     const isReadOnly = !canEditGeneral;
 
@@ -132,7 +132,8 @@ export default function OrganizationGeneralScreen() {
     const [joinCode, setJoinCode] = useState('');
     const [logoUrl, setLogoUrl] = useState<string | null>(null);
     const [primaryColor, setPrimaryColor] = useState('#007AFF');
-    const [customHex, setCustomHex] = useState('0036F8');
+    const [customHex, setCustomHex] = useState('007AFF');
+    const [saveError, setSaveError] = useState('');
     const [address, setAddress] = useState('');
     const [gmapsUrl, setGmapsUrl] = useState('');
     const [latitudeInput, setLatitudeInput] = useState('');
@@ -173,8 +174,8 @@ export default function OrganizationGeneralScreen() {
         primaryColor.toUpperCase() !== (activeTenant.primary_color || '#007AFF').toUpperCase() ||
         address !== (activeTenant.address || '') ||
         gmapsUrl !== (activeTenant.gmaps_url || '') ||
-        latitudeInput !== String((activeTenant as any).latitude || '') ||
-        longitudeInput !== String((activeTenant as any).longitude || '') ||
+        latitudeInput !== String((activeTenant as any).latitude ?? '') ||
+        longitudeInput !== String((activeTenant as any).longitude ?? '') ||
         selectedRadius !== Number((activeTenant as any).attendance_radius || 50) ||
         contactPhone !== (activeTenant.contact_phone || '') ||
         contactEmail !== (activeTenant.contact_email || '')
@@ -244,6 +245,8 @@ export default function OrganizationGeneralScreen() {
 
     const handleSaveChanges = async () => {
         if (!activeTenant?.id) return;
+        if (saving) return;
+        setSaveError('');
         setSaving(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
@@ -264,13 +267,13 @@ export default function OrganizationGeneralScreen() {
                 updated_at: new Date().toISOString(),
             };
 
-            await updateTenant(activeTenant.id, updates);
+            const result = await updateTenant(activeTenant.id, updates);
+            if (result.error) throw new Error(result.error);
 
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             Alert.alert('Success', 'Organization settings saved successfully.');
         } catch (err: any) {
-            console.error('Save changes error:', err);
-            Alert.alert('Error', err.message || 'Failed to save changes.');
+            setSaveError(err.message || 'Failed to save changes.');
         } finally {
             setSaving(false);
         }
@@ -310,6 +313,7 @@ export default function OrganizationGeneralScreen() {
                 }}
                 showsVerticalScrollIndicator={false}
             >
+                {saveError ? <Text accessibilityRole="alert" style={{ color: '#FF3B30' }}>{saveError}</Text> : null}
                 <OrganizationGeneralSection
                     name={name}
                     setName={setName}

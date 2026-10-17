@@ -15,9 +15,9 @@ export function isAdidayaTenant(tenant?: Partial<Tenant> | null): boolean {
 
 export function getTenantDisplayName(isAuthenticated: boolean, tenant?: Partial<Tenant> | null): string {
     if (!isAuthenticated || !tenant) return 'Adidaya Studio';
-    if (isAdidayaTenant(tenant)) return 'Adidaya Studio';
+    if (isAdidayaTenant(tenant)) return tenant.branding_name || tenant.name || 'Adidaya Studio';
     const rawName = (tenant.branding_name || tenant.name || 'Workspace').trim();
-    return `Forma: ${rawName}`;
+    return 'Adidaya Studio';
 }
 
 interface TenantBrandLogoProps {
@@ -35,22 +35,6 @@ export function TenantBrandLogo({
     style,
     showText = false,
 }: TenantBrandLogoProps) {
-    if (!tenant || isAdidayaTenant(tenant)) {
-        const adidayaSource = isDark
-            ? require('@/assets/images/logo-adidaya-white.png')
-            : require('@/assets/images/logo-adidaya-red.png');
-
-        return (
-            <View style={[{ alignItems: 'center', justifyContent: 'center' }, style]}>
-                <Image
-                    source={adidayaSource}
-                    style={{ width: size, height: size }}
-                    resizeMode="contain"
-                />
-            </View>
-        );
-    }
-
     const logoUrl = tenant?.branding_logo_url || tenant?.logo_url;
     if (logoUrl) {
         const isSvg = logoUrl.toLowerCase().endsWith('.svg') || logoUrl.includes('.svg');
@@ -65,6 +49,22 @@ export function TenantBrandLogo({
                         resizeMode="cover"
                     />
                 )}
+            </View>
+        );
+    }
+
+    if (!tenant || isAdidayaTenant(tenant)) {
+        const adidayaSource = isDark
+            ? require('@/assets/images/logo-adidaya-white.png')
+            : require('@/assets/images/logo-adidaya-red.png');
+
+        return (
+            <View style={[{ alignItems: 'center', justifyContent: 'center' }, style]}>
+                <Image
+                    source={adidayaSource}
+                    style={{ width: size, height: size }}
+                    resizeMode="contain"
+                />
             </View>
         );
     }

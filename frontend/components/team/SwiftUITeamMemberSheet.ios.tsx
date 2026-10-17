@@ -24,7 +24,7 @@ import {
 import { useTheme } from '@/context/ThemeContext';
 import * as Haptics from 'expo-haptics';
 
-const ROLE_OPTIONS = ['Member', 'Super Admin', 'Admin', 'Viewer', 'System'] as const;
+import { organizationRoleOptions, resolveOrganizationRole } from '@/lib/organizationSettings';
 const STATUS_OPTIONS = ['Active', 'Inactive', 'Archived'] as const;
 
 export interface SwiftUITeamMemberSheetProps {
@@ -53,6 +53,7 @@ export const SwiftUITeamMemberSheet: React.FC<SwiftUITeamMemberSheetProps> = (pr
     const { onClose, onSubmit, isSubmitting } = props;
     const { resolvedTheme } = useTheme();
     const isDark = props.isDark ?? (resolvedTheme === 'dark');
+    const ROLE_OPTIONS = organizationRoleOptions(editMember?.role);
     const isEditMode = !!editMember?.id;
 
     const sheetBg = 'clear';
@@ -73,9 +74,9 @@ export const SwiftUITeamMemberSheet: React.FC<SwiftUITeamMemberSheetProps> = (pr
         if (editMember) {
             setFullName(editMember.profile?.full_name || editMember.profile?.username || '');
             setEmail(editMember.profile?.email || editMember.email || '');
-            const currentRole = (editMember.role || '').toLowerCase();
+            const currentRole = resolveOrganizationRole(null, editMember.role);
             const matched = ROLE_OPTIONS.find(
-                (r) => r.toLowerCase() === currentRole || (r === 'System' && currentRole === 'sistem')
+                (r) => resolveOrganizationRole(null, r) === currentRole
             );
             setRole(matched || 'Member');
             const currentStatus = (editMember.status || 'active').toLowerCase();
