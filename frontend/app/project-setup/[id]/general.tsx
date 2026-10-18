@@ -1,3 +1,4 @@
+import { ProjectSaveFeedback, useProjectSaveFeedback } from '@/components/projects/setup/ProjectSaveFeedback';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
@@ -54,10 +55,12 @@ export default function ProjectSetupGeneralScreen({
     projectId: propProjectId,
     isEmbedded = false,
     onSaved,
+    onDirtyChange,
 }: {
     projectId?: string;
     isEmbedded?: boolean;
     onSaved?: () => void;
+    onDirtyChange?: (dirty: boolean) => void;
 } = {}) {
     const params = useLocalSearchParams();
     const id = propProjectId || params.id;
@@ -69,7 +72,7 @@ export default function ProjectSetupGeneralScreen({
     const isDark = resolvedTheme === 'dark';
 
     const bgColor = isDark ? '#000000' : '#F2F2F7';
-    const cardBgColor = isDark ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.7)';
+    const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#6E6E73';
     const dividerColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
@@ -79,6 +82,11 @@ export default function ProjectSetupGeneralScreen({
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSaving, setIsSaving] = useState(false);
+    const [saveError, setSaveError] = useState('');
+    const showSaveError = (title: string, message: string) => {
+        setSaveError(message);
+        if (Platform.OS !== 'web') Alert.alert(title, message);
+    };
 
     // Global settings & options
     const [generalSettings, setGeneralSettings] = useState<ProjectGeneralSettings | null>(null);
@@ -351,44 +359,52 @@ export default function ProjectSetupGeneralScreen({
         }));
     }, [projectStatuses, selectedStatus]);
 
+    const formSnapshot = JSON.stringify({ projectName, projectNumber, projectCode, selectedType, selectedStatus,
+        startDate: startDate?.toISOString(), targetDate: targetDate?.toISOString(),
+        selectedLeadId, lead: selectedLead?.id || null, trackingMethod });
+    const [savedSnapshot, setSavedSnapshot] = useState('');
+    useEffect(() => {
+        if (!isLoading) setSavedSnapshot(formSnapshot);
+    }, [isLoading]);
+    const hasChanges = !!savedSnapshot && savedSnapshot !== formSnapshot;
+    const feedback = useProjectSaveFeedback(hasChanges, onDirtyChange);
+
     const handleSave = async () => {
         Haptics.selectionAsync();
+        setSaveError('');
+        feedback.clear();
 
         if (!projectName.trim()) {
-            Alert.alert('Validation Error', 'Project name is required.');
+            showSaveError('Validation Error', 'Project name is required.');
             return;
         }
 
         if (projectCode.length !== 3) {
-            Alert.alert('Validation Error', 'Project code must be exactly 3 characters.');
+            showSaveError('Validation Error', 'Project code must be exactly 3 characters.');
             return;
         }
 
         if (isNumberDuplicate) {
-            Alert.alert('Validation Error', `Project number "${projectNumber}" is already in use by another project.`);
+            showSaveError('Validation Error', `Project number "${projectNumber}" is already in use by another project.`);
             return;
         }
 
         if (isCodeDuplicate) {
-            Alert.alert('Validation Error', `Project code "${projectCode}" is already in use by another project.`);
+            showSaveError('Validation Error', `Project code "${projectCode}" is already in use by another project.`);
             return;
         }
 
         const effectiveLeadId = selectedLead?.id || (selectedLeadId ? selectedLeadId : null);
         const effectiveLeadName = selectedLead?.name || (selectedLeadId ? selectedLeadId : null);
 
-        if (generalSettings?.requireProjectLead && !effectiveLeadName) {
-            Alert.alert('Validation Error', 'A Project Lead must be assigned for this project.');
-            return;
-        }
 
         if (generalSettings?.requireStartDate && !startDate) {
-            Alert.alert('Validation Error', 'A Start Date is required.');
+            showSaveError('Validation Error', 'A Start Date is required.');
             return;
         }
 
         if (generalSettings?.requireTargetDate && !generalSettings?.allowNoTargetDate && !targetDate) {
-            Alert.alert('Validation Error', 'A Target Date is required for this project.');
+            showSaveError('Validation Error', 'A Target Date is required for this project.');
             return;
         }
 
@@ -420,9 +436,9 @@ export default function ProjectSetupGeneralScreen({
             } else if (effectiveLeadName) {
                 updatedMembers.push({
                     id: effectiveLeadId || effectiveLeadName,
-                    userId: (effectiveLead as any)?.userId || effectiveLeadId || '',
+                    userId: (selectedLead as any)?.userId || effectiveLeadId || '',
                     name: effectiveLeadName,
-                    email: (effectiveLead as any)?.email || '',
+                    email: (selectedLead as any)?.email || '',
                     projectRole: 'Project Lead',
                 });
             }
@@ -442,6 +458,8 @@ export default function ProjectSetupGeneralScreen({
             const savedProject = await updateProjectApi(projectId, {
                 title: projectName.trim(),
                 number: projectNumber.trim(),
+                startDate: startDate?.toISOString() || undefined,
+                targetDate: targetDate?.toISOString() || null as any,
                 code: projectCode.trim(),
                 status: selectedStatus.toLowerCase(),
                 meta: updatedMeta,
@@ -449,11 +467,13 @@ export default function ProjectSetupGeneralScreen({
 
             if (!savedProject) throw new Error('Project update did not return a saved project.');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            if (isEmbedded) onSaved?.();
-            else router.back();
+            setProject(savedProject);
+            setSavedSnapshot(formSnapshot);
+            feedback.notify('Success', 'Project settings saved.');
+            onSaved?.();
         } catch (error) {
             console.error('Error saving project general details:', error);
-            Alert.alert('Error', 'Failed to save project details.');
+            showSaveError('Error', error instanceof Error ? error.message : (error as any)?.message || 'Failed to save project details.');
         } finally {
             setIsSaving(false);
         }
@@ -506,7 +526,7 @@ export default function ProjectSetupGeneralScreen({
                         headerRight: () => (
                             <TouchableOpacity
                                 onPress={handleSave}
-                                disabled={isSaving}
+                                disabled={isSaving || !hasChanges}
                                 hitSlop={10}
                                 style={{ paddingHorizontal: 4 }}
                             >
@@ -539,7 +559,7 @@ export default function ProjectSetupGeneralScreen({
                     </View>
                     <TouchableOpacity
                         onPress={handleSave}
-                        disabled={isSaving}
+                        disabled={isSaving || !hasChanges}
                         style={{
                             paddingHorizontal: 16,
                             paddingVertical: 7,
@@ -550,12 +570,15 @@ export default function ProjectSetupGeneralScreen({
                         {isSaving ? (
                             <ActivityIndicator size="small" color="#FFF" />
                         ) : (
-                            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Save Changes</Text>
+                            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>{hasChanges ? 'Save Changes' : 'Saved'}</Text>
                         )}
                     </TouchableOpacity>
                 </View>
             )}
 
+            <ProjectSaveFeedback message={feedback.message} failed={feedback.failed} />
+            {hasChanges && <Text style={{ color: subtextColor, paddingHorizontal: 24, paddingVertical: 6, fontSize: 12 }}>Unsaved changes</Text>}
+            {!!saveError && <Text accessibilityRole="alert" style={{ color: '#FF3B30', paddingHorizontal: 24, paddingVertical: 12 }}>{saveError}</Text>}
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{
@@ -698,7 +721,7 @@ export default function ProjectSetupGeneralScreen({
                             <Text style={[s.settingTitle, { color: textColor }]}>
                                 Start Date {generalSettings?.requireStartDate && '*'}
                             </Text>
-                            <DateTimePicker
+                            {Platform.OS === 'web' ? React.createElement('input' as any, { type: 'date', value: startDate ? new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : '', onChange: (event: any) => event.target.value && setStartDate(new Date(event.target.value + 'T12:00:00')), style: { colorScheme: isDark ? 'dark' : 'light', background: 'transparent', color: textColor, border: 0, font: 'inherit', maxWidth: 170 } }) : (<DateTimePicker
                                 value={startDate}
                                 mode="date"
                                 display="compact"
@@ -708,7 +731,7 @@ export default function ProjectSetupGeneralScreen({
                                     if (date) setStartDate(date);
                                 }}
                                 style={s.nativeDatePicker}
-                            />
+                            />)}
                         </View>
 
                         <View style={[s.divider, { backgroundColor: dividerColor }]} />
@@ -727,7 +750,7 @@ export default function ProjectSetupGeneralScreen({
                                     >
                                         <Ionicons name="close-circle" size={18} color={subtextColor} />
                                     </TouchableOpacity>
-                                    <DateTimePicker
+                                    {Platform.OS === 'web' ? React.createElement('input' as any, { type: 'date', value: targetDate ? new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : '', onChange: (event: any) => setTargetDate(event.target.value ? new Date(event.target.value + 'T12:00:00') : null), style: { colorScheme: isDark ? 'dark' : 'light', background: 'transparent', color: textColor, border: 0, font: 'inherit', maxWidth: 170 } }) : (<DateTimePicker
                                         value={targetDate}
                                         mode="date"
                                         display="compact"
@@ -737,7 +760,7 @@ export default function ProjectSetupGeneralScreen({
                                             if (date) setTargetDate(date);
                                         }}
                                         style={s.nativeDatePicker}
-                                    />
+                                    />)}
                                 </View>
                             ) : (
                                 <TouchableOpacity
@@ -758,7 +781,7 @@ export default function ProjectSetupGeneralScreen({
                 {/* 3. Project Lead Section */}
                 <View style={s.sectionBlock}>
                     <Text style={[s.sectionHeaderLabel, { color: subtextColor }]}>
-                        Project Lead
+                        Project Lead (optional)
                     </Text>
 
                     <GlassView
@@ -865,7 +888,7 @@ export default function ProjectSetupGeneralScreen({
                 onClose={() => setShowLeadModal(false)}
                 members={tenantMembers}
                 selectedLeadId={selectedLead?.id || selectedLeadId}
-                onSelect={(member) => {
+                onSelect={(member: any) => {
                     setSelectedLeadId(member.id);
                 }}
             />
@@ -947,6 +970,8 @@ const s = StyleSheet.create({
         height: 36,
         alignSelf: 'center',
     },
+    addDateBtn: { paddingVertical: 8, paddingHorizontal: 4 },
+    addDateBtnText: { fontSize: 16, fontWeight: '500' },
     clearBtnContainer: {
         padding: 4,
     },

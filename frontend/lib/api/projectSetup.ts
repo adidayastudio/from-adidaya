@@ -175,7 +175,7 @@ export interface ProjectGeneralSettings {
 }
 
 export const DEFAULT_PROJECT_GENERAL_SETTINGS: ProjectGeneralSettings = {
-    requireProjectLead: true,
+    requireProjectLead: false,
     requireStartDate: true,
     requireTargetDate: true,
     allowNoTargetDate: true,

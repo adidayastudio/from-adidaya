@@ -1,3 +1,6 @@
+import { ProjectWorkspace } from '@/components/projects/ProjectWorkspace';
+import { compareProjectNumbers } from '@/lib/projectSorting';
+import ContextMenu from '@/components/ui/PlatformContextMenu';
 import { DESKTOP_LIST_PANE, DESKTOP_PANEL_HEADER, DESKTOP_PANEL_TITLE_ROW, DESKTOP_PANEL_TITLE, DESKTOP_PANEL_ACTION } from '@/constants/desktopLayout';
 import { HeaderBlurBackground } from '@/components/ui/HeaderBlurBackground';
 import { getProjects, Project, updateProjectApi } from '@/lib/api/projects';
@@ -45,13 +48,13 @@ import ProjectSetupManagementScreen from '@/app/project-setup/[id]/management';
 export const PER_PROJECT_SETUP_MENU_ITEMS = [
     { id: 'general', title: 'General', subtitle: 'Project identity, type, timeline & tracking', icon: 'slider.horizontal.3', color: '#64748B', gradientColors: ['#64748B', '#475569'] },
     { id: 'team', title: 'Team & Access', subtitle: 'Project members and role assignments', icon: 'person.2.fill', color: '#F59E0B', gradientColors: ['#F59E0B', '#D97706'] },
-    { id: 'stages', title: 'Stages & Deliverables', subtitle: 'Workflow sequence & task checklists', icon: 'git-branch-outline', color: '#FF3B30', gradientColors: ['#FF3B30', '#E02D22'] },
-    { id: 'work-structure', title: 'Work Breakdown Structure', subtitle: 'WBS hierarchies & trade disciplines', icon: 'grid-outline', color: '#5856D6', gradientColors: ['#5856D6', '#4745B8'] },
+    { id: 'stages', title: 'Stages & Deliverables', subtitle: 'Workflow sequence & task checklists', icon: 'arrow.triangle.branch', color: '#FF3B30', gradientColors: ['#FF3B30', '#E02D22'] },
+    { id: 'work-structure', title: 'Work Breakdown Structure', subtitle: 'WBS hierarchies & trade disciplines', icon: 'square.grid.2x2.fill', color: '#5856D6', gradientColors: ['#5856D6', '#4745B8'] },
     { id: 'control', title: 'Progress & Quality Control', subtitle: 'Approvals, sign-offs & audit verification', icon: 'shield.checkmark', color: '#AF52DE', gradientColors: ['#AF52DE', '#9333EA'] },
     { id: 'cost-system', title: 'Cost & Budgeting', subtitle: 'Budget rules, AHSP & cost depth', icon: 'banknote', color: '#34C759', gradientColors: ['#34C759', '#248A3D'] },
     { id: 'time-system', title: 'Time & Schedule', subtitle: 'Scheduling rules & critical path', icon: 'clock', color: '#007AFF', gradientColors: ['#007AFF', '#0056B3'] },
     { id: 'price-library', title: 'Price Library & Rates', subtitle: 'Regional unit rates & material catalogs', icon: 'book.closed', color: '#FF9500', gradientColors: ['#FF9500', '#D97706'] },
-    { id: 'reports', title: 'Reports & Analytics', subtitle: 'Reporting templates & executive presets', icon: 'chart.bar.doc.horizontal', color: '#FF2D55', gradientColors: ['#FF2D55', '#D61F43'] },
+    { id: 'reports', title: 'Reports & Analytics', subtitle: 'Reporting templates & executive presets', icon: 'chart.bar.fill', color: '#FF2D55', gradientColors: ['#FF2D55', '#D61F43'] },
     { id: 'management', title: 'Project Management', subtitle: 'Project lifecycle, archive & danger zone', icon: 'archivebox', color: '#64748B', gradientColors: ['#64748B', '#334155'] },
 ];
 
@@ -119,10 +122,24 @@ export default function ProjectScreen() {
     const setupGroups: ProjectSetupGroup[] = ['general', 'configuration', 'access', 'system'];
     const isFocused = useIsFocused();
     const [projects, setProjects] = useState<Project[]>([]);
+    const [projectSort, setProjectSort] = useState<'number' | 'name' | 'activity'>('number');
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
     const [focusedProject, setFocusedProject] = useState<Project | null>(null);
     const [activeProjectTab, setActiveProjectTab] = useState<string>('overview');
-    const [projectDetailSetup, setProjectDetailSetup] = useState<string | null>(null);
+    const [projectDetailSetup, setProjectDetailSetupValue] = useState<string | null>(null);
+    const [projectSettingsDirty, setProjectSettingsDirty] = useState(false);
+    const setProjectDetailSetup = (next: string | null) => {
+        if (next === projectDetailSetup) return;
+        const proceed = () => { setProjectSettingsDirty(false); setProjectDetailSetupValue(next); };
+        if (!projectSettingsDirty) { proceed(); return; }
+        if (Platform.OS === 'web') {
+            if (window.confirm('Discard unsaved project settings?')) proceed();
+        } else {
+            Alert.alert('Unsaved changes', 'Discard unsaved project settings?', [
+                { text: 'Keep editing', style: 'cancel' }, { text: 'Discard', style: 'destructive', onPress: proceed },
+            ]);
+        }
+    };
     const [numberingSettings, setNumberingSettings] = useState<ProjectNumberingSettings | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const hasProjects = projects.length > 0;
@@ -246,6 +263,19 @@ export default function ProjectScreen() {
     const subtextColor = isDark ? '#8E8E93' : '#6e6e73';
     const dividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.06)';
 
+    const sortControl = (
+        <ContextMenu dropdownMenuMode actions={[
+            { title: 'Project number', state: projectSort === 'number' ? 'on' : 'off' },
+            { title: 'Project name', state: projectSort === 'name' ? 'on' : 'off' },
+            { title: 'Latest activity', state: projectSort === 'activity' ? 'on' : 'off' },
+        ]} onPress={event => setProjectSort((['number', 'name', 'activity'] as const)[event.nativeEvent.index] || 'number')}>
+            <TouchableOpacity accessibilityLabel="Sort projects" style={{ flexDirection: 'row', gap: 6, alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12 }}>
+                <Ionicons name="swap-vertical" size={16} color={subtextColor} />
+                <Text style={{ color: subtextColor, fontSize: 13 }}>{projectSort === 'number' ? 'Project number' : projectSort === 'name' ? 'Project name' : 'Latest activity'}</Text>
+            </TouchableOpacity>
+        </ContextMenu>
+    );
+
     const actions: HeaderToolbarAction[] = [
         {
             id: 'search',
@@ -254,10 +284,8 @@ export default function ProjectScreen() {
             tintColor: isSearchVisible ? FormaBlue[700] : textColor,
             onPress: () => {
                 Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                setIsSearchVisible((prev) => {
-                    if (prev) setSearchQuery('');
-                    return !prev;
-                });
+                if (isSearchVisible) setSearchQuery('');
+                setIsSearchVisible(!isSearchVisible);
             },
         },
         {
@@ -280,16 +308,9 @@ export default function ProjectScreen() {
     ];
 
     const sortedProjects = [...projects].sort((a, b) => {
-        // 1. Pinned first
-        if (a.isPinned && !b.isPinned) return -1;
-        if (!a.isPinned && b.isPinned) return 1;
-
-        // 2. Assigned to me second
-        if (a.isAssignedToMe && !b.isAssignedToMe) return -1;
-        if (!a.isAssignedToMe && b.isAssignedToMe) return 1;
-
-        // 3. Last activity third
-        return new Date(b.lastActivityAt || 0).getTime() - new Date(a.lastActivityAt || 0).getTime();
+        if (projectSort === 'name') return a.title.localeCompare(b.title);
+        if (projectSort === 'activity') return new Date(b.lastActivityAt || 0).getTime() - new Date(a.lastActivityAt || 0).getTime();
+        return compareProjectNumbers(a, b);
     });
 
     const counts = useMemo(() => {
@@ -360,6 +381,19 @@ export default function ProjectScreen() {
         })
         .slice(0, 10); // Radar limit
     const archivedProjects = filteredProjects.filter(p => p.isArchived);
+
+    if (isDesktopWeb && focusedProject) {
+        return <>
+            <Stack.Screen options={{ headerShown: false }} />
+            <ProjectWorkspace key={focusedProject.id} initialProject={focusedProject}
+                onClose={() => { setFocusedProject(null); setActiveProjectTab('overview'); setProjectDetailSetupValue(null); }}
+                onRefresh={() => loadProjects(false)}
+                renderContent={(selected, tab, onSelect, openSettings) => <ProjectDetailContent key={`${selected.id}-${tab}`} projectId={selected.id}
+                    initialProject={selected} contentOnly isEmbedded isFocusedWorkspace isPreviewMode={false}
+                    activeTabProp={tab} onTabChange={onSelect} onOpenSetupModule={openSettings} />}
+            />
+        </>;
+    }
 
     return (
         <>
@@ -471,11 +505,16 @@ export default function ProjectScreen() {
                                     contentContainerStyle={{ padding: 12, paddingBottom: 60 }}
                                     showsVerticalScrollIndicator={true}
                                 >
-                                    {visibleSetupMenuItems.map((item) => {
+                                    {[...visibleSetupMenuItems].sort((a, b) => { const order = ['general', 'team', 'stages', 'work-structure', 'control', 'time-system', 'cost-system', 'price-library', 'reports', 'management']; return order.indexOf(a.id) - order.indexOf(b.id); }).map((item, index) => {
+                                        const group = ['general', 'team'].includes(item.id) ? 'PROJECT & ACCESS'
+                                            : ['stages', 'work-structure', 'control', 'time-system'].includes(item.id) ? 'PLANNING & DELIVERY'
+                                            : ['cost-system', 'price-library'].includes(item.id) ? 'COST & RESOURCES' : 'REPORTING & MANAGEMENT';
                                         const isSelected = projectDetailSetup === item.id || 
                                             (projectDetailSetup === 'general_settings' && item.id === 'general') ||
                                             (projectDetailSetup === 'team_members' && item.id === 'team');
                                         return (
+                                            <React.Fragment key={item.id}>
+                                            {['general', 'stages', 'cost-system', 'reports'].includes(item.id) && <Text style={{ color: subtextColor, fontSize: 11, fontWeight: '700', letterSpacing: 1, paddingHorizontal: 12, marginTop: index ? 20 : 8, marginBottom: 12 }}>{group}</Text>}
                                             <TouchableOpacity
                                                 key={item.id}
                                                 style={[
@@ -498,7 +537,7 @@ export default function ProjectScreen() {
                                                 activeOpacity={0.7}
                                             >
                                                 <LinearGradient
-                                                    colors={isDark ? ['#1C1C1E', '#000000'] : item.gradientColors}
+                                                    colors={isDark ? ['#1C1C1E', '#000000'] : item.gradientColors as [string, string]}
                                                     style={styles.compactRoundIconBox}
                                                     start={{ x: 0, y: 0 }}
                                                     end={{ x: 1, y: 1 }}
@@ -521,6 +560,7 @@ export default function ProjectScreen() {
                                                     </Text>
                                                 </View>
                                             </TouchableOpacity>
+                                            </React.Fragment>
                                         );
                                     })}
                                 </ScrollView>
@@ -604,7 +644,7 @@ export default function ProjectScreen() {
                                                                 activeOpacity={0.7}
                                                             >
                                                                 <LinearGradient
-                                                                    colors={isDark ? ['#1C1C1E', '#000000'] : item.gradientColors}
+                                                                    colors={isDark ? ['#1C1C1E', '#000000'] : item.gradientColors as [string, string]}
                                                                     style={styles.compactRoundIconBox}
                                                                     start={{ x: 0, y: 0 }}
                                                                     end={{ x: 1, y: 1 }}
@@ -830,63 +870,72 @@ export default function ProjectScreen() {
                             <Animated.View key={`project-detail-setup-${projectDetailSetup}`} entering={FadeInRight.duration(200)} style={{ flex: 1 }}>
                                 {(projectDetailSetup === 'general' || projectDetailSetup === 'general_settings') ? (
                                     <ProjectSetupGeneralScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : (projectDetailSetup === 'team' || projectDetailSetup === 'team_members') ? (
                                     <ProjectSetupTeamScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : projectDetailSetup === 'stages' ? (
                                     <ProjectSetupStagesScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : projectDetailSetup === 'work-structure' ? (
                                     <ProjectSetupWorkStructureScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : projectDetailSetup === 'control' ? (
                                     <ProjectSetupControlScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : projectDetailSetup === 'cost-system' ? (
                                     <ProjectSetupCostSystemScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : projectDetailSetup === 'time-system' ? (
                                     <ProjectSetupTimeSystemScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : projectDetailSetup === 'price-library' ? (
                                     <ProjectSetupPriceLibraryScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : projectDetailSetup === 'reports' ? (
                                     <ProjectSetupReportsScreen
+                                        onDirtyChange={setProjectSettingsDirty}
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : projectDetailSetup === 'management' ? (
                                     <ProjectSetupManagementScreen
                                         projectId={focusedProject.id}
                                         isEmbedded={true}
-                                        onSaved={() => setProjectDetailSetup(null)}
+                                        onSaved={() => { loadProjects(false); }}
                                     />
                                 ) : (
                                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>

@@ -68,7 +68,7 @@ test('preserved Next backend accepts caller JWT while retaining legacy cookie au
  const calls=[];let bearer='Bearer user-jwt';
  const client={auth:{getUser:async token=>{calls.push(token);return {data:{user:{id:'u-1'}}};}}};
  const cookieClient={auth:{getUser:async()=>({data:{user:{id:'cookie-user'}}})}};
- const api=load('../from-adidaya/utils/supabase/server.ts',{'@supabase/ssr':{createServerClient:()=>cookieClient},'next/headers':{headers:async()=>({get:()=>bearer}),cookies:async()=>({getAll:()=>[]})},'@supabase/supabase-js':{createClient:(_url,_key,options)=>{assert.equal(options.global.headers.Authorization,'Bearer user-jwt');return client;}}});
+ const api=load(fs.existsSync('../utils/supabase/server.ts') ? '../utils/supabase/server.ts' : '../from-adidaya/utils/supabase/server.ts',{'@supabase/ssr':{createServerClient:()=>cookieClient},'next/headers':{headers:async()=>({get:()=>bearer}),cookies:async()=>({getAll:()=>[]})},'@supabase/supabase-js':{createClient:(_url,_key,options)=>{assert.equal(options.global.headers.Authorization,'Bearer user-jwt');return client;}}});
  assert.equal((await (await api.createClient()).auth.getUser()).data.user.id,'u-1');assert.equal(calls[0],'user-jwt');
  bearer=null;assert.equal((await (await api.createClient()).auth.getUser()).data.user.id,'cookie-user');
 });

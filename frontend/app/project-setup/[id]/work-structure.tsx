@@ -1,3 +1,5 @@
+import * as Haptics from 'expo-haptics';
+import { ProjectSaveFeedback, ProjectSettingsScopeNote, useProjectSaveFeedback } from '@/components/projects/setup/ProjectSaveFeedback';
 import { HeaderBlurBackground } from '@/components/ui/HeaderBlurBackground';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -73,10 +75,12 @@ export default function ProjectSetupWorkStructureScreen({
     projectId: propProjectId,
     isEmbedded = false,
     onSaved,
+    onDirtyChange,
 }: {
     projectId?: string;
     isEmbedded?: boolean;
     onSaved?: () => void;
+    onDirtyChange?: (dirty: boolean) => void;
 } = {}) {
     const params = useLocalSearchParams();
     const id = propProjectId || params.id;
@@ -148,9 +152,12 @@ export default function ProjectSetupWorkStructureScreen({
         JSON.stringify([...activeTemplates].sort()) !== JSON.stringify([...originalTemplates].sort()) ||
         JSON.stringify([...activeDisciplines].sort()) !== JSON.stringify([...originalDisciplines].sort());
 
+    const feedback = useProjectSaveFeedback(hasChanges, onDirtyChange);
+
     const handleSaveChanges = async () => {
         if (!project) return;
         setSaving(true);
+        feedback.clear();
         try {
             const currentMeta = project.meta || {};
             const updatedSetup = {
@@ -173,14 +180,14 @@ export default function ProjectSetupWorkStructureScreen({
                 setOriginalTemplates(activeTemplates);
                 setOriginalDisciplines(activeDisciplines);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                Alert.alert('Success', 'Work Structure configuration saved successfully!');
+                feedback.notify('Success', 'Work Structure configuration saved successfully!');
                 onSaved?.();
             } else {
-                Alert.alert('Error', 'Failed to save WBS configurations.');
+                feedback.notify('Error', 'Failed to save WBS configurations.');
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'An error occurred while saving.');
+            feedback.notify('Error', (error as any)?.message || 'Failed to save project settings.');
         } finally {
             setSaving(false);
         }
@@ -245,7 +252,9 @@ export default function ProjectSetupWorkStructureScreen({
                     backgroundColor: 'transparent',
                 }
             ]}>
-                <ScrollView
+                <ProjectSaveFeedback message={feedback.message} failed={feedback.failed} />
+            <ProjectSettingsScopeNote>WBS preferences are saved for this project. Saving does not rebuild existing task hierarchies.</ProjectSettingsScopeNote>
+            <ScrollView
                     ref={tabRef}
                     horizontal
                     showsHorizontalScrollIndicator={false}

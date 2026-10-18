@@ -1,3 +1,4 @@
+import { ProjectSaveFeedback, useProjectSaveFeedback } from '@/components/projects/setup/ProjectSaveFeedback';
 import React, { useState, useEffect } from 'react';
 import {
     View,
@@ -45,6 +46,12 @@ export default function ProjectSetupManagementScreen({
     const [project, setProject] = useState<Project | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isActionLoading, setIsActionLoading] = useState(false);
+    const feedback = useProjectSaveFeedback(false);
+    const confirmProjectAction = (title: string, message: string, buttons: any[]) => {
+        if (Platform.OS === 'web') {
+            if (window.confirm(message)) buttons.find(button => button.onPress)?.onPress();
+        } else Alert.alert(title, message, buttons);
+    };
 
     useEffect(() => {
         if (projectId) {
@@ -69,7 +76,7 @@ export default function ProjectSetupManagementScreen({
         const isArchived = project.isArchived || false;
         const actionLabel = isArchived ? 'Unarchive' : 'Archive';
 
-        Alert.alert(
+        confirmProjectAction(
             `${actionLabel} Project`,
             `Are you sure you want to ${actionLabel.toLowerCase()} "${project.title}"?`,
             [
@@ -87,11 +94,12 @@ export default function ProjectSetupManagementScreen({
                             if (updated) {
                                 setProject(updated);
                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                                Alert.alert('Success', `Project successfully ${actionLabel.toLowerCase()}d!`);
+                                feedback.notify('Success', `Project successfully ${actionLabel.toLowerCase()}d!`);
+                                onSaved?.();
                             }
                         } catch (e) {
                             console.error(e);
-                            Alert.alert('Error', `Failed to ${actionLabel.toLowerCase()} project.`);
+                            feedback.notify('Error', `Failed to ${actionLabel.toLowerCase()} project.`);
                         } finally {
                             setIsActionLoading(false);
                         }
@@ -104,7 +112,7 @@ export default function ProjectSetupManagementScreen({
     const handleDeleteProject = async () => {
         if (!project) return;
 
-        Alert.alert(
+        confirmProjectAction(
             'Delete Project',
             `Are you sure you want to permanently delete "${project.title}"? This action cannot be undone.`,
             [
@@ -120,11 +128,11 @@ export default function ProjectSetupManagementScreen({
                                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                                 router.replace('/(tabs)/projects' as any);
                             } else {
-                                Alert.alert('Error', 'Failed to delete project.');
+                                feedback.notify('Error', 'Failed to delete project.');
                             }
                         } catch (e) {
                             console.error(e);
-                            Alert.alert('Error', 'An error occurred while deleting the project.');
+                            feedback.notify('Error', 'An error occurred while deleting the project.');
                         } finally {
                             setIsActionLoading(false);
                         }
@@ -178,6 +186,7 @@ export default function ProjectSetupManagementScreen({
                 </View>
             )}
 
+            <ProjectSaveFeedback message={feedback.message} failed={feedback.failed} />
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{

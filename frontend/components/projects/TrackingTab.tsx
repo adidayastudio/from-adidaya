@@ -27,19 +27,14 @@ import * as Haptics from 'expo-haptics';
 
 interface TrackingTabProps {
     project: Project;
+    inlineDetails?: boolean;
+    taskListOnly?: boolean;
     isDark: boolean;
     onRefresh?: () => void;
     onProgressChange?: (progress: number) => void;
 }
 
-const DEFAULT_MILESTONES: ProjectMilestone[] = [
-    { id: 'm-1', title: 'Kickoff & Alignment', status: 'completed', targetDate: '15 Sep 2026', description: 'Initial briefing and stakeholder alignment' },
-    { id: 'm-2', title: 'Design & Concept Review', status: 'in_progress', targetDate: '30 Sep 2026', description: 'Schematic review and design sign-off' },
-    { id: 'm-3', title: 'Development & Execution', status: 'upcoming', targetDate: '15 Nov 2026', description: 'Core deliverables and implementation' },
-    { id: 'm-4', title: 'Final Handover & Launch', status: 'upcoming', targetDate: '30 Nov 2026', description: 'Project acceptance and final delivery' },
-];
-
-export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
+export function TrackingTab({ project, isDark, onRefresh, inlineDetails = false, taskListOnly = false }: TrackingTabProps) {
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#636366';
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
@@ -94,7 +89,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
                 loadedMilestones = project.meta.milestones;
             } else {
                 // If brand new project, initialize with defaults
-                loadedMilestones = DEFAULT_MILESTONES;
+                loadedMilestones = [];
             }
             setMilestones(loadedMilestones);
 
@@ -109,134 +104,14 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
 
             // Filter for this project
             const projectTasks = allTasks.filter(
-                t => t.projectId === project.id || (t.project && (t.project.id === project.id || (t.project as any).project_code === pCode || t.projectCode === pCode))
+                t => (t as any).projectId === project.id || (t as any).project_id === project.id || t.projectCode === pCode || t.project === project.title || (t.project as any)?.id === project.id
             );
             const projectActions = allActions.filter(
-                a => a.projectId === project.id || (a.project && (a.project.id === project.id || (a.project as any).project_code === pCode || a.projectCode === pCode))
+                a => (a as any).projectId === project.id || (a as any).project_id === project.id || a.projectCode === pCode || a.project === project.title || (a.project as any)?.id === project.id
             );
 
-            setTasks(projectTasks.length > 0 ? projectTasks : [
-                {
-                    id: 'pt-1',
-                    title: 'Architectural 3D Schematic Modelling',
-                    project: pTitle,
-                    projectCode: pCode,
-                    status: 'in_progress',
-                    priority: 'high',
-                    dueDate: '2026-10-15',
-                    dueTime: '14:00',
-                    description: 'Develop comprehensive 3D massing, exterior facade options, and sun path analysis.',
-                    assignees: [
-                        { id: 'u1', name: 'Alvin Pratama', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80' },
-                        { id: 'u2', name: 'Rina Sasmita', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' }
-                    ],
-                    subtasks: [
-                        { id: 'st-1', title: 'Massing exploration', assignee: { name: 'Alvin Pratama' }, isDone: true },
-                        { id: 'st-2', title: 'Exterior facade rendering', assignee: { name: 'Alvin Pratama' }, isDone: false }
-                    ],
-                },
-                {
-                    id: 'pt-2',
-                    title: 'MEP & Structural Engineering Review',
-                    project: pTitle,
-                    projectCode: pCode,
-                    status: 'todo',
-                    priority: 'medium',
-                    dueDate: '2026-10-28',
-                    dueTime: '10:30',
-                    description: 'Review structural grid alignments with plumbing and HVAC ducting layouts.',
-                    assignees: [
-                        { id: 'u2', name: 'Rina Sasmita', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' }
-                    ],
-                },
-                {
-                    id: 'pt-3',
-                    title: 'Bill of Quantities & Material Procurement',
-                    project: pTitle,
-                    projectCode: pCode,
-                    status: 'revision',
-                    priority: 'urgent',
-                    dueDate: '2026-11-05',
-                    dueTime: '17:00',
-                    description: 'Revise supplier cost comparison and adjust steel tonnage per updated structural drawings.',
-                    assignees: [
-                        { id: 'u3', name: 'Budi Santoso', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100&auto=format&fit=crop&q=80' }
-                    ],
-                    linkedModule: { target: 'finance', actionLabel: 'View Budget', route: '/finance' },
-                },
-                {
-                    id: 'pt-4',
-                    title: 'Site Workers Attendance & Overtime Signoff',
-                    project: pTitle,
-                    projectCode: pCode,
-                    status: 'submitted',
-                    priority: 'low',
-                    dueDate: '2026-11-15',
-                    description: 'Review and approve site shift attendance timesheets from Clock module.',
-                    assignees: [
-                        { id: 'u1', name: 'Alvin Pratama', avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80' }
-                    ],
-                    linkedModule: { target: 'clock', actionLabel: 'Open Clock', route: '/clock' },
-                },
-                {
-                    id: 'pt-5',
-                    title: 'Final Acceptance & Authority Handover',
-                    project: pTitle,
-                    projectCode: pCode,
-                    status: 'done',
-                    priority: 'medium',
-                    dueDate: '2026-11-30',
-                    assignees: [
-                        { id: 'u2', name: 'Rina Sasmita', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100&auto=format&fit=crop&q=80' }
-                    ],
-                }
-            ]);
-
-            setActions(projectActions.length > 0 ? projectActions : [
-                {
-                    id: 'act-1',
-                    title: 'Approve Material Submittal: Italian Travertine',
-                    projectId: project.id,
-                    projectCode: pCode,
-                    status: 'PENDING_APPROVAL',
-                    priority: 'urgent',
-                    type: 'approval',
-                    date: '18 Oct 2026',
-                    description: 'Review physical stone test samples and architect signoff batch.',
-                },
-                {
-                    id: 'act-2',
-                    title: 'Review Change Order: Structural Footing Elevation',
-                    projectId: project.id,
-                    projectCode: pCode,
-                    status: 'CHANGES_REQUESTED',
-                    priority: 'high',
-                    type: 'change_order',
-                    date: '25 Oct 2026',
-                    description: 'Soil bearing test indicates higher water table requiring reinforced raft adjustment.',
-                },
-                {
-                    id: 'act-3',
-                    title: 'Sign Off Site Inspection Checklist #14',
-                    projectId: project.id,
-                    projectCode: pCode,
-                    status: 'PENDING_REVIEW',
-                    priority: 'medium',
-                    type: 'inspection',
-                    date: '2 Nov 2026',
-                    description: 'Weekly quality assurance walk-through with site supervisor.',
-                },
-                {
-                    id: 'act-4',
-                    title: 'Contract Variation Authorization (Electrical)',
-                    projectId: project.id,
-                    projectCode: pCode,
-                    status: 'APPROVED',
-                    priority: 'low',
-                    type: 'approval',
-                    date: '20 Nov 2026',
-                }
-            ]);
+            setTasks(projectTasks);
+            setActions(projectActions);
         } catch (error) {
             console.error('Error loading tracking tab data:', error);
         } finally {
@@ -411,6 +286,17 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
             .slice(0, 5);
     }, [filteredActions]);
 
+    if (inlineDetails && selectedTask) return <View style={{ flex: 1, minHeight: 0 }}>
+        <TouchableOpacity onPress={() => setSelectedTask(null)} style={{ paddingVertical: 12 }}><Text style={{ color: '#007AFF', fontWeight: '600' }}>‹ Back to tasks</Text></TouchableOpacity>
+        <SwiftUITaskDetailSheet isOpened isEmbedded onClose={() => setSelectedTask(null)} task={selectedTask} setTasks={setTasks}
+            onTaskUpdated={() => { setSelectedTask(null); loadData(true); onRefresh?.(); }} />
+    </View>;
+    if (inlineDetails && selectedAction) return <View style={{ flex: 1, minHeight: 0 }}>
+        <TouchableOpacity onPress={() => setSelectedAction(null)} style={{ paddingVertical: 12 }}><Text style={{ color: '#007AFF', fontWeight: '600' }}>‹ Back to work</Text></TouchableOpacity>
+        <SwiftUIActionDetailSheet setActionsList={setActions} isOpened isEmbedded onClose={() => setSelectedAction(null)} action={selectedAction}
+            onStatusChange={() => { setSelectedAction(null); loadData(true); onRefresh?.(); }} />
+    </View>;
+
     if (loading) {
         return (
             <View style={styles.loadingContainer}>
@@ -419,8 +305,9 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
         );
     }
 
+    const Container = inlineDetails ? ScrollView : View;
     return (
-        <View style={styles.container}>
+        <Container style={inlineDetails ? { flex: 1 } : styles.container} {...(inlineDetails ? { contentContainerStyle: { padding: 24, gap: 24, paddingBottom: 100 } } : {})}>
             {/* 1. Project Progress Section (Hidden if No Progress) */}
             {isTrackingEnabled && (
                 <View style={styles.sectionBlock}>
@@ -480,7 +367,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
             )}
 
             {/* 2. Milestones Section */}
-            <View style={styles.sectionBlock}>
+            {!taskListOnly && <View style={styles.sectionBlock}>
                 <TouchableOpacity
                     onPress={() => {
                         Haptics.selectionAsync();
@@ -578,6 +465,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
                 </View>
             </View>
 
+            }
             {/* 3. Tasks Section */}
             <View style={styles.sectionBlock}>
                 <View style={styles.sectionHeaderRow}>
@@ -763,9 +651,9 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
                     ) : (
                         <View style={styles.milestoneList}>
                             {displayedActions.map((act, idx) => {
-                                const isResolved = act.status === 'COMPLETED' || act.status === 'APPROVED' || act.status === 'RESOLVED' || act.status === 'done';
+                                const isResolved = ['completed', 'approved', 'resolved', 'done'].includes(String(act.status).toLowerCase());
                                 const isUrgent = act.priority === 'urgent' || act.priority === 'high';
-                                const isReturned = act.status === 'RETURNED' || act.status === 'REJECTED' || act.status === 'CHANGES_REQUESTED';
+                                const isReturned = ['returned', 'rejected', 'changes_requested', 'revision'].includes(String(act.status).toLowerCase());
 
                                 const statusColor = isResolved ? '#34C759' : isReturned ? '#FF453A' : isUrgent ? '#FF9500' : formaBlue;
                                 const statusBg = isResolved
@@ -845,6 +733,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
 
             {/* Action Detail Sheet */}
             <SwiftUIActionDetailSheet
+                setActionsList={setActions}
                 isOpened={!!selectedAction}
                 onClose={() => setSelectedAction(null)}
                 action={selectedAction}
@@ -865,7 +754,7 @@ export function TrackingTab({ project, isDark, onRefresh }: TrackingTabProps) {
                 }}
                 defaultProjectId={project.id}
             />
-        </View>
+        </Container>
     );
 }
 

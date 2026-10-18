@@ -315,10 +315,6 @@ export const SwiftUIAddProjectSheet: React.FC<SwiftUIAddProjectSheetProps> = ({
             return;
         }
 
-        if (generalSettings.requireProjectLead && (!selectedLead || selectedLead === 'Select')) {
-            Alert.alert('Project Lead Required', 'Please assign a project lead from the members list.');
-            return;
-        }
 
         setIsSaving(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);

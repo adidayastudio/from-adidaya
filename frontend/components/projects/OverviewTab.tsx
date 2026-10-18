@@ -101,6 +101,7 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
     const dividerColor = isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)';
     const dotColor = isDark ? '#30D158' : '#34C759';
 
+    const [paneWidth, setPaneWidth] = useState(0);
     const [statsData, setStatsData] = useState({
         activeTasks: 0,
         openActions: 0,
@@ -138,7 +139,7 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
             }
             if (allTasks) {
                 const projectTasks = allTasks.filter(
-                    t => t.projectId === project.id || (t.project && (t.project.id === project.id || (t.project as any).project_code === project.code))
+                    t => (t as any).projectId === project.id || (t as any).project_id === project.id || t.project === project.code || t.project === project.title || (t.project as any)?.id === project.id
                 );
                 setTasks(projectTasks);
             }
@@ -225,11 +226,11 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
         if (project.meta?.projectLeadName) return project.meta.projectLeadName;
         if (project.meta?.projectLead) return project.meta.projectLead;
         if ((project as any).lead) return (project as any).lead;
-        const leadFromMembers = teamMembers.find(m => m.projectRole === 'Project Lead');
+        const leadFromMembers = teamMembers.find((m: any) => m.projectRole === 'Project Lead');
         if (leadFromMembers) return leadFromMembers.name;
         const leadId = project.meta?.projectLeadId;
         if (leadId && teamMembers.length > 0) {
-            const found = teamMembers.find(m => m.id === leadId || m.userId === leadId);
+            const found = teamMembers.find((m: any) => m.id === leadId || m.userId === leadId);
             if (found) return found.name;
         }
         return '-';
@@ -287,15 +288,15 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
     return (
         <View style={styles.container}>
             {/* 1. Stat Cards (Full width grid across container) */}
-            <View style={styles.statsGrid}>
+            <View onLayout={event => setPaneWidth(event.nativeEvent.layout.width)} style={[styles.statsGrid, { flexWrap: 'wrap' }]}>
                 {stats.map((stat, idx) => (
-                    <View key={stat.id || idx} style={styles.statCardWrapper}>
+                    <View key={stat.id || idx} style={[styles.statCardWrapper, paneWidth > 0 && paneWidth < 640 && { flex: undefined, width: '48%' }]}>
                         <View style={[styles.statCard, { backgroundColor: cardBgColor, borderColor: cardBorderColor }]}>
                             <View style={styles.statTopRow}>
                                 <Ionicons name={stat.icon as any} size={18} color={subtextColor} />
                                 <Text style={[styles.statValue, { color: textColor }]}>{stat.value}</Text>
                             </View>
-                            <Text style={[styles.statLabel, { color: subtextColor }]} numberOfLines={1}>{stat.label}</Text>
+                            <Text style={[styles.statLabel, { color: subtextColor }]} numberOfLines={2}>{stat.label}</Text>
                         </View>
                     </View>
                 ))}

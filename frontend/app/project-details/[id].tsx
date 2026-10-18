@@ -1,3 +1,7 @@
+import { ProjectWorkspace } from '@/components/projects/ProjectWorkspace';
+import { FormaBlue } from '@/constants/theme';
+import { ProjectWorkspaceInspector } from '@/components/projects/ProjectWorkspaceInspector';
+import type { ProjectSetupModule } from '@/lib/api/projectSetup';
 import { ActivityTab } from '@/components/projects/ActivityTab';
 import { DocsTab, ProjectDocItem, DEFAULT_PROJECT_MOCK_DOCS, BouncyToolbarButton, getDocSectionLabel } from '@/components/projects/DocsTab';
 import { OverviewTab } from '@/components/projects/OverviewTab';
@@ -30,7 +34,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, Stack, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
-import { ActivityIndicator, Alert, Clipboard, Dimensions, Image, Modal, Platform, StatusBar as RNStatusBar, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Keyboard, LayoutAnimation } from 'react-native';
+import { ActivityIndicator, Alert, Clipboard, Dimensions, Image, Modal, Platform, StatusBar as RNStatusBar, ScrollView, Share, StyleSheet, Text, TextInput, TouchableOpacity, View, KeyboardAvoidingView, Keyboard, LayoutAnimation, useWindowDimensions } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -223,6 +227,7 @@ export function ProjectDetailContent({
     onClose,
     isPreviewMode,
     onOpenSetupModule,
+    contentOnly = false,
 }: {
     projectId?: string;
     initialProject?: Project;
@@ -234,13 +239,16 @@ export function ProjectDetailContent({
     onClose?: () => void;
     isPreviewMode?: boolean;
     onOpenSetupModule?: (moduleId: string) => void;
+    contentOnly?: boolean;
 }) {
+    const { width: viewportWidth } = useWindowDimensions();
     const isPreview = isPreviewMode !== undefined ? isPreviewMode : (isEmbedded && !isFocusedWorkspace);
     const params = useLocalSearchParams();
     const id = propProjectId || params.id;
     const projectId = typeof id === 'string' ? id : Array.isArray(id) ? id[0] : '';
 
     const [project, setProject] = useState<Project | null>(initialProject || null);
+    useEffect(() => { if (initialProject) setProject(initialProject); }, [initialProject]);
     const [dynamicProgress, setDynamicProgress] = useState<number | null>(initialProject?.progress ?? null);
     const [numberingSettings, setNumberingSettings] = useState<ProjectNumberingSettings | null>(null);
     const [isLoading, setIsLoading] = useState(false);
@@ -719,7 +727,7 @@ export function ProjectDetailContent({
                         isDark={isDark}
                         isPinned={isPinned}
                         setIsPinned={handleTogglePin}
-                        onSelectTab={setActiveTab}
+                        onSelectTab={(tab) => { setActiveTab(tab); onTabChange?.(tab); }}
                         onRefresh={loadProject}
                         onProgressChange={setDynamicProgress}
                         isPreview={isPreview}
@@ -727,9 +735,12 @@ export function ProjectDetailContent({
                     />
                 );
             case 'work':
+            case 'tracking':
             case 'progress':
                 return (
                     <TrackingTab
+                        inlineDetails={contentOnly}
+                        taskListOnly={contentOnly && activeTab === 'work'}
                         project={project}
                         isDark={isDark}
                         onRefresh={loadProject}
@@ -752,7 +763,7 @@ export function ProjectDetailContent({
                             setActivityDateRange({ startDate: null, endDate: null, label: undefined });
                         }}
                         onOpenDateRange={() => setIsDateRangeSheetVisible(true)}
-                        onSelectTab={setActiveTab}
+                        onSelectTab={(tab) => { setActiveTab(tab); onTabChange?.(tab); }}
                     />
                 );
             case 'docs':
@@ -892,7 +903,7 @@ export function ProjectDetailContent({
             )}
 
             {/* Floating Top Bar when embedded/desktop */}
-            {isEmbedded && (
+            {isEmbedded && !contentOnly && (
                 <View style={[styles.floatingHeaderBar, isPreview && { justifyContent: 'flex-end' }]}>
                     {/* Left: Back to Projects button (in workspace mode) or Standalone Badge */}
                     {!isPreview && isFocusedWorkspace && onClose ? (
@@ -1037,19 +1048,18 @@ export function ProjectDetailContent({
                 </View>
             )}
 
-            {/* Project identity and section selection stay left; selected content stays right. */}
-            <ScrollView
+            {contentOnly && ['work', 'tracking'].includes(activeTab) ? <View style={{ flex: 1, minHeight: 0 }}>{renderTabContent()}</View> : <ScrollView
                 ref={scrollViewRef}
                 style={[styles.container, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}
                 contentContainerStyle={{ paddingBottom: 100 }}
-                stickyHeaderIndices={!isPreview ? [1] : undefined}
+                stickyHeaderIndices={!isPreview && !contentOnly ? [1] : undefined}
                 onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
                 scrollEventThrottle={16}
             >
-                <View>
+                {!contentOnly && <View>
                     {/* Hero Section - Edge-to-Edge with Blended Gradient */}
                     <TouchableOpacity
-                        style={[styles.heroContainer, isEmbedded && { height: 350 }]}
+                        style={[styles.heroContainer, isEmbedded && { height: viewportWidth >= 768 ? 280 : 350 }]}
                         onPress={() => setIsPreviewVisible(true)}
                         activeOpacity={0.95}
                     >
@@ -1105,13 +1115,17 @@ export function ProjectDetailContent({
                             </View>
                         </View>
                     </TouchableOpacity>
-                </View>
+                </View>}
 
                 {/* Sticky Segmented Control Layer (Only on Mobile / Non-embedded) */}
-                {!isPreview && (
+                {!isPreview && !contentOnly && (
                     <View
                         style={[
                             styles.stickySegmentedControlContainer,
+                            isEmbedded && Platform.OS === 'web' && {
+                                // Reserve the floating toolbar row as this section reaches the top.
+                                paddingTop: 10 + Math.min(64, Math.max(0, scrollY - ((viewportWidth >= 768 ? 280 : 350) - 64))),
+                            },
                             {
                                 backgroundColor: isDark
                                     ? (Platform.OS === 'web' ? 'rgba(0, 0, 0, 0.88)' : '#000000')
@@ -1133,8 +1147,8 @@ export function ProjectDetailContent({
                     </View>
                 )}
 
-                <View style={styles.content}>{renderTabContent()}</View>
-            </ScrollView>
+                <View style={[styles.content, contentOnly && { width: '100%', maxWidth: 960, alignSelf: 'center' }]}>{renderTabContent()}</View>
+            </ScrollView>}
 
             {/* Image Preview & Change Modal */}
             <Modal
@@ -2466,5 +2480,22 @@ const styles = StyleSheet.create({
 });
 
 export default function ProjectDetailScreen() {
-    return <ProjectDetailContent />;
+    const { width } = useWindowDimensions();
+    const params = useLocalSearchParams();
+    const id = typeof params.id === 'string' ? params.id : params.id?.[0] || '';
+    const [project, setProject] = useState<Project | null>(null);
+    useFocusEffect(React.useCallback(() => {
+        let active = true;
+        getProjectById(id).then(value => { if (active) setProject(value); });
+        return () => { active = false; };
+    }, [id]));
+    if (Platform.OS !== 'web' || width < 768) return <ProjectDetailContent />;
+    return <>
+        <Stack.Screen options={{ headerShown: false }} />
+        {project ? <ProjectWorkspace key={project.id} initialProject={project} onClose={() => router.back()}
+            renderContent={(selected, tab, onSelect, openSettings) => <ProjectDetailContent key={`${selected.id}-${tab}`} projectId={selected.id}
+                initialProject={selected} contentOnly isEmbedded isFocusedWorkspace isPreviewMode={false}
+                activeTabProp={tab} onTabChange={onSelect} onOpenSetupModule={openSettings} />}
+        /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#007AFF" /></View>}
+    </>;
 }

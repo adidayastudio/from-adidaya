@@ -177,7 +177,7 @@ export async function getProjects(workspaceOrTenantId?: string) {
             return undefined;
         };
 
-        const title = toString(getField(p, ['title', 'name', 'project_name', 'label']));
+        const title = toString(getField(p, ['project_name', 'title', 'name', 'label']));
         const rawPhase = toString(getField(p, ['phase', 'project_phase', 'stage', 'current_phase', 'status'])) || 'Planning';
         const formattedPhase = rawPhase.charAt(0).toUpperCase() + rawPhase.slice(1);
         const localMeta = await getProjectMeta(p.id);
@@ -197,14 +197,14 @@ export async function getProjects(workspaceOrTenantId?: string) {
             themeColor: toString(getField(p, ['theme_color', 'color', 'accent_color'])) || '#007AFF',
             heroImage: heroImg ? (typeof heroImg === 'string' ? { uri: heroImg } : heroImg) : null,
             isArchived: getField(p, ['is_archived', 'archived', 'deleted']) || p.status === 'archived' || localMeta.isArchived || false,
-            isPinned: getField(p, ['is_pinned', 'pinned', 'favorite', 'is_favorite']) || localMeta.isFavorite || false,
+            isPinned: getField(p, ['is_pinned', 'pinned', 'favorite', 'is_favorite']) ?? p.meta?.isPinned ?? localMeta.isFavorite ?? false,
             isAssignedToMe: getField(p, ['is_assigned_to_me', 'my_project']) || false,
             lastActivityAt: p.last_activity_at || p.updated_at || p.created_at || '',
             meta: {
                 startDate: p.start_date || undefined,
-                targetDate: p.target_date || undefined,
-                ...(p.meta || {}),
+                targetDate: p.end_date || p.target_date || undefined,
                 ...localMeta,
+                ...(p.meta || {}),
                 heroImage: heroImg || undefined,
                 avatarUrl: heroImg || undefined,
                 logoUrl: heroImg || undefined,
@@ -251,7 +251,7 @@ export async function getProjectById(id: string) {
         }
         return undefined;
     };
-    const title = toString(getField(data, ['title', 'name', 'project_name', 'label']));
+    const title = toString(getField(data, ['project_name', 'title', 'name', 'label']));
     const rawPhase = toString(getField(data, ['phase', 'project_phase', 'stage', 'current_phase', 'status'])) || 'Planning';
     const formattedPhase = rawPhase.charAt(0).toUpperCase() + rawPhase.slice(1);
     const localMeta = await getProjectMeta(data.id);
@@ -271,14 +271,14 @@ export async function getProjectById(id: string) {
         themeColor: toString(getField(data, ['theme_color', 'color', 'accent_color'])) || '#007AFF',
         heroImage: heroImgUrl ? (typeof heroImgUrl === 'string' ? { uri: heroImgUrl } : heroImgUrl) : null,
         isArchived: getField(data, ['is_archived', 'archived', 'deleted']) || data.status === 'archived' || localMeta.isArchived || false,
-        isPinned: getField(data, ['is_pinned', 'pinned', 'favorite', 'is_favorite']) || localMeta.isFavorite || false,
+        isPinned: getField(data, ['is_pinned', 'pinned', 'favorite', 'is_favorite']) ?? data.meta?.isPinned ?? localMeta.isFavorite ?? false,
         isAssignedToMe: getField(data, ['is_assigned_to_me', 'my_project']) || false,
         lastActivityAt: data.last_activity_at || data.updated_at || data.created_at || '',
         meta: {
             startDate: data.start_date || undefined,
-            targetDate: data.target_date || undefined,
-            ...(data.meta || {}),
+            targetDate: data.end_date || data.target_date || undefined,
             ...localMeta,
+            ...(data.meta || {}),
             heroImage: heroImgUrl || undefined,
             avatarUrl: heroImgUrl || undefined,
             logoUrl: heroImgUrl || undefined,
@@ -689,11 +689,11 @@ export async function updateProjectApi(
     }
 
     const payload: any = {};
-    if (updates.title !== undefined) payload.name = updates.title;
+    if (updates.title !== undefined) payload[APP_MODE === 'adidaya' ? 'project_name' : 'name'] = updates.title;
     if (updates.code !== undefined) payload.project_code = updates.code;
     if (updates.number !== undefined) payload.project_number = updates.number;
     if (updates.startDate !== undefined) payload.start_date = updates.startDate;
-    if (updates.targetDate !== undefined) payload.target_date = updates.targetDate;
+    if (updates.targetDate !== undefined) payload[APP_MODE === 'adidaya' ? 'end_date' : 'target_date'] = updates.targetDate;
     if (updates.status !== undefined) payload.status = updates.status.toLowerCase();
     if (updates.isArchived !== undefined) {
         payload.status = updates.isArchived ? 'archived' : 'active';
@@ -709,31 +709,55 @@ export async function updateProjectApi(
         if (imageUri) payload.hero_image_url = imageUri;
     }
 
-    if (updates.isPinned !== undefined) {
+    if (updates.isPinned !== undefined && (APP_MODE !== 'adidaya' || 'is_pinned' in current)) {
         payload.is_pinned = updates.isPinned;
     }
 
-    if (updates.progress !== undefined) {
+    if (updates.progress !== undefined && (APP_MODE !== 'adidaya' || 'progress' in current)) {
         payload.progress = updates.progress;
     }
 
+    if (updates.meta !== undefined) {
+        payload.meta = { ...(current.meta || {}), ...updates.meta };
+    }
+    if (APP_MODE === 'adidaya') {
+        if (updates.isPinned !== undefined || updates.progress !== undefined) {
+            payload.meta = { ...(current.meta || {}), ...(payload.meta || {}),
+                ...(updates.isPinned !== undefined ? { isPinned: updates.isPinned, isFavorite: updates.isPinned } : {}),
+                ...(updates.progress !== undefined ? { progress: updates.progress } : {}),
+            };
+        }
+        if (updates.startDate !== undefined || updates.meta?.startDate !== undefined) {
+            payload.start_date = updates.startDate ?? updates.meta?.startDate;
+        }
+        if (updates.targetDate !== undefined || updates.meta?.targetDate !== undefined) {
+            payload.end_date = updates.targetDate !== undefined ? updates.targetDate : updates.meta?.targetDate;
+        }
+    }
+
     if (Object.keys(payload).length > 0) {
-        const { error } = await supabase
+        const { data: savedRow, error } = await supabase
             .from('projects')
             .update(payload)
-            .eq('id', projectId);
+            .eq('id', projectId)
+            .select('id')
+            .maybeSingle();
 
+        if (!error && !savedRow) throw new Error('Project was not updated. Check your project permissions and try again.');
         if (error) {
             // If certain columns do not exist in DB yet, fallback to updating core columns
-            if (error.code === 'PGRST204') {
+            if (error.code === 'PGRST204' && APP_MODE !== 'adidaya') {
                 const safePayload = { ...payload };
                 delete safePayload.hero_image_url;
                 delete safePayload.is_pinned;
                 delete safePayload.is_favorite;
                 delete safePayload.progress;
                 if (Object.keys(safePayload).length > 0) {
-                    await supabase.from('projects').update(safePayload).eq('id', projectId);
+                    const { error: retryError } = await supabase.from('projects').update(safePayload).eq('id', projectId);
+                    if (retryError) throw retryError;
                 }
+            } else {
+                throw error;
             }
         }
     }

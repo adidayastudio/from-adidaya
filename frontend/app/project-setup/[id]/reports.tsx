@@ -1,3 +1,5 @@
+import * as Haptics from 'expo-haptics';
+import { ProjectSaveFeedback, ProjectSettingsScopeNote, useProjectSaveFeedback } from '@/components/projects/setup/ProjectSaveFeedback';
 import { HeaderBlurBackground } from '@/components/ui/HeaderBlurBackground';
 import React, { useState, useEffect } from 'react';
 import {
@@ -60,10 +62,12 @@ export default function ProjectSetupReportsScreen({
     projectId: propProjectId,
     isEmbedded = false,
     onSaved,
+    onDirtyChange,
 }: {
     projectId?: string;
     isEmbedded?: boolean;
     onSaved?: () => void;
+    onDirtyChange?: (dirty: boolean) => void;
 } = {}) {
     const params = useLocalSearchParams();
     const id = propProjectId || params.id;
@@ -119,9 +123,12 @@ export default function ProjectSetupReportsScreen({
     const hasChanges =
         JSON.stringify([...activePresets].sort()) !== JSON.stringify([...originalActivePresets].sort());
 
+    const feedback = useProjectSaveFeedback(hasChanges, onDirtyChange);
+
     const handleSaveChanges = async () => {
         if (!project) return;
         setSaving(true);
+        feedback.clear();
         try {
             const currentMeta = project.meta || {};
             const updatedSetup = {
@@ -142,14 +149,14 @@ export default function ProjectSetupReportsScreen({
                 setProject(updated);
                 setOriginalActivePresets(activePresets);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                Alert.alert('Success', 'Report presets saved successfully!');
+                feedback.notify('Success', 'Report presets saved successfully!');
                 onSaved?.();
             } else {
-                Alert.alert('Error', 'Failed to save Reports configuration.');
+                feedback.notify('Error', 'Failed to save Reports configuration.');
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'An error occurred while saving.');
+            feedback.notify('Error', (error as any)?.message || 'Failed to save project settings.');
         } finally {
             setSaving(false);
         }
@@ -205,6 +212,8 @@ export default function ProjectSetupReportsScreen({
                 </View>
             )}
 
+            <ProjectSaveFeedback message={feedback.message} failed={feedback.failed} />
+            <ProjectSettingsScopeNote>Report preferences are saved for this project. Saving does not generate reports automatically.</ProjectSettingsScopeNote>
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{

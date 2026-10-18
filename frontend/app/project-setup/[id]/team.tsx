@@ -1,3 +1,4 @@
+import { ProjectSaveFeedback, useProjectSaveFeedback } from '@/components/projects/setup/ProjectSaveFeedback';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
     View,
@@ -55,10 +56,12 @@ export default function ProjectSetupTeamScreen({
     projectId: propProjectId,
     isEmbedded = false,
     onSaved,
+    onDirtyChange,
 }: {
     projectId?: string;
     isEmbedded?: boolean;
     onSaved?: () => void;
+    onDirtyChange?: (dirty: boolean) => void;
 } = {}) {
     const params = useLocalSearchParams();
     const id = propProjectId || params.id;
@@ -81,6 +84,8 @@ export default function ProjectSetupTeamScreen({
     const [generalSettings, setGeneralSettings] = useState<ProjectGeneralSettings | null>(null);
     const [tenantMembers, setTenantMembers] = useState<any[]>([]);
     const [members, setMembers] = useState<ProjectMember[]>([]);
+    const [savingMembers, setSavingMembers] = useState(false);
+    const feedback = useProjectSaveFeedback(savingMembers, onDirtyChange);
     const [isLoading, setIsLoading] = useState(true);
 
     // Search state
@@ -219,14 +224,6 @@ export default function ProjectSetupTeamScreen({
                 }
 
                 savedMembers = initial;
-                if (initial.length > 0) {
-                    await updateProjectApi(projectId, {
-                        meta: {
-                            ...(projData?.meta || {}),
-                            members: initial,
-                        },
-                    });
-                }
             } else {
                 // Enrich existing saved members with their real avatarUrl from profiles
                 savedMembers = savedMembers.map((sm) => {
@@ -253,17 +250,21 @@ export default function ProjectSetupTeamScreen({
     };
 
     const handleSaveMembers = async (updatedList: ProjectMember[]) => {
+        if (savingMembers) return;
+        const previous = members;
+        setSavingMembers(true);
+        feedback.clear();
         setMembers(updatedList);
         try {
-            await updateProjectApi(projectId, {
-                meta: {
-                    ...(project?.meta || {}),
-                    members: updatedList,
-                },
-            });
-        } catch (e) {
-            console.error('Error updating project members:', e);
-        }
+            const updated = await updateProjectApi(projectId, { meta: { ...(project?.meta || {}), members: updatedList } });
+            if (!updated) throw new Error('Members were not saved.');
+            setProject(updated);
+            feedback.notify('Success', 'Project members saved.');
+            onSaved?.();
+        } catch (error) {
+            setMembers(previous);
+            feedback.notify('Error', (error as any)?.message || 'Failed to save members.');
+        } finally { setSavingMembers(false); }
     };
 
     const handleAddMember = (tenantUser: any) => {
@@ -286,33 +287,14 @@ export default function ProjectSetupTeamScreen({
     };
 
     const handleRemoveMember = (member: ProjectMember) => {
-        if (member.projectRole === 'Project Lead' && generalSettings?.requireProjectLead) {
-            const hasOtherLead = members.some((m) => m.id !== member.id && m.projectRole === 'Project Lead');
-            if (!hasOtherLead) {
-                Alert.alert(
-                    'Cannot Remove Lead',
-                    'A project must always have a Project Lead. Please assign a replacement Lead first.'
-                );
-                return;
-            }
+        const remove = () => handleSaveMembers(members.filter(m => m.id !== member.id));
+        if (Platform.OS === 'web') {
+            if (window.confirm(`Remove "${member.name}" from this project?`)) remove();
+        } else {
+            Alert.alert('Remove Member', `Remove "${member.name}" from this project?`, [
+                { text: 'Cancel', style: 'cancel' }, { text: 'Remove', style: 'destructive', onPress: remove },
+            ]);
         }
-
-        Alert.alert(
-            'Remove Member',
-            `Remove "${member.name}" from this project?`,
-            [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                    text: 'Remove',
-                    style: 'destructive',
-                    onPress: () => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                        const updated = members.filter((m) => m.id !== member.id);
-                        handleSaveMembers(updated);
-                    },
-                },
-            ]
-        );
     };
 
     const handleChangeRole = (member: ProjectMember, roleTitle: string) => {
@@ -416,6 +398,7 @@ export default function ProjectSetupTeamScreen({
                 </View>
             )}
 
+            <ProjectSaveFeedback message={savingMembers ? 'Saving members…' : feedback.message} failed={feedback.failed} />
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{

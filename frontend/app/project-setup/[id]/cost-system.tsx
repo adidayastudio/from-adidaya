@@ -1,3 +1,5 @@
+import * as Haptics from 'expo-haptics';
+import { ProjectSaveFeedback, ProjectSettingsScopeNote, useProjectSaveFeedback } from '@/components/projects/setup/ProjectSaveFeedback';
 import { HeaderBlurBackground } from '@/components/ui/HeaderBlurBackground';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -73,10 +75,12 @@ export default function ProjectSetupCostSystemScreen({
     projectId: propProjectId,
     isEmbedded = false,
     onSaved,
+    onDirtyChange,
 }: {
     projectId?: string;
     isEmbedded?: boolean;
     onSaved?: () => void;
+    onDirtyChange?: (dirty: boolean) => void;
 } = {}) {
     const params = useLocalSearchParams();
     const id = propProjectId || params.id;
@@ -142,9 +146,12 @@ export default function ProjectSetupCostSystemScreen({
         JSON.stringify([...activeRules].sort()) !== JSON.stringify([...originalRules].sort()) ||
         wbsDepth !== originalWbsDepth;
 
+    const feedback = useProjectSaveFeedback(hasChanges, onDirtyChange);
+
     const handleSaveChanges = async () => {
         if (!project) return;
         setSaving(true);
+        feedback.clear();
         try {
             const currentMeta = project.meta || {};
             const updatedSetup = {
@@ -167,14 +174,14 @@ export default function ProjectSetupCostSystemScreen({
                 setOriginalRules(activeRules);
                 setOriginalWbsDepth(wbsDepth);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                Alert.alert('Success', 'Cost System configuration saved successfully!');
+                feedback.notify('Success', 'Cost System configuration saved successfully!');
                 onSaved?.();
             } else {
-                Alert.alert('Error', 'Failed to save Cost System configurations.');
+                feedback.notify('Error', 'Failed to save Cost System configurations.');
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'An error occurred while saving.');
+            feedback.notify('Error', (error as any)?.message || 'Failed to save project settings.');
         } finally {
             setSaving(false);
         }
@@ -239,7 +246,9 @@ export default function ProjectSetupCostSystemScreen({
                     backgroundColor: 'transparent',
                 }
             ]}>
-                <ScrollView
+                <ProjectSaveFeedback message={feedback.message} failed={feedback.failed} />
+            <ProjectSettingsScopeNote>Budget preferences are saved for this project. Automatic estimates, AHSP matching and tax calculations are not active yet.</ProjectSettingsScopeNote>
+            <ScrollView
                     ref={tabRef}
                     horizontal
                     showsHorizontalScrollIndicator={false}

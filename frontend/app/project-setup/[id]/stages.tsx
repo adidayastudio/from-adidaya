@@ -1,3 +1,5 @@
+import * as Haptics from 'expo-haptics';
+import { ProjectSaveFeedback, ProjectSettingsScopeNote, useProjectSaveFeedback } from '@/components/projects/setup/ProjectSaveFeedback';
 import { HeaderBlurBackground } from '@/components/ui/HeaderBlurBackground';
 import React, { useState, useEffect, useRef } from 'react';
 import {
@@ -61,10 +63,12 @@ export default function ProjectSetupStagesScreen({
     projectId: propProjectId,
     isEmbedded = false,
     onSaved,
+    onDirtyChange,
 }: {
     projectId?: string;
     isEmbedded?: boolean;
     onSaved?: () => void;
+    onDirtyChange?: (dirty: boolean) => void;
 } = {}) {
     const params = useLocalSearchParams();
     const id = propProjectId || params.id;
@@ -171,9 +175,12 @@ export default function ProjectSetupStagesScreen({
         JSON.stringify([...activeStageIds].sort()) !== JSON.stringify([...originalStageIds].sort()) ||
         JSON.stringify([...activeTaskTemplateIds].sort()) !== JSON.stringify([...originalTaskTemplateIds].sort());
 
+    const feedback = useProjectSaveFeedback(hasChanges, onDirtyChange);
+
     const handleSaveChanges = async () => {
         if (!project) return;
         setSaving(true);
+        feedback.clear();
         try {
             const currentMeta = project.meta || {};
             const updatedSetup = {
@@ -196,14 +203,14 @@ export default function ProjectSetupStagesScreen({
                 setOriginalStageIds(activeStageIds);
                 setOriginalTaskTemplateIds(activeTaskTemplateIds);
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-                Alert.alert('Success', 'Stages configurations saved successfully!');
+                feedback.notify('Success', 'Stages configurations saved successfully!');
                 onSaved?.();
             } else {
-                Alert.alert('Error', 'Failed to save stage configurations.');
+                feedback.notify('Error', 'Failed to save stage configurations.');
             }
         } catch (error) {
             console.error(error);
-            Alert.alert('Error', 'An error occurred while saving.');
+            feedback.notify('Error', (error as any)?.message || 'Failed to save project settings.');
         } finally {
             setSaving(false);
         }
@@ -269,7 +276,9 @@ export default function ProjectSetupStagesScreen({
                     backgroundColor: 'transparent',
                 }
             ]}>
-                <ScrollView
+                <ProjectSaveFeedback message={feedback.message} failed={feedback.failed} />
+            <ProjectSettingsScopeNote>Template selections are saved for this project. Saving does not create or change existing tasks.</ProjectSettingsScopeNote>
+            <ScrollView
                     ref={tabRef}
                     horizontal
                     showsHorizontalScrollIndicator={false}
