@@ -1,4 +1,4 @@
-# Adidaya Preview
+# newfromadidaya
 
 Isolated Forma-based candidate connected exclusively to Adidaya.
 

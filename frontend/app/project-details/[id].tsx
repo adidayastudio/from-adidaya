@@ -897,7 +897,7 @@ export function ProjectDetailContent({
                     {/* Left: Back to Projects button (in workspace mode) or Standalone Badge */}
                     {!isPreview && isFocusedWorkspace && onClose ? (
                         <TouchableOpacity
-                            onPress={onClose}
+                            onPress={onClose || (() => router.back())}
                             style={[styles.smallPill, {
                                 height: 40,
                                 backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 255, 255, 0.65)',
@@ -947,20 +947,6 @@ export function ProjectDetailContent({
                         </View>
                     ) : null}
 
-                    {/* Center: Standalone Segmented Control (Only when not in preview mode) */}
-                    {!isPreview && (
-                        <SegmentedControl
-                            segments={[
-                                { id: 'overview', label: 'Overview', icon: 'doc.plaintext' },
-                                { id: 'work', label: 'Work', icon: 'location.viewfinder' },
-                                { id: 'activity', label: 'Activity', icon: 'bolt.horizontal' },
-                                { id: 'docs', label: 'Docs', icon: 'folder' },
-                            ]}
-                            activeSegment={activeTab}
-                            onSegmentChange={setActiveTab}
-                        />
-                    )}
-
                     {/* Right: Actions */}
                     {isPreview ? (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -990,7 +976,7 @@ export function ProjectDetailContent({
                                     <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>Open Project</Text>
                                 </TouchableOpacity>
                             )}
-                            {onClose && (
+                            {onClose && isPreview && (
                                 <TouchableOpacity
                                     onPress={onClose}
                                     style={{
@@ -1021,7 +1007,7 @@ export function ProjectDetailContent({
                                 isDark={isDark}
                                 textColor={textColor}
                             />
-                            {onClose && (
+                            {onClose && isPreview && (
                                 <TouchableOpacity
                                     onPress={onClose}
                                     style={{
@@ -1051,12 +1037,12 @@ export function ProjectDetailContent({
                 </View>
             )}
 
-            {/* ScrollView for Content */}
+            {/* Project identity and section selection stay left; selected content stays right. */}
             <ScrollView
                 ref={scrollViewRef}
                 style={[styles.container, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}
                 contentContainerStyle={{ paddingBottom: 100 }}
-                stickyHeaderIndices={!isEmbedded ? [1] : undefined}
+                stickyHeaderIndices={!isPreview ? [1] : undefined}
                 onScroll={(e) => setScrollY(e.nativeEvent.contentOffset.y)}
                 scrollEventThrottle={16}
             >
@@ -1122,7 +1108,7 @@ export function ProjectDetailContent({
                 </View>
 
                 {/* Sticky Segmented Control Layer (Only on Mobile / Non-embedded) */}
-                {!isEmbedded && (
+                {!isPreview && (
                     <View
                         style={[
                             styles.stickySegmentedControlContainer,
@@ -1141,19 +1127,14 @@ export function ProjectDetailContent({
                                 { id: 'docs', label: 'Docs', icon: 'folder' },
                             ]}
                             activeSegment={activeTab}
-                            onSegmentChange={setActiveTab}
+                            onSegmentChange={(tab) => { setActiveTab(tab); onTabChange?.(tab); }}
                             style={styles.topSegmentedControl}
                         />
                     </View>
                 )}
 
-                {/* Scrollable Content Rest */}
-                <View style={styles.content}>
-                    {renderTabContent()}
-                </View>
+                <View style={styles.content}>{renderTabContent()}</View>
             </ScrollView>
-
-
 
             {/* Image Preview & Change Modal */}
             <Modal

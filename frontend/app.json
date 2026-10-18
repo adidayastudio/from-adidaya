@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Adidaya Preview",
-    "slug": "adidaya-preview",
+    "name": "newfromadidaya",
+    "slug": "newfromadidaya",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/logo-adidaya-black.png",
-    "scheme": "adidaya-preview",
+    "scheme": "newfromadidaya",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {

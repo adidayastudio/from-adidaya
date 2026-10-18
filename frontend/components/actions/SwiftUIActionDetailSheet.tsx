@@ -1,3 +1,4 @@
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
     Modal,
@@ -204,8 +205,10 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
         }
     };
 
-    const chatScrollViewRef = useRef<ScrollView>(null);
     const chatInputRef = useRef<TextInput>(null);
+    const sectionScrollRef = useRef<ScrollView>(null);
+    const sectionOffsets = useRef<Record<string, number>>({ info: 0 });
+    const [activeSection, setActiveSection] = useState('info');
 
     const [relatedTask, setRelatedTask] = useState<Task | null>(null);
 
@@ -298,7 +301,7 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
 
         // Scroll to bottom after state update
         setTimeout(() => {
-            chatScrollViewRef.current?.scrollToEnd({ animated: true });
+            sectionScrollRef.current?.scrollToEnd({ animated: true });
         }, 100);
     };
 
@@ -575,7 +578,7 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
     const renderInnerContent = () => (
         <View style={isEmbedded ? [styles.embeddedContainer, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }] : { flexShrink: 1, paddingHorizontal: 24, paddingTop: 20, paddingBottom: Platform.OS === 'ios' ? 22 : 24 }}>
             {/* Header */}
-            <View style={[styles.modalHeader, isEmbedded && { paddingTop: 20, paddingHorizontal: 24, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+            <View style={[styles.modalHeader, isEmbedded && { paddingTop: 20, paddingHorizontal: 24, paddingBottom: 14 }]}>
                 <Text style={[styles.modalTitle, { color: textColor }]} numberOfLines={isEmbedded ? 2 : undefined}>{action.title}</Text>
                 <HeaderCircleButton
                     type="close"
@@ -585,13 +588,24 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
                 />
             </View>
 
+            <View style={{ paddingHorizontal: isEmbedded ? 24 : 0, paddingBottom: 12 }}>
+                <SegmentedControl fullWidth segments={[
+                    { id: 'info', label: 'Info' },
+                    { id: 'attachments', label: 'Attachments' },
+                    { id: 'discussion', label: 'Discussion' },
+                ]} activeSegment={activeSection} onSegmentChange={(section) => {
+                    setActiveSection(section);
+                    sectionScrollRef.current?.scrollTo({ y: sectionOffsets.current[section] || 0, animated: true });
+                }} />
+            </View>
             <ScrollView
-                ref={chatScrollViewRef}
+                ref={sectionScrollRef}
+                style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: isEmbedded ? 48 : 24, paddingHorizontal: isEmbedded ? 24 : 0, paddingTop: isEmbedded ? 16 : 0, maxWidth: isEmbedded ? 840 : undefined, width: '100%', alignSelf: 'center' }}
             >
                             {/* Meta Info */}
-                            <View style={styles.modalInfoCard}>
+                            <View style={[styles.modalInfoCard, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
                                 {relatedTask ? (
                                     <>
                                         <View style={styles.modalInfoRow}>
@@ -845,6 +859,7 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
                                 </View>
                             )}
 
+                            <View onLayout={e => { sectionOffsets.current.attachments = e.nativeEvent.layout.y; }} />
                             {/* Attachments Section */}
                             {originalAttachments.length > 0 && (
                                 <View style={styles.modalSubtaskSection}>
@@ -940,6 +955,7 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
                                 </View>
                             )}
 
+                            <View onLayout={e => { sectionOffsets.current.discussion = e.nativeEvent.layout.y; }} />
                             {/* Discussion */}
                             <View style={styles.modalSubtaskSection}>
                                 <Text style={[styles.modalSectionTitle, { color: textColor }]}>Discussion</Text>
@@ -1011,10 +1027,10 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
                                     </TouchableOpacity>
                                 )}
                             </View>
-                        </ScrollView>
+
 
                         {/* Actions Row */}
-                        <View style={{ flexDirection: 'column', gap: 12, marginTop: 24 }}>
+
                             <View style={[styles.chatInputRow, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
                                 <TextInput
                                     ref={chatInputRef}
@@ -1035,6 +1051,10 @@ export const SwiftUIActionDetailSheet: React.FC<SwiftUIActionDetailSheetProps> =
                                 </TouchableOpacity>
                             </View>
 
+            </ScrollView>
+            <View style={{ flexShrink: 0, paddingTop: 12, paddingBottom: isEmbedded ? 24 : 0,
+                paddingHorizontal: isEmbedded ? 24 : 0, width: '100%', maxWidth: isEmbedded ? 840 : undefined,
+                alignSelf: 'center', gap: 12, backgroundColor: isEmbedded ? (isDark ? '#000000' : '#F2F2F7') : 'transparent' }}>
                             {action.status === 'pending' || action.status === 'urgent' ? (
                                 <>
 

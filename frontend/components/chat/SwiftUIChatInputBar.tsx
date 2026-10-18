@@ -1,3 +1,4 @@
+import { chatToolbarSurface } from '@/constants/chatToolbar';
 import { useTheme } from '@/context/ThemeContext';
 import { FormaBlue } from '@/constants/theme';
 import { PlatformIcon } from '@/components/ui/PlatformIcon';
@@ -92,8 +93,7 @@ export function SwiftUIChatInputBar({
             <View style={[
                 styles.pillContainer,
                 {
-                    backgroundColor: isDark ? 'rgba(28,28,30,0.92)' : '#FFFFFF',
-                    borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)',
+                    ...chatToolbarSurface(isDark),
                 }
             ]}>
                 {/* Left Attachment (+) Action */}
@@ -229,9 +229,9 @@ const styles = StyleSheet.create({
     pillContainer: {
         flexDirection: 'row',
         alignItems: 'flex-end',
-        borderRadius: 22,
+        borderRadius: 24,
         borderWidth: StyleSheet.hairlineWidth,
-        minHeight: 44,
+        minHeight: 48,
         maxHeight: 116,
         paddingLeft: 5,
         paddingRight: 5,
@@ -248,21 +248,22 @@ const styles = StyleSheet.create({
         } : {}),
     },
     inlineActionBtn: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 0,
     },
     textInput: {
         flex: 1,
-        fontSize: 14.5,
+        fontSize: 15,
+        fontWeight: '500',
         lineHeight: 20,
         paddingHorizontal: 6,
         paddingTop: Platform.OS === 'web' ? 7 : (Platform.OS === 'ios' ? 7 : 4),
         paddingBottom: Platform.OS === 'web' ? 7 : (Platform.OS === 'ios' ? 7 : 4),
-        minHeight: 34,
+        minHeight: 36,
         maxHeight: 88, // 4 lines max (4 * 20px = 80px + 8px padding)
         ...(Platform.OS === 'web' ? {
             outlineStyle: 'none',
@@ -272,9 +273,9 @@ const styles = StyleSheet.create({
         } as any : {}),
     },
     inlineSendBtn: {
-        width: 34,
-        height: 34,
-        borderRadius: 17,
+        width: 36,
+        height: 36,
+        borderRadius: 18,
         alignItems: 'center',
         justifyContent: 'center',
         marginBottom: 0,

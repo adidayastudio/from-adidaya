@@ -216,7 +216,7 @@ export default function ProjectSetupGeneralScreen({
 
             if (projData) {
                 setProjectName(projData.title || '');
-                setProjectNumber(projData.number || '001');
+                setProjectNumber(String(projData.number || '001'));
                 setProjectCode(projData.code || 'PRJ');
                 setSelectedStatus((projData.status || 'planning').toLowerCase());
 
@@ -439,7 +439,7 @@ export default function ProjectSetupGeneralScreen({
                 members: updatedMembers,
             };
 
-            await updateProjectApi(projectId, {
+            const savedProject = await updateProjectApi(projectId, {
                 title: projectName.trim(),
                 number: projectNumber.trim(),
                 code: projectCode.trim(),
@@ -447,8 +447,10 @@ export default function ProjectSetupGeneralScreen({
                 meta: updatedMeta,
             });
 
+            if (!savedProject) throw new Error('Project update did not return a saved project.');
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-            router.back();
+            if (isEmbedded) onSaved?.();
+            else router.back();
         } catch (error) {
             console.error('Error saving project general details:', error);
             Alert.alert('Error', 'Failed to save project details.');
@@ -536,10 +538,7 @@ export default function ProjectSetupGeneralScreen({
                         <Text style={{ fontSize: 12, color: subtextColor }}>Project identity, lead, timeline & tracking</Text>
                     </View>
                     <TouchableOpacity
-                        onPress={async () => {
-                            await handleSave();
-                            onSaved?.();
-                        }}
+                        onPress={handleSave}
                         disabled={isSaving}
                         style={{
                             paddingHorizontal: 16,

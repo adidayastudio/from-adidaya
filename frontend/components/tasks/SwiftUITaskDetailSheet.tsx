@@ -1,3 +1,4 @@
+import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
     Modal,
@@ -128,6 +129,9 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
     const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
     const [isUploading, setIsUploading] = useState(false);
     const chatInputRef = useRef<TextInput>(null);
+    const sectionScrollRef = useRef<ScrollView>(null);
+    const sectionOffsets = useRef<Record<string, number>>({ info: 0 });
+    const [activeSection, setActiveSection] = useState('info');
 
     // Document Preview and Download States
     const [activeDocUrl, setActiveDocUrl] = useState<string | null>(null);
@@ -690,7 +694,18 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                 />
             </View>
 
+            <View style={{ paddingHorizontal: isEmbedded ? 24 : 0, paddingBottom: 12 }}>
+                <SegmentedControl fullWidth segments={[
+                    { id: 'info', label: 'Info' },
+                    { id: 'attachments', label: 'Attachments' },
+                    { id: 'discussion', label: 'Discussion' },
+                ]} activeSegment={activeSection} onSegmentChange={(section) => {
+                    setActiveSection(section);
+                    sectionScrollRef.current?.scrollTo({ y: sectionOffsets.current[section] || 0, animated: true });
+                }} />
+            </View>
             <ScrollView
+                ref={sectionScrollRef}
                 style={{ flex: 1 }}
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: isEmbedded ? 48 : 24, paddingHorizontal: isEmbedded ? 24 : 0, paddingTop: isEmbedded ? 16 : 0, maxWidth: isEmbedded ? 840 : undefined, width: '100%', alignSelf: 'center' }}
@@ -847,6 +862,7 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                                 </View>
                             )}
 
+                            <View onLayout={e => { sectionOffsets.current.attachments = e.nativeEvent.layout.y; }} />
                             {/* Attachments Section */}
                             {selectedTask.attachments && selectedTask.attachments.length > 0 && (
                                 <View style={styles.modalSubtaskSection}>
@@ -1047,6 +1063,7 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                                 </View>
                             )}
 
+                            <View onLayout={e => { sectionOffsets.current.discussion = e.nativeEvent.layout.y; }} />
                             {selectedTask.status !== 'todo' && (
                                 <View style={styles.modalSubtaskSection}>
                                     <Text style={[styles.modalSectionTitle, { color: textColor }]}>Discussion</Text>
@@ -1119,9 +1136,9 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                                     )}
                                 </View>
                             )}
-                        </ScrollView>
 
-                        <View style={[styles.modalActionsSection, { marginTop: 'auto', paddingTop: 16 }, isEmbedded && { maxWidth: 840, width: '100%', alignSelf: 'center', paddingHorizontal: 24, paddingBottom: 24, borderTopWidth: 0 }]}>
+
+
                         {selectedTask.status !== 'todo' && (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', paddingLeft: 16, paddingRight: 8, paddingVertical: 8, borderRadius: 24, borderWidth: 1, borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }}>
                                     <TextInput
@@ -1151,8 +1168,12 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                                 </View>
                             )}
 
+            </ScrollView>
+            <View style={{ flexShrink: 0, paddingTop: 12, paddingBottom: isEmbedded ? 24 : 0,
+                paddingHorizontal: isEmbedded ? 24 : 0, width: '100%', maxWidth: isEmbedded ? 840 : undefined,
+                alignSelf: 'center', gap: 12, backgroundColor: isEmbedded ? (isDark ? '#000000' : '#F2F2F7') : 'transparent' }}>
                             {selectedTask.taskType === 'linked_module' && selectedTask.linkedModule ? (
-                                <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 20, marginBottom: 16 }}>
+                                <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 0, marginBottom: 0 }}>
                                     <TouchableOpacity
                                         onPress={handleDelete}
                                         style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
@@ -1178,7 +1199,7 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                             ) : (
                                 <>
                                     {selectedTask.status === 'todo' && (
-                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 20, marginBottom: 16 }}>
+                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 0, marginBottom: 0 }}>
                                             <TouchableOpacity
                                                 onPress={handleDelete}
                                                 style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
@@ -1197,7 +1218,7 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                                         </View>
                                     )}
                                     {selectedTask.status === 'in_progress' && (
-                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 20, marginBottom: 16 }}>
+                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 0, marginBottom: 0 }}>
                                             <TouchableOpacity
                                                 onPress={handleDelete}
                                                 style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
@@ -1245,7 +1266,7 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                                         </View>
                                     )}
                                     {selectedTask.status === 'revision' && (
-                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 20, marginBottom: 16 }}>
+                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 0, marginBottom: 0 }}>
                                             <TouchableOpacity
                                                 onPress={handleDelete}
                                                 style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
@@ -1265,7 +1286,7 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                                         </View>
                                     )}
                                     {selectedTask.status === 'submitted' && (
-                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 20, marginBottom: 16 }}>
+                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', marginTop: 0, marginBottom: 0 }}>
                                             <TouchableOpacity
                                                 onPress={handleDelete}
                                                 style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}
@@ -1285,7 +1306,7 @@ export const SwiftUITaskDetailSheet: React.FC<SwiftUITaskDetailSheetProps> = ({
                                         </View>
                                     )}
                                     {selectedTask.status === 'done' && (
-                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', alignItems: 'center', marginTop: 20, marginBottom: 16 }}>
+                                        <View style={{ flexDirection: 'row', gap: 10, width: '100%', alignItems: 'center', marginTop: 0, marginBottom: 0 }}>
                                             <TouchableOpacity
                                                 onPress={handleDelete}
                                                 style={[styles.iconButton, { backgroundColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.05)' }]}

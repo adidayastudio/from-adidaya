@@ -1,3 +1,4 @@
+import { chatToolbarSurface } from '@/constants/chatToolbar';
 import { BouncyGlassButton } from '@/components/ui/BouncyGlassButton';
 import { HeaderToolbar } from '@/components/ui/HeaderToolbar';
 import { GlassView } from '@/components/ui/GlassView';
@@ -4715,7 +4716,7 @@ export default function ChatDetailScreen() {
                 <View
                     style={[
                         styles.floatingInputWrapper,
-                        { bottom: insets.bottom > 0 ? insets.bottom + 10 : 16 }
+                        { bottom: Math.max(insets.bottom, 0) + 24 }
                     ]}
                     pointerEvents="box-none"
                 >
@@ -4740,7 +4741,7 @@ export default function ChatDetailScreen() {
                                     </SwiftUIGlassEffectContainer>
                                 </Host>
                             ) : (
-                                <View style={[styles.selectBtnFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                <View style={[styles.selectBtnFallback, { ...chatToolbarSurface(isDark) }]} />
                             )}
                             <Text style={[styles.selectCancelText, { color: textColor }]}>
                                 Cancel
@@ -4767,7 +4768,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="doc.on.doc" size={18} tintColor={textColor} />
                             </BouncyToolbarButton>
@@ -4790,7 +4791,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="arrowshape.turn.up.right" size={18} tintColor={textColor} />
                             </BouncyToolbarButton>
@@ -4813,7 +4814,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="square.and.arrow.up" size={18} tintColor={textColor} />
                             </BouncyToolbarButton>
@@ -4844,7 +4845,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="trash" size={18} tintColor="#FF453A" />
                             </BouncyToolbarButton>
@@ -4859,9 +4860,7 @@ export default function ChatDetailScreen() {
                     style={[
                         styles.floatingInputWrapper,
                         {
-                            bottom: keyboardHeight > 0
-                                ? keyboardHeight + 16
-                                : (insets.bottom > 0 ? insets.bottom + 6 : 12)
+                            bottom: keyboardHeight > 0 ? keyboardHeight + 24 : Math.max(insets.bottom, 0) + 24
                         }
                     ]}
                     pointerEvents="box-none"
@@ -5162,7 +5161,7 @@ export default function ChatDetailScreen() {
                 <View
                     style={[
                         styles.floatingInputWrapper,
-                        { bottom: insets.bottom > 0 ? insets.bottom + 8 : 16 }
+                        { bottom: Math.max(insets.bottom, 0) + 24 }
                     ]}
                     pointerEvents="box-none"
                 >
@@ -5187,7 +5186,7 @@ export default function ChatDetailScreen() {
                                     </SwiftUIGlassEffectContainer>
                                 </Host>
                             ) : (
-                                <View style={[styles.selectBtnFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                <View style={[styles.selectBtnFallback, { ...chatToolbarSurface(isDark) }]} />
                             )}
                             <Text style={[styles.selectCancelText, { color: textColor }]}>
                                 Cancel
@@ -5214,7 +5213,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="bookmark" size={18} tintColor={textColor} />
                             </BouncyToolbarButton>
@@ -5237,7 +5236,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="arrowshape.turn.up.right" size={18} tintColor={textColor} />
                             </BouncyToolbarButton>
@@ -5260,7 +5259,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="square.and.arrow.up" size={18} tintColor={textColor} />
                             </BouncyToolbarButton>
@@ -5283,7 +5282,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="arrow.down.to.line" size={18} tintColor={textColor} />
                             </BouncyToolbarButton>
@@ -5314,7 +5313,7 @@ export default function ChatDetailScreen() {
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="trash" size={18} tintColor="#FF453A" />
                             </BouncyToolbarButton>
@@ -5331,9 +5330,8 @@ export default function ChatDetailScreen() {
                     style={[
                         styles.floatingInputWrapper,
                         {
-                            bottom: Platform.OS === 'android'
-                                ? (keyboardHeight > 0 ? keyboardHeight + 20 : (insets.bottom > 0 ? insets.bottom + 10 : 16))
-                                : (insets.bottom > 0 ? insets.bottom + 10 : 16)
+                            bottom: Platform.OS === 'android' && keyboardHeight > 0
+                                ? keyboardHeight + 24 : Math.max(insets.bottom, 0) + 24
                         }
                     ]}
                     pointerEvents="box-none"
@@ -5344,12 +5342,12 @@ export default function ChatDetailScreen() {
                             {Platform.OS === 'ios' ? (
                                 <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                     <SwiftUIGlassEffectContainer modifiers={[
-                                        frame({ height: 44 }),
-                                        cornerRadius(22),
+                                        frame({ height: 48 }),
+                                        cornerRadius(24),
                                         glassEffect({ shape: 'capsule' })
                                     ]}>
                                         <SwiftUIHStack alignment="center" modifiers={[
-                                            frame({ height: 44 }),
+                                            frame({ height: 48 }),
                                             swiftUIPadding({ leading: 14, trailing: 14 })
                                         ]}>
                                             <SwiftUISpacer />
@@ -5357,7 +5355,7 @@ export default function ChatDetailScreen() {
                                     </SwiftUIGlassEffectContainer>
                                 </Host>
                             ) : (
-                                <View style={[styles.selectBtnFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderRadius: 22 }]} />
+                                <View style={[styles.selectBtnFallback, { ...chatToolbarSurface(isDark), borderRadius: 24 }]} />
                             )}
                             <View style={styles.searchInnerRow}>
                                 <PlatformIcon name="magnifyingglass" size={16} tintColor={isDark ? '#8E8E93' : '#9CA3AF'} />
@@ -5412,22 +5410,21 @@ export default function ChatDetailScreen() {
                                         {Platform.OS === 'ios' ? (
                                             <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                                 <SwiftUIGlassEffectContainer modifiers={[
-                                                    frame({ width: 44, height: 44 }),
-                                                    cornerRadius(22),
+                                                    frame({ width: 48, height: 48 }),
+                                                    cornerRadius(24),
                                                     glassEffect({ shape: 'circle' })
                                                 ]}>
-                                                    <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                                    <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                         <SwiftUISpacer />
                                                     </SwiftUIHStack>
                                                 </SwiftUIGlassEffectContainer>
                                             </Host>
                                         ) : (
-                                            <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderRadius: 22 }]} />
+                                            <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark), borderRadius: 24 }]} />
                                         )}
-                                        <PlatformIcon
-                                            name={docFilterType !== 'all' ? 'line.3.horizontal.decrease.circle.fill' : 'line.3.horizontal.decrease'}
+                                        <Ionicons style={{ zIndex: 1 }} name="filter-outline"
                                             size={18}
-                                            tintColor={docFilterType !== 'all' ? (isDark ? FormaBlue[400] : FormaBlue[700]) : textColor}
+                                            color={docFilterType !== 'all' ? (isDark ? FormaBlue[400] : FormaBlue[700]) : textColor}
                                         />
                                     </BouncyToolbarButton>
                                 </ContextMenu>
@@ -5442,17 +5439,17 @@ export default function ChatDetailScreen() {
                                         {Platform.OS === 'ios' ? (
                                             <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                                 <SwiftUIGlassEffectContainer modifiers={[
-                                                    frame({ width: 44, height: 44 }),
-                                                    cornerRadius(22),
+                                                    frame({ width: 48, height: 48 }),
+                                                    cornerRadius(24),
                                                     glassEffect({ shape: 'circle' })
                                                 ]}>
-                                                    <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                                    <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                         <SwiftUISpacer />
                                                     </SwiftUIHStack>
                                                 </SwiftUIGlassEffectContainer>
                                             </Host>
                                         ) : (
-                                            <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderRadius: 22 }]} />
+                                            <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark), borderRadius: 24 }]} />
                                         )}
                                         <PlatformIcon
                                             name="arrow.up.arrow.down"
@@ -5477,22 +5474,21 @@ export default function ChatDetailScreen() {
                                         {Platform.OS === 'ios' ? (
                                             <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                                 <SwiftUIGlassEffectContainer modifiers={[
-                                                    frame({ width: 44, height: 44 }),
-                                                    cornerRadius(22),
+                                                    frame({ width: 48, height: 48 }),
+                                                    cornerRadius(24),
                                                     glassEffect({ shape: 'circle' })
                                                 ]}>
-                                                    <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                                    <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                         <SwiftUISpacer />
                                                     </SwiftUIHStack>
                                                 </SwiftUIGlassEffectContainer>
                                             </Host>
                                         ) : (
-                                            <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderRadius: 22 }]} />
+                                            <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark), borderRadius: 24 }]} />
                                         )}
-                                        <PlatformIcon
-                                            name={linkFilterType !== 'all' ? 'line.3.horizontal.decrease.circle.fill' : 'line.3.horizontal.decrease'}
+                                        <Ionicons style={{ zIndex: 1 }} name="filter-outline"
                                             size={18}
-                                            tintColor={linkFilterType !== 'all' ? (isDark ? FormaBlue[400] : FormaBlue[700]) : textColor}
+                                            color={linkFilterType !== 'all' ? (isDark ? FormaBlue[400] : FormaBlue[700]) : textColor}
                                         />
                                     </BouncyToolbarButton>
                                 </ContextMenu>
@@ -5507,17 +5503,17 @@ export default function ChatDetailScreen() {
                                         {Platform.OS === 'ios' ? (
                                             <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                                 <SwiftUIGlassEffectContainer modifiers={[
-                                                    frame({ width: 44, height: 44 }),
-                                                    cornerRadius(22),
+                                                    frame({ width: 48, height: 48 }),
+                                                    cornerRadius(24),
                                                     glassEffect({ shape: 'circle' })
                                                 ]}>
-                                                    <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                                    <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                         <SwiftUISpacer />
                                                     </SwiftUIHStack>
                                                 </SwiftUIGlassEffectContainer>
                                             </Host>
                                         ) : (
-                                            <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderRadius: 22 }]} />
+                                            <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark), borderRadius: 24 }]} />
                                         )}
                                         <PlatformIcon
                                             name="arrow.up.arrow.down"
@@ -5537,7 +5533,7 @@ export default function ChatDetailScreen() {
                 <View
                     style={[
                         styles.floatingInputWrapper,
-                        { bottom: insets.bottom > 0 ? insets.bottom + 10 : 16 }
+                        { bottom: Math.max(insets.bottom, 0) + 24 }
                     ]}
                     pointerEvents="box-none"
                 >
@@ -5550,11 +5546,11 @@ export default function ChatDetailScreen() {
                             {Platform.OS === 'ios' ? (
                                 <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                     <SwiftUIGlassEffectContainer modifiers={[
-                                        cornerRadius(22),
+                                        cornerRadius(24),
                                         glassEffect({ shape: 'capsule' })
                                     ]}>
                                         <SwiftUIHStack alignment="center" modifiers={[
-                                            frame({ height: 44 }),
+                                            frame({ height: 48 }),
                                             swiftUIPadding({ leading: 18, trailing: 18 })
                                         ]}>
                                             <SwiftUISpacer />
@@ -5562,7 +5558,7 @@ export default function ChatDetailScreen() {
                                     </SwiftUIGlassEffectContainer>
                                 </Host>
                             ) : (
-                                <View style={[styles.selectBtnFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                <View style={[styles.selectBtnFallback, { ...chatToolbarSurface(isDark) }]} />
                             )}
                             <Text style={[styles.selectCancelText, { color: textColor }]}>
                                 Cancel
@@ -5579,17 +5575,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="bookmark" size={18} tintColor={selectedLinkIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : textColor} />
                             </BouncyToolbarButton>
@@ -5602,17 +5598,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="doc.on.doc" size={18} tintColor={selectedLinkIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : textColor} />
                             </BouncyToolbarButton>
@@ -5625,17 +5621,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="arrowshape.turn.up.right" size={18} tintColor={selectedLinkIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : textColor} />
                             </BouncyToolbarButton>
@@ -5648,17 +5644,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="square.and.arrow.up" size={18} tintColor={selectedLinkIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : textColor} />
                             </BouncyToolbarButton>
@@ -5678,17 +5674,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="trash" size={18} tintColor={selectedLinkIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : '#FF453A'} />
                             </BouncyToolbarButton>
@@ -5702,7 +5698,7 @@ export default function ChatDetailScreen() {
                 <View
                     style={[
                         styles.floatingInputWrapper,
-                        { bottom: insets.bottom > 0 ? insets.bottom + 10 : 16 }
+                        { bottom: Math.max(insets.bottom, 0) + 24 }
                     ]}
                     pointerEvents="box-none"
                 >
@@ -5715,11 +5711,11 @@ export default function ChatDetailScreen() {
                             {Platform.OS === 'ios' ? (
                                 <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                     <SwiftUIGlassEffectContainer modifiers={[
-                                        cornerRadius(22),
+                                        cornerRadius(24),
                                         glassEffect({ shape: 'capsule' })
                                     ]}>
                                         <SwiftUIHStack alignment="center" modifiers={[
-                                            frame({ height: 44 }),
+                                            frame({ height: 48 }),
                                             swiftUIPadding({ leading: 18, trailing: 18 })
                                         ]}>
                                             <SwiftUISpacer />
@@ -5727,13 +5723,12 @@ export default function ChatDetailScreen() {
                                     </SwiftUIGlassEffectContainer>
                                 </Host>
                             ) : (
-                                <View style={[styles.selectBtnFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                <View style={[styles.selectBtnFallback, { ...chatToolbarSurface(isDark) }]} />
                             )}
                             <Text style={[styles.selectCancelText, { color: textColor }]}>
                                 Select
                             </Text>
                         </BouncyToolbarButton>
-
                         <View style={{ flex: 1 }} />
 
                         {/* 2. Right: Filter & Sort */}
@@ -5748,22 +5743,21 @@ export default function ChatDetailScreen() {
                                     {Platform.OS === 'ios' ? (
                                         <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                             <SwiftUIGlassEffectContainer modifiers={[
-                                                frame({ width: 44, height: 44 }),
-                                                cornerRadius(22),
+                                                frame({ width: 48, height: 48 }),
+                                                cornerRadius(24),
                                                 glassEffect({ shape: 'circle' })
                                             ]}>
-                                                <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                                <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                     <SwiftUISpacer />
                                                 </SwiftUIHStack>
                                             </SwiftUIGlassEffectContainer>
                                         </Host>
                                     ) : (
-                                        <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderRadius: 22 }]} />
+                                        <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark), borderRadius: 24 }]} />
                                     )}
-                                    <PlatformIcon
-                                        name={mediaFilterType !== 'all' ? 'line.3.horizontal.decrease.circle.fill' : 'line.3.horizontal.decrease'}
+                                    <Ionicons style={{ zIndex: 1 }} name="filter-outline"
                                         size={18}
-                                        tintColor={mediaFilterType !== 'all' ? (isDark ? FormaBlue[400] : FormaBlue[700]) : textColor}
+                                        color={mediaFilterType !== 'all' ? (isDark ? FormaBlue[400] : FormaBlue[700]) : textColor}
                                     />
                                 </BouncyToolbarButton>
                             </ContextMenu>
@@ -5778,17 +5772,17 @@ export default function ChatDetailScreen() {
                                     {Platform.OS === 'ios' ? (
                                         <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                             <SwiftUIGlassEffectContainer modifiers={[
-                                                frame({ width: 44, height: 44 }),
-                                                cornerRadius(22),
+                                                frame({ width: 48, height: 48 }),
+                                                cornerRadius(24),
                                                 glassEffect({ shape: 'circle' })
                                             ]}>
-                                                <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                                <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                     <SwiftUISpacer />
                                                 </SwiftUIHStack>
                                             </SwiftUIGlassEffectContainer>
                                         </Host>
                                     ) : (
-                                        <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)', borderRadius: 22 }]} />
+                                        <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark), borderRadius: 24 }]} />
                                     )}
                                     <PlatformIcon
                                         name="arrow.up.arrow.down"
@@ -5807,7 +5801,7 @@ export default function ChatDetailScreen() {
                 <View
                     style={[
                         styles.floatingInputWrapper,
-                        { bottom: insets.bottom > 0 ? insets.bottom + 10 : 16 }
+                        { bottom: Math.max(insets.bottom, 0) + 24 }
                     ]}
                     pointerEvents="box-none"
                 >
@@ -5820,11 +5814,11 @@ export default function ChatDetailScreen() {
                             {Platform.OS === 'ios' ? (
                                 <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                     <SwiftUIGlassEffectContainer modifiers={[
-                                        cornerRadius(22),
+                                        cornerRadius(24),
                                         glassEffect({ shape: 'capsule' })
                                     ]}>
                                         <SwiftUIHStack alignment="center" modifiers={[
-                                            frame({ height: 44 }),
+                                            frame({ height: 48 }),
                                             swiftUIPadding({ leading: 18, trailing: 18 })
                                         ]}>
                                             <SwiftUISpacer />
@@ -5832,7 +5826,7 @@ export default function ChatDetailScreen() {
                                     </SwiftUIGlassEffectContainer>
                                 </Host>
                             ) : (
-                                <View style={[styles.selectBtnFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                <View style={[styles.selectBtnFallback, { ...chatToolbarSurface(isDark) }]} />
                             )}
                             <Text style={[styles.selectCancelText, { color: textColor }]}>
                                 Cancel
@@ -5849,17 +5843,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="bookmark" size={18} tintColor={selectedMediaIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : textColor} />
                             </BouncyToolbarButton>
@@ -5872,17 +5866,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="arrowshape.turn.up.right" size={18} tintColor={selectedMediaIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : textColor} />
                             </BouncyToolbarButton>
@@ -5895,17 +5889,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="square.and.arrow.up" size={18} tintColor={selectedMediaIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : textColor} />
                             </BouncyToolbarButton>
@@ -5918,17 +5912,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="arrow.down.to.line" size={18} tintColor={selectedMediaIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : textColor} />
                             </BouncyToolbarButton>
@@ -5948,17 +5942,17 @@ export default function ChatDetailScreen() {
                                 {Platform.OS === 'ios' ? (
                                     <Host style={StyleSheet.absoluteFill} colorScheme={isDark ? 'dark' : 'light'}>
                                         <SwiftUIGlassEffectContainer modifiers={[
-                                            frame({ width: 44, height: 44 }),
-                                            cornerRadius(22),
+                                            frame({ width: 48, height: 48 }),
+                                            cornerRadius(24),
                                             glassEffect({ shape: 'circle' })
                                         ]}>
-                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 44, height: 44 })]}>
+                                            <SwiftUIHStack alignment="center" modifiers={[frame({ width: 48, height: 48 })]}>
                                                 <SwiftUISpacer />
                                             </SwiftUIHStack>
                                         </SwiftUIGlassEffectContainer>
                                     </Host>
                                 ) : (
-                                    <View style={[styles.selectCircleFallback, { backgroundColor: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)' }]} />
+                                    <View style={[styles.selectCircleFallback, { ...chatToolbarSurface(isDark) }]} />
                                 )}
                                 <PlatformIcon name="trash" size={18} tintColor={selectedMediaIds.length === 0 ? (isDark ? '#636366' : '#AEAEB2') : '#FF453A'} />
                             </BouncyToolbarButton>
@@ -6724,8 +6718,8 @@ const styles = StyleSheet.create({
     /* Floating Liquid Glass Input Bar (Anchored right above screen bottom) */
     floatingInputWrapper: {
         position: 'absolute',
-        left: 14,
-        right: 14,
+        left: 24,
+        right: 24,
         zIndex: 99,
     },
 
@@ -6908,9 +6902,9 @@ const styles = StyleSheet.create({
         paddingHorizontal: 4,
     },
     selectCancelBtn: {
-        height: 44,
+        height: 48,
         paddingHorizontal: 20,
-        borderRadius: 22,
+        borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -6925,9 +6919,9 @@ const styles = StyleSheet.create({
         gap: 10,
     },
     selectActionCircleBtn: {
-        width: 44,
-        height: 44,
-        borderRadius: 22,
+        width: 48,
+        height: 48,
+        borderRadius: 24,
         alignItems: 'center',
         justifyContent: 'center',
         overflow: 'hidden',
@@ -6939,8 +6933,8 @@ const styles = StyleSheet.create({
         width: '100%',
     },
     floatingSearchCapsule: {
-        height: 44,
-        borderRadius: 22,
+        height: 48,
+        borderRadius: 24,
         justifyContent: 'center',
         overflow: 'hidden',
     },
@@ -6953,7 +6947,7 @@ const styles = StyleSheet.create({
     },
     floatingSearchInput: {
         flex: 1,
-        fontSize: 14,
+        fontSize: 15,
         fontWeight: '500',
         paddingVertical: 0,
     },
@@ -6964,11 +6958,11 @@ const styles = StyleSheet.create({
     },
     selectBtnFallback: {
         ...StyleSheet.absoluteFillObject,
-        borderRadius: 22,
+        borderRadius: 24,
     },
     selectCircleFallback: {
         ...StyleSheet.absoluteFillObject,
-        borderRadius: 22,
+        borderRadius: 24,
     },
     forwardSearchBar: {
         flexDirection: 'row',

@@ -583,6 +583,20 @@ export default function FinanceScreen() {
             }
         });
 
+        // Keep departments in their configured number/order, then projects by project number.
+        const projectStartIndex = items.length;
+        const projectNumbers = new Map<string, string>();
+        const rememberProjectNumber = (project: any) => {
+            if (!project || typeof project !== 'object') return;
+            const code = formatDepartmentCode(project.project_code || project.code, project.project_name || project.name);
+            const number = project.project_number ?? project.number;
+            if (code && number !== undefined && number !== null && String(number).trim()) {
+                projectNumbers.set(code, String(number).trim());
+            }
+        };
+        allRequests.forEach(req => rememberProjectNumber(req.project_obj || req.project));
+        fetchedProjects.forEach(rememberProjectNumber);
+
         // 3. Projects from DB
         fetchedProjects.forEach((p: any) => {
             const code = formatDepartmentCode(p.project_code || p.code, p.project_name || p.name);
@@ -603,7 +617,19 @@ export default function FinanceScreen() {
             }
         });
 
-        return items;
+        const projectItems = items.splice(projectStartIndex);
+        projectItems.sort((a, b) => {
+            const aNumber = projectNumbers.get(a.id);
+            const bNumber = projectNumbers.get(b.id);
+            if (aNumber && bNumber) {
+                const order = aNumber.localeCompare(bNumber, undefined, { numeric: true });
+                if (order) return order;
+            } else if (aNumber || bNumber) {
+                return aNumber ? -1 : 1;
+            }
+            return a.label.localeCompare(b.label, undefined, { numeric: true });
+        });
+        return [...items, ...projectItems];
     }, [fetchedDepartments, fetchedProjects, purchasingRequests, reimbursementRequests]);
 
     const departmentFilterActions = useMemo<ContextMenuAction[]>(() => (
@@ -1303,7 +1329,7 @@ export default function FinanceScreen() {
         const isEligibleForConsolidation = moduleType === 'purchasing' && isRequestEligibleForConsolidation(item, undefined, consolidations);
         const isSelectedForConsolidation = selectedForConsolidationIds.includes(item.id);
 
-        const isCurrentlySelected = isDesktopWeb && selectedRequest?.id === item.id;
+        const isCurrentlySelected = isDesktopWeb && selectedRequest?.id === item.id && selectedRequest?.moduleType === moduleType;
 
         const handlePress = () => {
             if (isConsolidationSelectionMode && moduleType === 'purchasing') {
@@ -1314,6 +1340,11 @@ export default function FinanceScreen() {
                         setSelectedForConsolidationIds([...selectedForConsolidationIds, item.id]);
                     }
                 }
+                return;
+            }
+            if (isCurrentlySelected) {
+                setSelectedRequest(null);
+                setExpandedId(null);
                 return;
             }
             if (showActions) {
@@ -2882,7 +2913,7 @@ export default function FinanceScreen() {
                             <SwiftUITransactionDetailSheet
                                 key={`desktop-req-${selectedRequest.id}-${requestDetailPresentationKey}`}
                                 isOpened={true}
-                                onClose={() => setSelectedRequest(null)}
+                                onClose={() => { setSelectedRequest(null); setExpandedId(null); }}
                                 request={selectedRequest}
                                 actions={getActionButtons(selectedRequest).filter(action => action.id !== 'delete')}
                                 onAction={(actionId, req) => openFinanceAction(actionId, req, selectedRequest?.moduleType || 'purchasing')}

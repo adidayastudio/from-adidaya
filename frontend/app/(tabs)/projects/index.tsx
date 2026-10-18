@@ -135,8 +135,7 @@ export default function ProjectScreen() {
         if (selectedProject) {
             const updated = projects.find(p => p.id === selectedProject.id);
             if (updated) setSelectedProject(updated);
-        } else if (isDesktopWeb && !focusedProject && projects.length > 0) {
-            setSelectedProject(projects[0]);
+
         }
     }, [projects, isDesktopWeb]);
 
@@ -400,6 +399,10 @@ export default function ProjectScreen() {
                         layout={Layout.springify().damping(28).stiffness(280)}
                         style={[
                             styles.splitLeftPane,
+                            focusedProject && activeProjectTab !== 'setup' && !projectDetailSetup && {
+                                width: undefined, minWidth: 0, maxWidth: undefined,
+                                flexBasis: 0, flexGrow: 1, flexShrink: 1, borderRightWidth: 0,
+                            },
                             {
                                 flex: (focusedProject && activeProjectTab !== 'setup' && !projectDetailSetup) ? 2 : 1,
                                 borderRightColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
@@ -738,7 +741,7 @@ export default function ProjectScreen() {
                                                         activeOpacity={0.7}
                                                         onPress={() => {
                                                             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                                            setSelectedProject(project);
+                                                            setSelectedProject(current => current?.id === project.id ? null : project);
                                                         }}
                                                     >
                                                         <View

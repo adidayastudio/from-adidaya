@@ -544,7 +544,7 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
     const renderInnerBody = () => (
         <View style={isEmbedded ? [s.embeddedContainer, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }] : { flex: 1, width: '100%', backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', display: 'flex', flexDirection: 'column' }}>
             {/* Header */}
-            <View style={[s.header, isEmbedded && { paddingTop: 20, paddingHorizontal: 24, paddingBottom: 14, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)' }]}>
+            <View style={[s.header, isEmbedded && { paddingTop: 20, paddingHorizontal: 24, paddingBottom: 14 }]}>
                 <Text style={[s.headerRef, { color: textColor }]}>{request.ref || 'Request Detail'}</Text>
                 <View style={s.headerActions}>
                     <TouchableOpacity
@@ -559,11 +559,9 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
                             <PlatformIcon name="square.and.arrow.up" size={15} tintColor={textColor} />
                         )}
                     </TouchableOpacity>
-                    {!isEmbedded && (
-                        <TouchableOpacity onPress={handleDismiss} style={[s.closeBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
+                        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close request detail" onPress={handleDismiss} style={[s.closeBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)' }]}>
                             <PlatformIcon name="xmark" size={16} tintColor={subtextColor} />
                         </TouchableOpacity>
-                    )}
                 </View>
             </View>
 
@@ -1066,6 +1064,8 @@ const s = StyleSheet.create({
         fontSize: 22,
         fontWeight: '800',
         letterSpacing: -0.5,
+        flex: 1,
+        marginRight: 12,
     },
     headerActions: {
         flexDirection: 'row',
