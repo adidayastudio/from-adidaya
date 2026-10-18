@@ -21,8 +21,7 @@ import { Colors } from '@/constants/theme';
 import { CrewRequest, CrewMember, Project, RequestType, RequestStatus, matchProjectCode } from './mockData';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { uploadCrewFileBase64 } from '@/lib/api/attendance';
+import { uploadCrewProofFile } from '@/lib/crewAttachments';
 
 interface CrewRequestModalProps {
     visible: boolean;
@@ -220,17 +219,7 @@ export function CrewRequestModal({
             if (type === 'REIMBURSE' && proofFiles.length > 0) {
                 const uploadedUrls: string[] = [];
                 for (const file of proofFiles) {
-                    if (file.uri.startsWith('http')) {
-                        uploadedUrls.push(file.uri);
-                    } else {
-                        const base64 = await FileSystem.readAsStringAsync(file.uri, {
-                            encoding: FileSystem.EncodingType.Base64,
-                        });
-                        const ext = file.name.split('.').pop() || 'jpg';
-                        const mimeType = ext === 'pdf' ? 'application/pdf' : 'image/jpeg';
-                        const url = await uploadCrewFileBase64(base64, ext, mimeType);
-                        uploadedUrls.push(url);
-                    }
+                    uploadedUrls.push(await uploadCrewProofFile(file));
                 }
                 proofUrl = uploadedUrls.join(',');
             }
