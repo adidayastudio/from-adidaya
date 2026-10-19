@@ -248,12 +248,18 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         }
     };
 
+    const [submitError, setSubmitError] = useState('');
+    const showFormError = (title: string, message = '') => {
+        setSubmitError(message || title);
+        if (Platform.OS !== 'web') Alert.alert(title, message);
+    };
     const [isSubmitting, setIsSubmitting] = useState(false);
     const submitInFlight = useRef(false);
     const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
     const [activeSelect, setActiveSelect] = useState<'target' | 'category' | 'subcategory' | 'stage' | 'unit' | null>(null);
 
     const resetCreateForm = () => {
+        setSubmitError('');
         setProjectCode('');
         setDepartmentId('');
         setCategory('');
@@ -279,6 +285,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
     };
 
     const applyEditRequest = (req: any, fetchedProjects: any[], fetchedDepts: OrganizationDepartmentItem[] = []) => {
+        setSubmitError('');
         const tab = req.moduleType === 'reimbursement' ? 'reimburse' : 'purchase';
         setActiveTab(tab);
 
@@ -305,9 +312,10 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         setAccountNumber(req.beneficiary_number || '');
         setAccountName(req.beneficiary_name || '');
 
-        const mappedItems = (req.items || []).map((item: any, i: number) => ({
+        const editableItems = req.items?.length ? req.items : [{ name: req.title || req.description || '', qty: req.quantity ?? 1, unit: req.unit || 'pcs', unit_price: req.unit_price ?? ((Number(req.subtotal_amount ?? req.amount) || 0) / (Number(req.quantity) || 1)) }];
+        const mappedItems = editableItems.map((item: any, i: number) => ({
             id: item.id || String(i + 1),
-            name: item.name || '',
+            name: item.name || item.item_name || '',
             qty: item.qty ?? item.quantity ?? 1,
             unit: item.unit || 'pcs',
             price: item.unit_price ?? item.unitPrice ?? 0,
@@ -522,35 +530,44 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             if (activeTab === 'purchase') setPurchaseImages(prev => [...prev, ...files]);
             else setReimburseImages(prev => [...prev, ...files]);
         } catch (error: any) {
-            Alert.alert('Upload File', error?.message || 'Unable to select the file. Please try again.');
+            showFormError('Upload File', error?.message || 'Unable to select the file. Please try again.');
         }
     };
 
     const handleSubmit = async (asDraft = false) => {
         if (submitInFlight.current) return;
+        setSubmitError('');
         const selectedProject = projects.find(p => p.project_code === projectCode);
         const selectedDept = departments.find(d => d.id === departmentId);
-        if ((!selectedProject && !selectedDept) || !category || activeItems.some(i => !i.name.trim())) {
-            Alert.alert('Informasi', 'Silakan pilih proyek atau departemen, kategori, dan isi nama item terlebih dahulu.');
+        if (!selectedProject && !selectedDept) {
+            showFormError('Informasi', 'Pilih salah satu Proyek atau Departemen.');
+            return;
+        }
+        if (!category) {
+            showFormError('Informasi', 'Pilih kategori request.');
+            return;
+        }
+        if (!activeItems.length || activeItems.some(i => !i.name.trim())) {
+            showFormError('Informasi', 'Isi nama atau deskripsi setiap item.');
             return;
         }
 
         if (activeItems.some(item => !Number.isFinite(item.qty) || !Number.isFinite(item.price)
             || [item.qtyInput, item.priceInput].some(value => value !== undefined && value !== '' && !Number.isFinite(Number(value.replace(',', '.')))))) {
-            Alert.alert('Invalid Amount', 'Enter a valid quantity and price. Negative numbers and decimals are allowed.');
+            showFormError('Invalid Amount', 'Enter a valid quantity and price. Negative numbers and decimals are allowed.');
             return;
         }
         if (activeTab === 'reimburse' && !asDraft && activeItems.some(item => item.qty === 0 || item.price === 0)) {
-            Alert.alert('Actual Amount Required', 'Every reimbursement item must have an actual non-zero quantity and unit price.');
+            showFormError('Actual Amount Required', 'Every reimbursement item must have an actual non-zero quantity and unit price.');
             return;
         }
         if (activeTab === 'reimburse' && !asDraft) {
             if (!reimburseImages.some(file => file.documentKind === 'invoice') || !reimburseImages.some(file => file.documentKind === 'expense_proof')) {
-                Alert.alert('Documents Required', 'Attach one invoice and one expense payment proof.');
+                showFormError('Documents Required', 'Attach one invoice and one expense payment proof.');
                 return;
             }
             if (!bankName.trim() || !accountNumber.trim() || !accountName.trim()) {
-                Alert.alert('Reimbursement Account Required', 'Complete the bank account that will receive the reimbursement.');
+                showFormError('Reimbursement Account Required', 'Complete the bank account that will receive the reimbursement.');
                 return;
             }
         }
@@ -701,7 +718,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                 : (asDraft ? 'Draft saved.' : 'Request submitted successfully.'));
             onClose();
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to submit request.');
+            showFormError('Error', error.message || 'Failed to submit request.');
         } finally {
             submitInFlight.current = false;
             setUploadProgress(null);
@@ -906,7 +923,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
 
                                 <TouchableOpacity 
                                     style={s.listRow} 
-                                    onPress={() => category ? setActiveSelect('subcategory') : Alert.alert('Pick Category First')}
+                                    onPress={() => category ? setActiveSelect('subcategory') : showFormError('Pick Category First')}
                                     disabled={!category}
                                 >
                                     <Text style={[s.listRowLabel, { color: category ? textColor : subtextColor }]}>Subcategory</Text>
@@ -1271,18 +1288,19 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                             </Text>
                             <View style={[s.section, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
                                 {(activeTab === 'purchase' ? [
-                                    { kind: 'invoice' as const, label: 'Pick Invoice File/Images' },
+                                    { kind: 'invoice' as const, label: 'Tambah gambar / PDF' },
                                 ] : [
-                                    { kind: 'invoice' as const, label: 'Add Invoice Files' },
-                                    { kind: 'expense_proof' as const, label: 'Add Payment Proof Files' },
+                                    { kind: 'invoice' as const, label: 'Tambah invoice (gambar / PDF)' },
+                                    { kind: 'expense_proof' as const, label: 'Tambah bukti bayar (gambar / PDF)' },
                                 ]).map(option => (
                                     <TouchableOpacity
                                         key={option.kind}
-                                        style={[s.listRow, { justifyContent: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', marginHorizontal: 12, marginTop: 12, borderRadius: 22, minHeight: 44 }]}
+                                        style={s.listRow}
                                         onPress={() => pickDocument(option.kind)}
                                     >
-                                        <PlatformIcon name="doc.badge.plus" size={16} tintColor={subtextColor} />
-                                        <Text style={{ color: textColor, fontSize: 15, fontWeight: '600', marginLeft: 8 }}>{option.label}</Text>
+                                        <PlatformIcon name="photo.on.rectangle" size={20} tintColor="#159957" />
+                                        <Text style={{ flex: 1, color: '#159957', fontSize: 16, fontWeight: '500', marginLeft: 10 }}>{option.label}</Text>
+                                        <PlatformIcon name="plus.circle.fill" size={20} tintColor="#159957" />
                                     </TouchableOpacity>
                                 ))}
 
@@ -1371,6 +1389,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
 
                         {/* Sticky Action Buttons Footer */}
                         <View style={s.stickyFooter}>
+                            {!!submitError && <Text accessibilityRole="alert" style={{ color: '#D92D20', fontSize: 14, marginBottom: 12 }}>{submitError}</Text>}
                             <View style={s.btnRow}>
                                 <TouchableOpacity 
                                     style={[s.draftBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)', borderColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)' }]} 
