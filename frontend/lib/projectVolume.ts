@@ -1,5 +1,5 @@
 export type VolumeFormula = 'BOX' | 'TRAPEZOIDAL' | 'COLUMN_BEAM' | 'AREA' | 'LINE' | 'MANUAL';
-export interface VolumeCalc { id: string; name: string; formula_type: VolumeFormula; parameters: Record<string, number>; calculated_volume?: number; }
+export interface VolumeCalc { id: string; name: string; formula_type: VolumeFormula; parameters: Record<string, number>; calculated_volume?: number; details?: { location?: string; notes?: string }; }
 export function calculateVolume(row: VolumeCalc): number {
     const p = row.parameters, count = p.count ?? 1;
     if (Object.values(p).some(value => !Number.isFinite(value) || value < 0)) throw new Error('Enter valid non-negative dimensions and quantity.');

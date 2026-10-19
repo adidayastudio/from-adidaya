@@ -60,7 +60,7 @@ export const compareWBSCodes = (a: string, b: string): number => {
     return partsA.length - partsB.length;
 };
 
-export function buildWBSTree(items: any[]): WBSNode[] {
+export function buildWBSTree(items: any[], usePosition = false): WBSNode[] {
     if (!items || items.length === 0) return [];
 
     const idMap = new Map<string, any>();
@@ -110,7 +110,7 @@ export function buildWBSTree(items: any[]): WBSNode[] {
     });
 
     const sortNodes = (nodes: any[]) => {
-        nodes.sort((a, b) => compareWBSCodes(a.code || a.wbsCode, b.code || b.wbsCode));
+        nodes.sort((a, b) => (usePosition ? Number(a.position || 0) - Number(b.position || 0) : 0) || compareWBSCodes(a.code || a.wbsCode, b.code || b.wbsCode));
         nodes.forEach((n) => {
             if (n.children && n.children.length > 0) sortNodes(n.children);
         });

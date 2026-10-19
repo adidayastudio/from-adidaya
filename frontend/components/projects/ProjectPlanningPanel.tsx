@@ -1,5 +1,7 @@
+import { publishedWBSRows } from '@/lib/projectWBSWorkflow';
+import { ProjectStagesWork } from './ProjectStagesWork';
 import { ProjectVolumeCalculator } from './ProjectVolumeCalculator';
-import { ProjectWorkTree } from './ProjectWorkTree';
+import { ProjectWBSEditor } from './ProjectWBSEditor';
 import { saveProjectRAB } from '@/lib/api/projectRAB';
 import { mergeRABDrafts, RABDrafts } from '@/lib/legacy-rab/editing';
 import { legacyProjectInfo, legacyRABView } from '@/lib/legacy-rab/project-view';
@@ -13,7 +15,7 @@ import { reportContentFields } from '@/lib/api/projectReports';
 
 export type PlanningSection = 'stages' | 'wbs' | 'volume' | 'rab' | 'schedule' | 'reports';
 const TABLES = { stages: 'project_stages', wbs: 'project_wbs_items', volume: 'project_volume_calcs', rab: 'project_rab_versions', schedule: 'project_schedule_versions', reports: 'project_reports' };
-export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange }: { project: Project; section: PlanningSection; isDark: boolean; onDirtyChange?: (dirty: boolean) => void }) {
+export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, onToolbarChange }: { project: Project; section: PlanningSection; isDark: boolean; onDirtyChange?: (dirty: boolean) => void; onToolbarChange?: (toolbar: React.ReactNode) => void }) {
     const [legacyProject, setLegacyProject] = useState<any>(project);
     const [legacyWbs, setLegacyWbs] = useState<any[]>([]);
     const [rabStage, setRabStage] = useState('DETAIL');
@@ -69,7 +71,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange }
             };
             const { data: current, error: projectError } = await supabase.from('projects').select('meta').eq('id', project.id).single();
             if (projectError) throw projectError;
-            const wbs = ['rab', 'volume', 'schedule'].includes(section) ? await read('project_wbs_items') : [];
+            const wbs = ['rab', 'volume', 'schedule'].includes(section) ? publishedWBSRows(current?.meta, await read('project_wbs_items')) : [];
             if (active) { setLegacyProject({ ...project, meta: current?.meta || {} }); setLegacyWbs(wbs); }
             if (section === 'stages') { const tasks = await read('project_tasks'); if (active) setStageTasks(tasks); }
             const saved = savedPlanningRows(section, current?.meta || {}, wbs);
@@ -158,16 +160,17 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange }
         { title: 'Status', width: 150, value: row => row.status || (row.is_locked ? 'Locked' : 'Draft') },
         { title: 'Notes', width: 300, value: row => row.notes },
     ];
+    if (section === 'volume') return <View style={{ flex: 1, minHeight: 0, paddingHorizontal: 20, paddingBottom: 16 }}>
+        {loading && <ActivityIndicator color="#007AFF" />}
+        {!!error && <View><Text accessibilityRole="alert" style={{ color: '#FF3B30', paddingVertical: 12 }}>{error}</Text><TouchableOpacity onPress={() => setRetry(value => value + 1)}><Text style={{ color: '#007AFF' }}>Retry</Text></TouchableOpacity></View>}
+        {!loading && !error && <ProjectVolumeCalculator key={project.id} project={legacyProject} wbs={legacyWbs} calculations={rows} isDark={isDark} onDirtyChange={onDirtyChange} />}
+    </View>;
     return <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 60 }}>
         {selected && <TouchableOpacity onPress={() => { setSelected(null); setError(''); }} style={{ paddingVertical: 12, marginBottom: 12 }}><Text style={{ color: '#007AFF', fontWeight: '600' }}>‹ Back to list</Text></TouchableOpacity>}
         {loading && <ActivityIndicator color="#007AFF" />}
         {!!error && <View><Text accessibilityRole="alert" style={{ color: '#FF3B30', marginBottom: 16 }}>{error}</Text><TouchableOpacity onPress={() => setRetry(value => value + 1)} style={{ padding: 12 }}><Text style={{ color: '#0036F8' }}>Retry</Text></TouchableOpacity></View>}
-        {section === 'stages' && !loading && !error && <ProjectWorkTree isDark={isDark} stages items={[
-            ...rows.map(stage => ({ ...stage, code: stage.stage_code, nameEn: stage.stage_name || stage.name || stage.title, children: stageTasks.filter(task => task.stage_code === stage.stage_code).map(task => ({ ...task, code: task.code || task.section_code || task.id, nameEn: task.name || task.title })) })),
-            ...Array.from(new Set(stageTasks.filter(task => !rows.some(stage => stage.stage_code === task.stage_code)).map(task => task.stage_code || 'unassigned'))).map(code => ({ id: `stage:${code}`, code, nameEn: code === 'unassigned' ? 'Unassigned Work' : code, children: stageTasks.filter(task => (task.stage_code || 'unassigned') === code).map(task => ({ ...task, code: task.code || task.section_code || task.id, nameEn: task.name || task.title })) })),
-        ]} />}
-        {section === 'volume' && !loading && !error && <ProjectVolumeCalculator project={legacyProject} wbs={legacyWbs} calculations={rows} isDark={isDark} onDirtyChange={onDirtyChange} />}
-        {section === 'wbs' && !loading && !error && <ProjectWorkTree items={rows} isDark={isDark} />}
+        {section === 'stages' && !loading && !error && <ProjectStagesWork key={project.id} project={legacyProject} records={stageTasks} isDark={isDark} onDirtyChange={onDirtyChange} />}
+        {section === 'wbs' && !loading && !error && <ProjectWBSEditor onToolbarChange={onToolbarChange} key={project.id} project={legacyProject} items={rows} isDark={isDark} onDirtyChange={onDirtyChange} />}
         {!selected && section === 'rab' && !loading && !error && <>
             <SegmentedControl segments={['BALLPARK', 'ESTIMATES', 'DETAIL'].map(id => ({ id, label: id }))} activeSegment={rabStage} onSegmentChange={setRabStage} />
             <View style={{ marginVertical: 12 }}><SegmentedControl segments={[

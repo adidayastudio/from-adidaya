@@ -3,8 +3,9 @@ import { calculateVolume, VolumeCalc } from '@/lib/projectVolume';
 
 export async function saveProjectVolume(projectId: string, code: string, unit: string, rows: VolumeCalc[], originalIds: string[]) {
     if (!unit.trim()) throw new Error('Select an item unit.');
-    const records = rows.map(row => ({ ...row, project_id: projectId, wbs_code: code, calculated_volume: calculateVolume(row) }));
-    const total = records.reduce((sum, row) => sum + row.calculated_volume, 0);
+    if (rows.some(row => !row.name.trim())) throw new Error('Enter a description for every calculation row.');
+    const records = rows.map(({ details: _, ...row }) => ({ ...row, project_id: projectId, wbs_code: code, calculated_volume: calculateVolume(row) }));
+    const total = Number(records.reduce((sum, row) => sum + row.calculated_volume, 0).toFixed(3));
     const { data: project, error: readError } = await supabase.from('projects').select('meta').eq('id', projectId).single();
     if (readError) throw readError;
     // Keep record IDs stable across retries; never delete all project calculations.
@@ -19,7 +20,10 @@ export async function saveProjectVolume(projectId: string, code: string, unit: s
     }
     const meta = project.meta || {}, estimates = meta.estimateValues || {};
     const entry = estimates[code] || estimates[code.replace(/^[A-Z]\./, '')] || {};
-    const next = { ...meta, estimateValues: { ...estimates, [code]: { ...entry, volume: total, unit, explicit: true } } };
+    const rowDetails = { ...meta.volumeRowDetails };
+    removed.forEach(id => delete rowDetails[id]);
+    rows.forEach(row => { if (row.details) rowDetails[row.id] = row.details; });
+    const next = { ...meta, ...(Object.keys(rowDetails).length || meta.volumeRowDetails ? { volumeRowDetails: rowDetails } : {}), estimateValues: { ...estimates, [code]: { ...entry, volume: total, unit, explicit: true } } };
     let query = supabase.from('projects').update({ meta: next }).eq('id', projectId);
     query = project.meta === null ? query.is('meta', null) : query.filter('meta', 'eq', JSON.stringify(project.meta));
     const { error: metaError } = await query.select('id').single();

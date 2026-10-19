@@ -34,6 +34,7 @@ interface SegmentedControlProps {
     variant?: 'default' | 'hero';
     fullWidth?: boolean;
     equalWidth?: boolean;
+    compact?: boolean;
 }
 
 export function SegmentedControl({
@@ -44,7 +45,18 @@ export function SegmentedControl({
     variant = 'default',
     fullWidth = false,
     equalWidth = false,
+    compact = false,
 }: SegmentedControlProps) {
+    const segmentHeight = compact ? 26 : 36;
+    const styles = compact ? {
+        ...baseStyles,
+        container: { ...StyleSheet.flatten(baseStyles.container), height: 34, padding: 3, borderRadius: 17 },
+        webScrollView: { ...StyleSheet.flatten(baseStyles.webScrollView), height: 26 },
+        segmentsWrapper: { ...StyleSheet.flatten(baseStyles.segmentsWrapper), height: 26 },
+        indicator: { ...StyleSheet.flatten(baseStyles.indicator), height: 26, borderRadius: 13 },
+        segmentButton: { ...StyleSheet.flatten(baseStyles.segmentButton), height: 26, paddingHorizontal: 10, borderRadius: 13 },
+        segmentText: { ...StyleSheet.flatten(baseStyles.segmentText), fontSize: 12, lineHeight: 16 },
+    } : baseStyles;
     const { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark';
     const isHero = variant === 'hero';
@@ -123,7 +135,7 @@ export function SegmentedControl({
                         style={[
                             styles.indicator,
                             {
-                                height: 36,
+                                height: segmentHeight,
                                 backgroundColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)',
                             },
                             animatedIndicatorStyle,
@@ -201,7 +213,7 @@ export function SegmentedControl({
                     ref={scrollViewRef}
                     horizontal
                     showsHorizontalScrollIndicator={false}
-                    style={[{ height: 36 }, fullWidth && { width: '100%', maxWidth: '100%' }]}
+                    style={[{ height: segmentHeight }, fullWidth && { width: '100%', maxWidth: '100%' }]}
                     contentContainerStyle={[styles.segmentsWrapper, fullWidth && { minWidth: '100%', display: 'flex' }]}
                     onLayout={(e) => setScrollViewWidth(e.nativeEvent.layout.width)}
                 >
@@ -211,7 +223,7 @@ export function SegmentedControl({
                             style={[
                                 styles.indicator,
                                 {
-                                    height: 36,
+                                    height: segmentHeight,
                                     backgroundColor: isHero
                                         ? '#FFFFFF'
                                         : isDark
@@ -302,7 +314,7 @@ export function SegmentedControl({
                 ref={scrollViewRef}
                 horizontal
                 showsHorizontalScrollIndicator={false}
-                style={[{ height: 36 }, fullWidth && { width: '100%', maxWidth: '100%' }]}
+                style={[{ height: segmentHeight }, fullWidth && { width: '100%', maxWidth: '100%' }]}
                 contentContainerStyle={[styles.segmentsWrapper, fullWidth && { minWidth: '100%', display: 'flex' }]}
                 bounces={true}
                 onLayout={(e) => setScrollViewWidth(e.nativeEvent.layout.width)}
@@ -312,7 +324,7 @@ export function SegmentedControl({
                     style={[
                         styles.indicator,
                         {
-                            height: 36,
+                            height: segmentHeight,
                             backgroundColor: isHero
                                 ? '#FFFFFF'
                                 : isDark
@@ -370,7 +382,7 @@ export function SegmentedControl({
     );
 }
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
     container: {
         borderRadius: 23,
         height: 46,

@@ -43,3 +43,9 @@ test('partial synchronization errors are reported and never returned as success'
     responses = [{ data: { meta: {} }, error: null }, { error: null }, { data: null, error: { message: 'conflict' } }];
     await assert.rejects(() => saveProjectVolume('project', 'S.1.1', 'm¹', [row], []), /Calculations saved, but RAB was not updated/);
 });
+test('calculation notes persist as project metadata and never become unsupported table columns',async()=>{
+ calls=[];responses=[{data:{meta:{other:'keep'}},error:null},{error:null},{data:{id:'project'},error:null},{data:[{id:'wbs'}],error:null}];
+ const result=await saveProjectVolume('project','S.1.1','m',[{...row,details:{notes:'Drawing A-01'}}],[]);
+ const record=calls.find(call=>call[0]==='upsert')[1][0];assert.equal(record.details,undefined);assert.equal(result.meta.volumeRowDetails['stable-id'].notes,'Drawing A-01');assert.equal(result.meta.other,'keep');
+});
+test('empty row descriptions are rejected before any database access',async()=>{calls=[];await assert.rejects(saveProjectVolume('p','S.1.1','m',[{...row,name:' '}],[]),/description/);assert.equal(calls.length,0);});

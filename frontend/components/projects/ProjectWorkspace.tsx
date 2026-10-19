@@ -1,3 +1,6 @@
+import { FocusModeIcon } from '@/components/ui/FocusModeIcon';
+import { ProjectFocusNavigation } from './ProjectFocusNavigation';
+import { InstantTooltip } from '@/components/ui/InstantTooltip';
 import { ProjectSidebarContext } from '@/context/ProjectSidebarContext';
 import { PROJECT_LINKED_MODULES } from '@/lib/projectLinkedModules';
 import { router, useFocusEffect } from 'expo-router';
@@ -55,7 +58,9 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     useFocusEffect(useCallback(() => collapseSidebar(), [collapseSidebar]));
     const { activeTenant } = useTenantContext(), { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark', text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366';
+    const [focusMode, setFocusMode] = useState(false);
     const [project, setProject] = useState(initialProject), [section, setSection] = useState('overview');
+    const [planningToolbar, setPlanningToolbar] = useState<React.ReactNode>(null);
     const [headerAction, setHeaderAction] = useState<HeaderToolbarAction | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['PLANNING', 'WORK']);
     const [dirty, setDirty] = useState(false), [settingsOpen, setSettingsOpen] = useState(false), [error, setError] = useState('');
@@ -75,17 +80,19 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     const settingsId = section.startsWith('settings:') ? section.split(':')[1] : null;
     const Screen = settingsId ? SETTINGS[settingsId] : null;
     const title = settingsId ? SETTING_NAMES[settingsId] : GROUPS.flatMap(group => group.items).find(item => item.id === section)?.title || 'Tracking';
+    const projectActions: HeaderToolbarAction[] = [
+                    { id: 'star', icon: project.isPinned ? 'star' : 'star-outline', image: project.isPinned ? 'star.fill' : 'star', onPress: async () => { try { const updated = await updateProjectApi(project.id, { isPinned: !project.isPinned }); if (updated) setProject(updated); onRefresh?.(); } catch (e) { setError((e as any)?.message || 'Unable to save favorite.'); } } },
+                    { id: 'share', icon: 'share-outline', image: 'square.and.arrow.up', onPress: async () => { try { await Share.share({ title: project.title, message: `${project.number}-${project.code} · ${project.title}` }); } catch (e) { setError((e as any)?.message || 'Unable to share project.'); } } },
+                    { id: 'settings', icon: 'settings-outline', image: 'gearshape', onPress: () => { setSettingsOpen(true); select('settings:general'); } },
+                ];
+    const focusToggle = (labelled = false) => <InstantTooltip label={focusMode ? 'Exit Focus' : 'Focus Mode'}><TouchableOpacity accessibilityLabel={focusMode ? 'Exit Focus' : 'Focus Mode'} accessibilityState={{ selected: focusMode }} onPress={() => setFocusMode(value => !value)} style={{ height: 34, minWidth: 34, paddingHorizontal: labelled ? 12 : 0, borderRadius: 999, flexDirection: 'row', gap: 7, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}><FocusModeIcon active={focusMode} size={17} color={focusMode ? '#007AFF' : text} />{labelled && <Text style={{ color: focusMode ? '#007AFF' : text, fontSize: 12, fontWeight: '600' }}>{focusMode ? 'Exit Focus' : 'Focus Mode'}</Text>}</TouchableOpacity></InstantTooltip>;
     return <View style={{ flex: 1, flexDirection: 'row', minHeight: 0, backgroundColor: isDark ? '#000000' : '#F2F2F7' }}>
-        <View style={{ ...DESKTOP_LIST_PANE, borderRightWidth: 1, borderRightColor: isDark ? '#242426' : '#E5E5EA' }}>
+        {!focusMode && <View style={{ ...DESKTOP_LIST_PANE, borderRightWidth: 1, borderRightColor: isDark ? '#242426' : '#E5E5EA' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, ...DESKTOP_PANEL_HEADER, minHeight: 66 }}>
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel="Back to projects" onPress={() => proceed(onClose)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 10, borderRadius: 999, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }}>
                     <Ionicons name="chevron-back" size={17} color={text} /><Text style={{ color: text, fontSize: 16, fontWeight: '700' }}>Projects</Text>
                 </TouchableOpacity>
-                <HeaderToolbar isDark={isDark} textColor={text} maxDirectActions={3} actions={[
-                    { id: 'star', icon: project.isPinned ? 'star' : 'star-outline', image: project.isPinned ? 'star.fill' : 'star', onPress: async () => { try { const updated = await updateProjectApi(project.id, { isPinned: !project.isPinned }); if (updated) setProject(updated); onRefresh?.(); } catch (e) { setError((e as any)?.message || 'Unable to save favorite.'); } } },
-                    { id: 'share', icon: 'share-outline', image: 'square.and.arrow.up', onPress: async () => { try { await Share.share({ title: project.title, message: `${project.number}-${project.code} · ${project.title}` }); } catch (e) { setError((e as any)?.message || 'Unable to share project.'); } } },
-                    { id: 'settings', icon: 'settings-outline', image: 'gearshape', onPress: () => { setSettingsOpen(true); select('settings:general'); } },
-                ]} />
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><HeaderToolbar isDark={isDark} textColor={text} maxDirectActions={3} actions={projectActions} />{focusToggle(focusMode)}</View>
             </View>
             <View style={{ height: 230, marginBottom: 12, overflow: 'hidden', justifyContent: 'flex-end', backgroundColor: isDark ? '#0F172A' : '#E6EEFF' }}>
                 {project.heroImage ? <Image source={typeof project.heroImage === 'string' ? { uri: project.heroImage } : project.heroImage} resizeMode="cover" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 }} />
@@ -118,16 +125,26 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
                 </View>
                 {settingsOpen && <View><Text style={{ color: secondary, padding: 12, fontSize: 10, fontWeight: '700', letterSpacing: 1 }}>SETTINGS</Text>{Object.entries(SETTING_NAMES).map(([id, name]) => <TouchableOpacity key={id} onPress={() => select(`settings:${id}`)} style={{ padding: 12, borderRadius: 12, backgroundColor: section === `settings:${id}` ? (isDark ? '#102447' : '#E6EEFF') : 'transparent' }}><Text style={{ color: section === `settings:${id}` ? '#007AFF' : text, fontSize: 13 }}>{name}</Text></TouchableOpacity>)}</View>}
             </ScrollView>
-        </View>
-        <View style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+        </View>}
+        <View key="project-content" style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
+            {focusMode && <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, gap: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <InstantTooltip label="Back to projects"><TouchableOpacity accessibilityLabel="Back to projects" onPress={() => proceed(onClose)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}><Ionicons name="chevron-back" size={18} color={text} /></TouchableOpacity></InstantTooltip>
+                    <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={{ color: text, fontSize: 14, fontWeight: '700' }}>{project.number}-{project.code} · {project.title}</Text></View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><HeaderToolbar isDark={isDark} textColor={text} maxDirectActions={3} actions={projectActions} />{focusToggle(focusMode)}</View>
+                </View>
+                <ProjectFocusNavigation section={section} isDark={isDark} onSelect={select} onOpenModule={path => proceed(() => router.push(path as any))} />
+            </View>}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, ...DESKTOP_PANEL_HEADER, minHeight: 66 }}>
                 <Text style={{ ...DESKTOP_PANEL_TITLE, color: text, flex: 1 }}>{title}</Text>
+                {!focusMode && focusToggle(true)}
                 {headerAction && ['overview', 'work'].includes(section) && <HeaderToolbar isDark={isDark} textColor={text} actions={[headerAction]} />}
 
             </View>
+            {section === 'planning:wbs' && planningToolbar && <View style={{ paddingHorizontal: 24, paddingVertical: 8, minHeight: 62 }}>{planningToolbar}</View>}
             {!!error && <Text accessibilityRole="alert" style={{ color: '#FF3B30', padding: 16 }}>{error}</Text>}
             {Screen ? <Screen key={`${project.id}-${section}`} projectId={project.id} isEmbedded onDirtyChange={setDirty} onSaved={refresh} />
-                : section.startsWith('planning:') ? <ProjectPlanningPanel key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
+                : section.startsWith('planning:') ? <ProjectPlanningPanel onToolbarChange={setPlanningToolbar} key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
                 : renderContent(project, section, select, () => { setSettingsOpen(true); select('settings:general'); }, setHeaderAction)}
         </View>
     </View>;
