@@ -227,7 +227,7 @@ export function ClockOverview({ renderPart = 'all' }: ClockOverviewProps = {}) {
 
     // Trigger confirmation modal
     const handleClockAction = () => {
-        if (!user || isProcessing) return;
+        if (!user || isProcessing || attendanceStatus === 'loading') return;
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setShowClockModal(true);
     };
@@ -235,7 +235,7 @@ export function ClockOverview({ renderPart = 'all' }: ClockOverviewProps = {}) {
     // Execute clock action after modal confirmation
     const handleClockConfirm = async (payload: ClockConfirmPayload) => {
         setShowClockModal(false);
-        if (!user || isProcessing) return;
+        if (!user || isProcessing || attendanceStatus === 'loading') return;
         
         setIsProcessing(true);
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
@@ -269,14 +269,16 @@ export function ClockOverview({ renderPart = 'all' }: ClockOverviewProps = {}) {
         
         try {
             const result = await clockAction(user.id, type, metadata);
+            await refreshAttendance();
             if (result.success) {
-                await refreshAttendance();
+                Alert.alert(type === 'IN' ? 'Clock In Tersimpan' : 'Clock Out Tersimpan', result.warning || 'Absensi berhasil dicatat.');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
             } else if (result.error) {
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 Alert.alert("Clock Failed", result.error);
             }
         } catch (error: any) {
+            await refreshAttendance();
             console.warn("Clock action failed:", error);
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             Alert.alert("Clock Failed", error?.message || "An unexpected error occurred.");

@@ -301,22 +301,38 @@ async function legacyClockAction(userId: string, type: "IN" | "OUT", metadata?: 
 
     // Await all critical operations and the log
     // We prioritize session/record integrity, log is side effect but we await it so function doesn't return with error swallowed
-    const results = await Promise.all([logPromise, ...criticalPromises]);
+    const results = await Promise.allSettled([logPromise, ...criticalPromises]);
     for (const result of results) {
-        if (result?.error) throw result.error;
+        if (result.status === 'rejected') throw result.reason;
+        if (result.value?.error) throw result.value.error;
     }
 
     return { success: true };
 }
 
 const inFlight = new Set<string>();
-export async function writeAdidayaClock(userId: string, type: 'IN' | 'OUT', metadata?: ClockActionMetadata) {
+export async function writeAdidayaClock(userId: string, type: 'IN' | 'OUT', metadata?: ClockActionMetadata): Promise<{ success?: boolean; error?: string; warning?: string }> {
+    const attemptedAt = Date.now();
     const { data: { user }, error } = await supabase.auth.getUser();
     if (error || !user || user.id !== userId) return { error: 'Please sign in to record your own attendance.' };
     if (inFlight.has(userId)) return { error: 'Attendance is being saved. Please wait.' };
     if (!metadata?.photoUrl || !Number.isFinite(metadata.latitude) || !Number.isFinite(metadata.longitude)) return { error: 'A photo and valid location are required.' };
     inFlight.add(userId);
     try { return await legacyClockAction(userId, type, metadata); }
-    catch (e) { return { error: 'Attendance could not be fully saved. Refresh your attendance before retrying. ' + (e instanceof Error ? e.message : '') }; }
+    catch (e) {
+        // A secondary write can fail after the attendance session was committed.
+        // Confirm the actual session before reporting the clock action as failed.
+        try {
+            const { data: sessions, error: readError } = await supabase.from('attendance_sessions')
+                .select('*').eq('user_id', userId).eq('date', new Date().toLocaleDateString('en-CA'))
+                .order('session_number', { ascending: true });
+            const latest = sessions?.[sessions.length - 1];
+            const savedAt = type === 'IN' ? latest?.clock_in : latest?.clock_out;
+            if (!readError && savedAt && new Date(savedAt).getTime() >= attemptedAt && (type === 'OUT' || !latest.clock_out)) {
+                return { success: true, warning: 'Absensi tersimpan, tetapi sinkronisasi ringkasan belum lengkap. Tidak perlu mengulang clock.' };
+            }
+        } catch { /* Keep the outcome unconfirmed when the verification read fails. */ }
+        return { error: 'Attendance could not be fully saved. Status penyimpanan belum dapat dikonfirmasi. Periksa status absensi sebelum mencoba lagi. ' + (e instanceof Error ? e.message : '') };
+    }
     finally { inFlight.delete(userId); }
 }

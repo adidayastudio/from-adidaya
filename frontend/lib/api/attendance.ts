@@ -180,8 +180,7 @@ export async function fetchTodaySessions(userId: string): Promise<AttendanceSess
             .eq("user_id", userId);
 
         if (error) {
-            // Graceful fallback if table/column does not exist
-            return [];
+            throw error;
         }
 
         return (data || [])
@@ -210,9 +209,10 @@ export async function fetchTodaySessions(userId: string): Promise<AttendanceSess
                     locationStatus: row.location_status || row.location?.status,
                     photoUrl: row.photo_url
                 };
-            });
-    } catch {
-        return [];
+            })
+            .sort((a, b) => new Date(a.clockIn).getTime() - new Date(b.clockIn).getTime());
+    } catch (error) {
+        throw error;
     }
 }
 

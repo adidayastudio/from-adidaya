@@ -10,6 +10,7 @@ import React, {
     useState
 } from "react";
 import { AttendanceSession, fetchTodaySessions } from "../lib/api/attendance";
+import { AppState, Platform } from "react-native";
 import { supabase } from "../lib/supabase";
 
 import { computeEmployeeIdentifiersHelper, formatScheduleDetail } from "../components/people/member-profile/types";
@@ -420,6 +421,23 @@ export function UserProvider({ children }: { children: ReactNode }) {
             refreshAttendance();
         }
     }, [authStatus, user, refreshProfile, refreshAttendance]);
+
+    useEffect(() => {
+        if (authStatus !== 'authenticated' || !user) return;
+        const refresh = () => { void refreshAttendance(); };
+        const channel = supabase.channel(`own-attendance-${user.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_sessions', filter: `user_id=eq.${user.id}` }, refresh)
+            .subscribe(status => { if (status === 'SUBSCRIBED') refresh(); });
+        const timer = setInterval(refresh, 30000);
+        const listener = AppState.addEventListener('change', state => { if (state === 'active') refresh(); });
+        if (Platform.OS === 'web') window.addEventListener('focus', refresh);
+        return () => {
+            clearInterval(timer);
+            listener.remove();
+            if (Platform.OS === 'web') window.removeEventListener('focus', refresh);
+            void supabase.removeChannel(channel);
+        };
+    }, [authStatus, user, refreshAttendance]);
 
     const value = useMemo(() => ({
         authStatus,

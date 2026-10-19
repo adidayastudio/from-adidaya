@@ -21,7 +21,7 @@ import {
 import { background, ignoreSafeArea, padding, tint, frame, cornerRadius, foregroundStyle, foregroundColor } from '@expo/ui/swift-ui/modifiers';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, StyleSheet, Platform } from 'react-native';
 import {
     buildWatermarkText,
@@ -38,7 +38,7 @@ interface ClockConfirmModalProps {
     visible: boolean;
     isClockedIn: boolean;
     userName: string;
-    onConfirm: (payload: ClockConfirmPayload) => void;
+    onConfirm: (payload: ClockConfirmPayload) => void | Promise<void>;
     onCancel: () => void;
 }
 
@@ -320,26 +320,39 @@ export function ClockConfirmModal({ visible, isClockedIn, userName, onConfirm, o
         }
     };
 
-    const handleConfirm = () => {
-        const photoUrl = capturedPhoto?.photoUrl;
-        const photoUri = capturedPhoto?.watermarkedUri || capturedPhoto?.uri;
-        const faceCount = capturedPhoto?.faceCount ?? 1;
-        const watermarkText = capturedPhoto?.watermarkText || watermarkPreview;
-        const modeCode = isInsideArea ? (detectedCode || activeTenant?.company_code || 'HQ') : selectedMode ? MODE_CODES[selectedMode] : undefined;
+    const [isSaving, setIsSaving] = useState(false);
+    const savingRef = useRef(false);
 
-        onConfirm({
-            modeCode,
-            photoUrl,
-            photoUri,
-            faceCount,
-            watermarkText,
-            overrideReason: notes.trim() || undefined,
-            latitude: userCoords?.latitude,
-            longitude: userCoords?.longitude,
-            detectedLocationCode: isInsideArea ? detectedCode : modeCode,
-            detectedLocationType: detectedType,
-            locationStatus: isInsideArea ? 'inside' : 'outside',
-        });
+    const handleConfirm = async () => {
+        if (savingRef.current) return;
+        savingRef.current = true;
+        setIsSaving(true);
+        try {
+            const photoUrl = capturedPhoto?.photoUrl;
+            const photoUri = capturedPhoto?.watermarkedUri || capturedPhoto?.uri;
+            const faceCount = capturedPhoto?.faceCount ?? 1;
+            const watermarkText = capturedPhoto?.watermarkText || watermarkPreview;
+            const modeCode = isInsideArea ? (detectedCode || activeTenant?.company_code || 'HQ') : selectedMode ? MODE_CODES[selectedMode] : undefined;
+
+            await onConfirm({
+                modeCode,
+                photoUrl,
+                photoUri,
+                faceCount,
+                watermarkText,
+                overrideReason: notes.trim() || undefined,
+                latitude: userCoords?.latitude,
+                longitude: userCoords?.longitude,
+                detectedLocationCode: isInsideArea ? detectedCode : modeCode,
+                detectedLocationType: detectedType,
+                locationStatus: isInsideArea ? 'inside' : 'outside',
+            });
+        } catch (error: any) {
+            Alert.alert('Status Absensi', error?.message || 'Status belum dapat dikonfirmasi. Periksa status absensi sebelum mencoba lagi.');
+        } finally {
+            savingRef.current = false;
+            setIsSaving(false);
+        }
     };
 
     return (
@@ -349,7 +362,7 @@ export function ClockConfirmModal({ visible, isClockedIn, userName, onConfirm, o
                 presentationDetents={[0.75]}
                 presentationDragIndicator="hidden"
                 onIsOpenedChange={(opened) => {
-                    if (!opened) onCancel();
+                    if (!opened && !savingRef.current) onCancel();
                 }}
             >
                 <VStack
@@ -365,7 +378,7 @@ export function ClockConfirmModal({ visible, isClockedIn, userName, onConfirm, o
                             <SwiftUIText size={22} weight="bold" color={textColor}>{`Confirm ${actionLabel}`}</SwiftUIText>
                         </VStack>
                         <Spacer />
-                        <Button systemImage="xmark" role="cancel" color="gray" onPress={onCancel} />
+                        <Button systemImage="xmark" role="cancel" color="gray" disabled={isSaving} onPress={onCancel} />
                     </HStack>
 
                     <Form modifiers={[background(sheetBg), foregroundStyle(textColor)]}>
@@ -487,6 +500,7 @@ export function ClockConfirmModal({ visible, isClockedIn, userName, onConfirm, o
                         frame({ maxWidth: Infinity })
                     ]}>
                         <Button
+                            disabled={isSaving || !canConfirm}
                             variant={canConfirm ? "borderedProminent" : "glass"}
                             color={canConfirm ? (isClockIn ? Colors[resolvedTheme].tint : '#FF3B30') : 'gray'}
                             onPress={() => {
@@ -507,7 +521,7 @@ export function ClockConfirmModal({ visible, isClockedIn, userName, onConfirm, o
                                     size={17} 
                                     color={canConfirm ? '#FFFFFF' : disabledTextColor}
                                 >
-                                    {actionLabel}
+                                    {isSaving ? 'Menyimpan...' : actionLabel}
                                 </SwiftUIText>
                                 <Spacer />
                             </HStack>

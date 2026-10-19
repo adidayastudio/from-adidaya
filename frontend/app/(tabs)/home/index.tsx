@@ -454,13 +454,15 @@ export default function HomeScreen() {
                                 photoUrl: payload.photoUrl || payload.photoUri,
                             });
                             
+                            await refreshAttendance();
                             if (res && (res as any).error) {
                                 throw new Error((res as any).error);
                             } else {
-                                await refreshAttendance();
                                 setShowClockModal(false);
+                                Alert.alert(type === 'IN' ? 'Clock In Tersimpan' : 'Clock Out Tersimpan', res.warning || 'Absensi berhasil dicatat.');
                              }
                         } catch (err: any) {
+                            await refreshAttendance();
                             throw err;
                         } finally {
                             setIsProcessing(false);

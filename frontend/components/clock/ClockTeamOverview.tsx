@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, ActivityIndicator, Platform, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { StyleSheet, View, Text, ScrollView, ActivityIndicator, Platform, TouchableOpacity, AppState } from 'react-native';
 import { useUserContext } from '@/context/UserProvider';
 import { useTenantContext } from '@/context/TenantContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -38,8 +38,12 @@ export function ClockTeamOverview({ onRegisterShare, onViewDocument }: { onRegis
     });
     const [loading, setLoading] = useState(true);
 
-    const loadData = async () => {
-        setLoading(true);
+    const [loadError, setLoadError] = useState(false);
+    const requestVersion = useRef(0);
+
+    const loadData = useCallback(async (background = false) => {
+        const version = ++requestVersion.current;
+        if (!background) setLoading(true);
         try {
             const todayStr = format(new Date(), 'yyyy-MM-dd');
             const isMockUser = user?.id === '00000000-0000-0000-0000-000000000000';
@@ -84,10 +88,11 @@ export function ClockTeamOverview({ onRegisterShare, onViewDocument }: { onRegis
                 const tenantId = activeTenant?.id;
                 let tenantUserIds: string[] | null = null;
                 if (tenantId) {
-                    const { data: tmData } = await supabase
+                    const { data: tmData, error: tenantError } = await supabase
                         .from('tenant_members')
                         .select('user_id')
                         .eq('tenant_id', tenantId);
+                    if (tenantError) throw tenantError;
                     if (tmData && tmData.length > 0) {
                         tenantUserIds = tmData.map(t => t.user_id).filter(Boolean);
                     }
@@ -104,12 +109,16 @@ export function ClockTeamOverview({ onRegisterShare, onViewDocument }: { onRegis
                     profQuery = profQuery.eq("tenant_id", tenantId);
                 }
 
-                const [profilesRes, attendanceRes, requestsRes] = await Promise.all([
+                const [profilesRes, attendanceRes, sessionsRes, requestsRes] = await Promise.all([
                     profQuery,
                     supabase.from("attendance_records").select("*").eq("date", todayStr),
+                    supabase.from("attendance_sessions").select("user_id, clock_in, clock_out").eq("date", todayStr).order('clock_in', { ascending: true }),
                     fetchAllRequestsAndRank()
                 ]);
 
+                if (profilesRes.error) throw profilesRes.error;
+                if (attendanceRes.error) throw attendanceRes.error;
+                if (sessionsRes.error) throw sessionsRes.error;
                 const rawProfiles = profilesRes.data || [];
                 // Only include Human Accounts with include_in_performance !== false and exclude test accounts
                 profilesList = rawProfiles.filter((p: any) => {
@@ -120,7 +129,28 @@ export function ClockTeamOverview({ onRegisterShare, onViewDocument }: { onRegis
                     const isIncluded = p.include_in_performance !== false;
                     return !isSystem && !isTest && isIncluded;
                 });
-                attendanceList = attendanceRes.data || [];
+                attendanceList = [...(attendanceRes.data || [])];
+                // Sessions are the clock action itself; a delayed summary must not hide a saved clock in.
+                const sessionsByUser = new Map<string, any[]>();
+                for (const session of sessionsRes.data || []) {
+                    if (!session.clock_in) continue;
+                    const list = sessionsByUser.get(session.user_id) || [];
+                    list.push(session);
+                    sessionsByUser.set(session.user_id, list);
+                }
+                for (const [userId, sessions] of sessionsByUser) {
+                    const index = attendanceList.findIndex(record => record.user_id === userId);
+                    const summary = index >= 0 ? attendanceList[index] : {};
+                    const record = {
+                        ...summary,
+                        user_id: userId,
+                        clock_in: sessions[0].clock_in,
+                        clock_out: sessions[sessions.length - 1].clock_out,
+                        status: summary.status || 'not-checked-in'
+                    };
+                    if (index >= 0) attendanceList[index] = record;
+                    else attendanceList.push(record);
+                }
                 requestsData = requestsRes;
 
                 if (requestsRes) {
@@ -206,6 +236,8 @@ export function ClockTeamOverview({ onRegisterShare, onViewDocument }: { onRegis
                 return a.fullName.localeCompare(b.fullName);
             });
 
+            if (version !== requestVersion.current) return;
+            setLoadError(false);
             setMembers(mappedMembers);
 
             // Compute statistics from actual mapped array
@@ -219,15 +251,51 @@ export function ClockTeamOverview({ onRegisterShare, onViewDocument }: { onRegis
                 pending: pendingCount
             });
         } catch (error) {
+            if (version !== requestVersion.current) return;
+            setLoadError(true);
             console.error('Error loading team overview:', error);
         } finally {
-            setLoading(false);
+            if (version === requestVersion.current) setLoading(false);
         }
-    };
+    }, [user?.id, activeTenant?.id]);
 
     useEffect(() => {
-        loadData();
-    }, [user]);
+        if (!user?.id) return;
+        let active = true;
+        let refreshing = false;
+        let refreshPending = false;
+        const refresh = async () => {
+            if (!active) return;
+            if (refreshing) { refreshPending = true; return; }
+            refreshing = true;
+            try {
+                do {
+                    refreshPending = false;
+                    await loadData(true);
+                } while (active && refreshPending);
+            } finally { refreshing = false; }
+        };
+        void refresh();
+        const channel = supabase.channel(`clock-team-${activeTenant?.id || 'default'}-${user.id}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, refresh)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_sessions' }, refresh)
+            .subscribe((status) => { if (status === 'SUBSCRIBED') void refresh(); });
+        // Also recover from missed events, reconnects and date changes.
+        const timer = setInterval(() => { void refresh(); }, 30000);
+        const appListener = AppState.addEventListener('change', state => {
+            if (state === 'active') void refresh();
+        });
+        const onFocus = () => { void refresh(); };
+        if (Platform.OS === 'web') window.addEventListener('focus', onFocus);
+        return () => {
+            active = false;
+            requestVersion.current++;
+            clearInterval(timer);
+            appListener.remove();
+            if (Platform.OS === 'web') window.removeEventListener('focus', onFocus);
+            void supabase.removeChannel(channel);
+        };
+    }, [user?.id, activeTenant?.id, loadData]);
 
     useEffect(() => {
         if (onRegisterShare) {
@@ -291,6 +359,14 @@ export function ClockTeamOverview({ onRegisterShare, onViewDocument }: { onRegis
     const cardBg = isDark ? '#1C1C1E' : '#FFF';
     const cardBorder = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)';
 
+    if (loadError) {
+        return (
+            <TouchableOpacity onPress={() => { void loadData(); }} style={s.container}>
+                <Text style={{ color: textColor }}>Data absensi belum berhasil dimuat. Ketuk untuk mencoba lagi.</Text>
+            </TouchableOpacity>
+        );
+    }
+
     if (loading) {
         return (
             <View style={s.loader}>
@@ -349,7 +425,7 @@ export function ClockTeamOverview({ onRegisterShare, onViewDocument }: { onRegis
             </ScrollView>
 
             {/* Attendance Activity List (Crew Style) */}
-            <Text style={[s.sectionTitle, { color: subtextColor }]}>TODAY'S ATTENDANCE</Text>
+            <Text style={[s.sectionTitle, { color: subtextColor }]}>TODAY&apos;S ATTENDANCE</Text>
             <View style={s.listContainer}>
                 {members.map(member => {
                     const badge = getStatusBadgeConfig(member.status);
