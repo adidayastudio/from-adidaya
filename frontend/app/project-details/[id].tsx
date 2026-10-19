@@ -714,7 +714,7 @@ export function ProjectDetailContent({
 
     useEffect(() => {
         if (!onHeaderActionChange) return;
-        if (!project?.id || isPreview || !['overview', 'work'].includes(activeTab)) { onHeaderActionChange(null); return; }
+        if (!project?.id || isPreview || activeTab !== 'work') { onHeaderActionChange(null); return; }
         onHeaderActionChange({
             id: 'add', icon: 'add', image: 'plus', title: 'Add', tintColor: FormaBlue[700],
             menuActions: [

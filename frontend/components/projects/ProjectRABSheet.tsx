@@ -9,15 +9,29 @@ import { displayVolumeUnit } from '@/lib/projectVolumeEditor';
 import { AHSP_DATA, AHSP_CATEGORY_LABELS } from '@/lib/legacy-ahsp/ahsp.data';
 import { RABDrafts } from '@/lib/legacy-rab/editing';
 
-export function ProjectRABSheet({ rows, wbs, meta, drafts, isDark, editable, onEdit, onCellFocus, toolbarLeading, formulaVisible, onToggleFormula, summary = false }: { rows: any[]; wbs: any[]; meta: any; drafts: RABDrafts; isDark: boolean; editable: boolean; onEdit: (code: string, field: string, value: string) => void; summary?: boolean; toolbarLeading?: React.ReactNode; formulaVisible?: boolean; onToggleFormula?: () => void; onCellFocus?: (cell: { code: string; field: string; address: string; value: string }) => void }) {
-    const [languages, setLanguages] = useState('en'), [collapsed, setCollapsed] = useState<Set<string>>(() => new Set()), [widths, setWidths] = useState<Record<string, number>>({});
+export function ProjectRABSheet({ rows, wbs, meta, drafts, isDark, editable, onEdit, onCellFocus, toolbarLeading, formulaVisible, onToggleFormula, summary = false, onExclude, tableSearch: externalTableSearch, onTableSearchChange, languages: externalLanguages, onLanguagesChange, collapsed: externalCollapsed, onCollapsedChange, hideToolbar = false, subtotal: externalSubtotal, resetWidthsKey }: { rows: any[]; wbs: any[]; meta: any; drafts: RABDrafts; isDark: boolean; editable: boolean; onEdit: (code: string, field: string, value: string) => void; onExclude?: (code: string) => void; summary?: boolean; toolbarLeading?: React.ReactNode; formulaVisible?: boolean; onToggleFormula?: () => void; onCellFocus?: (cell: { code: string; field: string; address: string; value: string }) => void; tableSearch?: string; onTableSearchChange?: (val: string) => void; languages?: any; onLanguagesChange?: (val: any) => void; collapsed?: Set<string>; onCollapsedChange?: (val: any) => void; hideToolbar?: boolean; subtotal?: number; resetWidthsKey?: number }) {
+    const [internalLanguages, setInternalLanguages] = useState('en');
+    const [internalCollapsed, setInternalCollapsed] = useState<Set<string>>(() => new Set());
+    const [internalTableSearch, setInternalTableSearch] = useState('');
+    const [widths, setWidths] = useState<Record<string, number>>({});
     const [availableWidth, setAvailableWidth] = useState(1100);
-    const [tableSearch, setTableSearch] = useState('');
     const [ahspCode, setAhspCode] = useState(''), [query, setQuery] = useState(''), [category, setCategory] = useState('');
+
+    React.useEffect(() => {
+        if (resetWidthsKey) setWidths({});
+    }, [resetWidthsKey]);
+
+    const languages = externalLanguages ?? internalLanguages;
+    const setLanguages = onLanguagesChange ?? setInternalLanguages;
+    const collapsed = externalCollapsed ?? internalCollapsed;
+    const setCollapsed = onCollapsedChange ?? setInternalCollapsed;
+    const tableSearch = externalTableSearch ?? internalTableSearch;
+    const setTableSearch = onTableSearchChange ?? setInternalTableSearch;
+
     const text = isDark ? '#F5F5F7' : '#1C1C1E', muted = isDark ? '#9898A2' : '#73737D', surface = isDark ? '#1C1D23' : '#F2F2F7', border = isDark ? '#292930' : '#E5E5EA';
     const pill = { height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: surface, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 };
     const groups = rows.filter(row => row.isSection).map(row => row.code);
-    const expanded = groups.every(code => !collapsed.has(code));
+    const expanded = groups.length > 0 && groups.every(code => !collapsed.has(code));
     const matched = rows.filter(row => { const source = wbs.find(item => item.wbs_code === row.code); return `${row.code} ${row.title} ${source?.title || ''} ${source?.title_en || ''} ${drafts[row.code]?.titleEn || ''} ${drafts[row.code]?.titleId || ''}`.toLowerCase().includes(tableSearch.toLowerCase()); });
     const visible = rows.map((row, index) => ({ ...row, sheetIndex: index + 1 })).filter(row => (!tableSearch || matched.some(item => item.code === row.code || item.code.startsWith(`${row.code}.`))) && ![...collapsed].some(code => row.code.startsWith(`${code}.`)));
     const descriptionCount = languages === 'both' ? 2 : 1;
@@ -29,17 +43,44 @@ export function ProjectRABSheet({ rows, wbs, meta, drafts, isDark, editable, onE
         if (key === 'titleEn' || key === 'titleId') return drafts[row.code]?.[key] ?? meta.estimateValues?.[row.code]?.[key] ?? (key === 'titleEn' ? names.title : meta.estimateValues?.[row.code]?.title || names.title_en);
         return drafts[row.code]?.[key] ?? row[key] ?? '';
     };
+
+    const getItemAmount = (row: any): number => {
+        return Number(value(row, 'volume')) * Number(value(row, 'unitPrice'));
+    };
+
+    const getRowAmount = (row: any): number => {
+        if (!row.isSection) {
+            return getItemAmount(row);
+        }
+        const children = rows.filter(r => !r.isSection && (r.code === row.code || r.code.startsWith(`${row.code}.`)));
+        if (children.length > 0) {
+            return children.reduce((sum, r) => sum + getItemAmount(r), 0);
+        }
+        return getItemAmount(row);
+    };
+
+    const sheetSubtotal = React.useMemo(() => {
+        return rows.filter(r => !r.isSection).reduce((sum, r) => sum + getItemAmount(r), 0);
+    }, [rows, drafts, meta]);
+
+    const totalBudget = externalSubtotal && externalSubtotal > 0 ? externalSubtotal : sheetSubtotal;
+
+    const getRowWeight = (row: any): number => {
+        if (!totalBudget) return 0;
+        return (getRowAmount(row) / totalBudget) * 100;
+    };
+
     const matches = AHSP_DATA.filter(item => (!category || item.category === category) && `${item.code} ${item.name} ${item.nameId}`.toLowerCase().includes(query.toLowerCase()));
     const selected = rows.find(row => row.code === ahspCode);
     return <View onLayout={event => setAvailableWidth(event.nativeEvent.layout.width)} style={{ gap: 10 }}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+        {!hideToolbar && <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
             <View style={{ ...pill, width: 220 }}><Ionicons name="search-outline" size={14} color={muted} /><TextInput accessibilityLabel="Search RAB" value={tableSearch} onChangeText={value => { setTableSearch(value); setCollapsed(new Set()); }} placeholder="Search work items" placeholderTextColor={muted} style={{ flex: 1, minWidth: 0, color: text, fontSize: 12, padding: 0 }} /></View>
             {toolbarLeading}
             <View style={{ flex: 1 }} />
             <ContextMenu title="Description columns" dropdownMenuMode actions={[{ title: 'English + Indonesia', selected: languages === 'both' }, { title: 'English only', selected: languages === 'en' }, { title: 'Indonesia only', selected: languages === 'id' }]} onPress={event => setLanguages(['both', 'en', 'id'][event.nativeEvent.index])}><View style={pill}><Ionicons name="language-outline" size={15} color="#007AFF" /><Text style={{ color: text, fontSize: 12 }}>{languages === 'both' ? 'EN + ID' : languages.toUpperCase()}</Text><Ionicons name="chevron-down" size={11} color={muted} /></View></ContextMenu>
             <InstantTooltip label={expanded ? 'Collapse all groups' : 'Expand all groups'}><TouchableOpacity accessibilityLabel={expanded ? 'Collapse all groups' : 'Expand all groups'} onPress={() => setCollapsed(expanded ? new Set(groups) : new Set())} style={pill}><Ionicons name={expanded ? 'contract-outline' : 'expand-outline'} size={16} color="#007AFF" /></TouchableOpacity></InstantTooltip>
             <ContextMenu title="Table options" dropdownMenuMode actions={[{ title: formulaVisible ? 'Hide formula bar' : 'Show formula bar' }, { title: 'Show discipline groups only' }, { title: 'Show through level 2' }, { title: 'Expand all groups' }, { title: 'Reset column widths' }]} onPress={event => { if (event.nativeEvent.index === 0) onToggleFormula?.(); else if (event.nativeEvent.index === 4) setWidths({}); else setCollapsed(event.nativeEvent.index === 3 ? new Set() : new Set(groups.filter(code => code.split('.').length >= event.nativeEvent.index))); }}><View style={{ ...pill, paddingHorizontal: 10 }}><Ionicons name="ellipsis-horizontal" size={18} color={muted} /></View></ContextMenu>
-        </View>
+        </View>}
         {!!ahspCode && <View style={{ padding: 14, borderRadius: 14, backgroundColor: surface, gap: 10 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}><Text style={{ flex: 1, color: text, fontSize: 13, fontWeight: '600' }}>AHSP · {ahspCode}</Text><TouchableOpacity accessibilityLabel="Close AHSP picker" onPress={() => setAhspCode('')}><Ionicons name="close" size={18} color={muted} /></TouchableOpacity></View>
             <Text style={{ color: muted, fontSize: 11 }}>Legacy sample library · Preview prices only. Apply copies the unit price; descriptions and item unit stay as entered.</Text>
@@ -52,7 +93,7 @@ export function ProjectRABSheet({ rows, wbs, meta, drafts, isDark, editable, onE
             {visible.map(row => <View key={row.code} style={{ flexDirection: 'row', backgroundColor: row.isSection ? surface : 'transparent', borderTopWidth: 1, borderColor: border }}>{columns.map(column => {
                 const numeric = ['volume', 'unitPrice'].includes(column.key), description = ['titleEn', 'titleId'].includes(column.key), canEdit = editable && (description || (!row.isSection && (numeric || column.key === 'unit')));
                 return <View key={column.key} style={{ width: column.width, minHeight: 44, justifyContent: 'center', flexDirection: 'row', alignItems: 'center' }}>
-                    {column.key === 'code' ? <TouchableOpacity disabled={!row.isSection} onPress={() => setCollapsed(current => { const next = new Set(current); if (next.has(row.code)) next.delete(row.code); else next.add(row.code); return next; })} style={{ flex: 1, padding: 9, flexDirection: 'row', alignItems: 'center', gap: 6 }}>{row.isSection && <Ionicons name={collapsed.has(row.code) ? 'chevron-forward' : 'chevron-down'} size={13} color={muted} />}<Text style={{ color: text, fontSize: 12, fontWeight: row.isSection ? '600' : '400' }}>{row.code}</Text></TouchableOpacity> : column.key === 'row' ? <Text style={{ color: muted, fontSize: 11 }}>{row.sheetIndex}</Text> : row.isSection && !description ? null : column.key === 'amount' || column.key === 'weight' ? <Text style={{ color: text, fontSize: 12, padding: 9 }}>{column.key === 'amount' ? money(Number(value(row, 'volume')) * Number(value(row, 'unitPrice'))) : Number(row.weight || 0).toFixed(2)}</Text> : <TextInput accessibilityLabel={`${row.code} ${column.title}`} editable={canEdit} onFocus={() => onCellFocus?.({ code: row.code, field: column.key, address: `${String.fromCharCode(64 + columns.findIndex(item => item.key === column.key))}${row.sheetIndex}`, value: String(value(row, column.key)) })} value={String(value(row, column.key))} onChangeText={content => { onEdit(row.code, column.key, content); if (column.key === 'unitPrice') onEdit(row.code, 'priceSource', 'Manual'); }} keyboardType={numeric ? 'decimal-pad' : 'default'} style={{ flex: 1, minWidth: 0, color: text, fontSize: 12, padding: 9, textAlign: numeric ? 'right' : 'left' }} />}
+                    {column.key === 'code' ? <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center' }}><TouchableOpacity disabled={!row.isSection} onPress={() => setCollapsed(current => { const next = new Set(current); if (next.has(row.code)) next.delete(row.code); else next.add(row.code); return next; })} style={{ flex: 1, padding: 9, flexDirection: 'row', alignItems: 'center', gap: 6 }}>{row.isSection && <Ionicons name={collapsed.has(row.code) ? 'chevron-forward' : 'chevron-down'} size={13} color={muted} />}<Text style={{ color: text, fontSize: 12, fontWeight: row.isSection ? '700' : '400' }}>{row.code}</Text></TouchableOpacity>{onExclude && <ContextMenu title={row.code} dropdownMenuMode actions={[{ title: 'Exclude from RAB' }]} onPress={() => onExclude(row.code)}><View style={{ padding: 6 }}><Ionicons name="ellipsis-horizontal" size={13} color={muted} /></View></ContextMenu>}</View> : column.key === 'row' ? <Text style={{ color: muted, fontSize: 11, fontWeight: row.isSection ? '700' : '400' }}>{row.sheetIndex}</Text> : row.isSection && !description && column.key !== 'amount' && column.key !== 'weight' ? null : column.key === 'amount' ? <Text style={{ flex: 1, color: text, fontSize: 12, padding: 9, textAlign: 'right', fontWeight: row.isSection ? '700' : '400' }}>{money(getRowAmount(row))}</Text> : column.key === 'weight' ? <Text style={{ flex: 1, color: text, fontSize: 12, padding: 9, textAlign: 'right', fontWeight: row.isSection ? '700' : '400' }}>{getRowWeight(row).toFixed(2)}</Text> : <TextInput accessibilityLabel={`${row.code} ${column.title}`} editable={canEdit} onFocus={() => onCellFocus?.({ code: row.code, field: column.key, address: `${String.fromCharCode(64 + columns.findIndex(item => item.key === column.key))}${row.sheetIndex}`, value: String(value(row, column.key)) })} value={String(value(row, column.key))} onChangeText={content => { onEdit(row.code, column.key, content); if (column.key === 'unitPrice') onEdit(row.code, 'priceSource', 'Manual'); }} keyboardType={numeric ? 'decimal-pad' : 'default'} style={{ flex: 1, minWidth: 0, color: text, fontSize: 12, padding: 9, textAlign: numeric ? 'right' : 'left', fontWeight: row.isSection ? '700' : '400' }} />}
                     {column.key === 'unitPrice' && !row.isSection && <InstantTooltip label={drafts[row.code]?.priceSource || meta.estimateValues?.[row.code]?.priceSource || 'Manual price or choose AHSP'}><TouchableOpacity accessibilityLabel={`Choose AHSP for ${row.code}`} disabled={!editable} onPress={() => { setAhspCode(row.code); setQuery(''); }} style={{ padding: 8 }}><Ionicons name="library-outline" size={15} color={editable ? '#007AFF' : muted} /></TouchableOpacity></InstantTooltip>}
                 </View>;
             })}</View>)}

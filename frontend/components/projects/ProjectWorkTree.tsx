@@ -7,14 +7,40 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import type { WBSAction } from '@/lib/projectWBSActions';
 import { buildWBSTree } from '@/lib/legacy-rab/wbs-mapper';
 
-const branchKeys = (nodes: any[]): string[] => nodes.flatMap(node => node.children?.length ? [String(node.id || node.code), ...branchKeys(node.children)] : []);
-const keys = (nodes: any[]): string[] => nodes.flatMap(node => [String(node.id || node.code), ...keys(node.children || [])]);
+export const branchKeys = (nodes: any[]): string[] => nodes.flatMap(node => node.children?.length ? [String(node.id || node.code), ...branchKeys(node.children)] : []);
+export const keys = (nodes: any[]): string[] => nodes.flatMap(node => [String(node.id || node.code), ...keys(node.children || [])]);
 
-export function ProjectWorkTree({ items, isDark, stages = false, onSelectLeaf, selectedCode, onEditName, editingDisabled = false, showVolume = true, toolbarAction, toolbarLeading, toolbarTools, onAddWork, onToolbarChange, onWorkAction, onReorder }: { items: any[]; isDark: boolean; stages?: boolean; onSelectLeaf?: (node: any) => void; selectedCode?: string; onEditName?: (id: string, field: 'title' | 'title_en', value: string) => void; editingDisabled?: boolean; showVolume?: boolean; toolbarAction?: React.ReactNode; toolbarLeading?: React.ReactNode; toolbarTools?: React.ReactNode; onAddWork?: (node: any, child: boolean) => void; onToolbarChange?: (toolbar: React.ReactNode) => void; onWorkAction?: (id: string, action: WBSAction) => void; onReorder?: (sourceId: string, targetId: string) => void }) {
-    const [expanded, setExpanded] = useState<string[]>([]), [search, setSearch] = useState(''), [view, setView] = useState('summary');
+export function ProjectWorkTree({
+    items, isDark, stages = false, onSelectLeaf, selectedCode, onEditName,
+    editingDisabled = false, showVolume = true, toolbarAction, toolbarLeading,
+    toolbarTools, onAddWork, onToolbarChange, onWorkAction, onReorder,
+    externalSearch, externalExpanded, onExternalExpandedChange, hideToolbar = false,
+}: {
+    items: any[]; isDark: boolean; stages?: boolean; onSelectLeaf?: (node: any) => void;
+    selectedCode?: string; onEditName?: (id: string, field: 'title' | 'title_en', value: string) => void;
+    editingDisabled?: boolean; showVolume?: boolean; toolbarAction?: React.ReactNode;
+    toolbarLeading?: React.ReactNode; toolbarTools?: React.ReactNode; onAddWork?: (node: any, child: boolean) => void;
+    onToolbarChange?: (toolbar: React.ReactNode) => void; onWorkAction?: (id: string, action: WBSAction) => void;
+    onReorder?: (sourceId: string, targetId: string) => void;
+    externalSearch?: string; externalExpanded?: string[]; onExternalExpandedChange?: (keys: string[]) => void;
+    hideToolbar?: boolean;
+}) {
+    const [internalExpanded, setInternalExpanded] = useState<string[]>([]);
+    const [internalSearch, setInternalSearch] = useState('');
+    const [view, setView] = useState('summary');
     const dragId = useRef<string | null>(null);
     const [searchOpen, setSearchOpen] = useState(false);
     const [dragOver, setDragOver] = useState<string | null>(null);
+
+    const expanded = externalExpanded !== undefined ? externalExpanded : internalExpanded;
+    const setExpanded = (updater: string[] | ((curr: string[]) => string[])) => {
+        const next = typeof updater === 'function' ? updater(expanded) : updater;
+        if (onExternalExpandedChange) onExternalExpandedChange(next);
+        else setInternalExpanded(next);
+    };
+    const search = externalSearch !== undefined ? externalSearch : internalSearch;
+    const setSearch = setInternalSearch;
+
     const DragRow = Platform.OS === 'web' && onReorder ? 'div' : View;
     const color = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#8E8E93' : '#8E8E93', border = isDark ? '#303034' : '#E5E5EA';
     const pill = useMemo(() => ({ borderRadius: 999, paddingHorizontal: onEditName ? 12 : 16, paddingVertical: onEditName ? 0 : 10, height: onEditName ? 46 : undefined, justifyContent: 'center' as const, backgroundColor: onEditName ? (isDark ? '#1C1C1E' : '#FFFFFF') : (isDark ? '#1C1C1E' : '#F2F2F7'), borderWidth: onEditName ? 1 : 0, borderColor: border }), [onEditName, isDark, border]);
@@ -65,9 +91,13 @@ export function ProjectWorkTree({ items, isDark, stages = false, onSelectLeaf, s
             <InstantTooltip label={branchKeys(tree).length > 0 && branchKeys(tree).every(id => expanded.includes(id)) ? 'Collapse all' : 'Expand all'}><TouchableOpacity accessibilityLabel={branchKeys(tree).length > 0 && branchKeys(tree).every(id => expanded.includes(id)) ? 'Collapse all' : 'Expand all'} style={{ ...pill, paddingHorizontal: 0, width: 46, alignItems: 'center' }} onPress={() => setExpanded(branchKeys(tree).length > 0 && branchKeys(tree).every(id => expanded.includes(id)) ? [] : keys(tree))}><Ionicons name={branchKeys(tree).length > 0 && branchKeys(tree).every(id => expanded.includes(id)) ? 'contract-outline' : 'expand-outline'} size={18} color={color} /></TouchableOpacity></InstantTooltip>
             {toolbarAction && <View style={{ marginLeft: onToolbarChange ? 0 : 'auto' }}>{toolbarAction}</View>}
         </View>), [search, searchOpen, expanded, view, tree, stages, onEditName, toolbarAction, toolbarLeading, toolbarTools, color, onToolbarChange, pill, secondary]);
-    useEffect(() => { onToolbarChange?.(toolbar); return () => onToolbarChange?.(null); }, [onToolbarChange, toolbar]);
+    useEffect(() => {
+        if (hideToolbar) return;
+        onToolbarChange?.(toolbar);
+        return () => onToolbarChange?.(null);
+    }, [hideToolbar, onToolbarChange, toolbar]);
     return <View>
-        {!onToolbarChange && toolbar}
+        {!hideToolbar && !onToolbarChange && toolbar}
         {renderNodes(tree)}
         {!tree.some(matches) && <Text style={{ color: secondary, padding: 16 }}>{query ? 'No matching work items.' : 'No work items saved for this project.'}</Text>}
     </View>;

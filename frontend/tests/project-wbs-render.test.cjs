@@ -6,7 +6,10 @@ const Text = props => React.createElement('span', null, props.children);
 const TextInput = props => React.createElement('input', { value: props.value, readOnly: !props.editable, onChange: () => {} });
 const passthrough = props => React.createElement(View, null, props.children);
 const empty = () => null;
-const mocks = { react: React, 'react-dom': require('react-dom'), 'react-native': { View, Text, TextInput, TouchableOpacity: View, Platform: { OS: 'web' } }, '@expo/vector-icons': { Ionicons: empty }, '@/components/ui/PlatformContextMenu': { default: passthrough, __esModule: true }, '@/components/ui/PlatformIcon': { PlatformIcon: empty }, '@/components/ui/SegmentedControl': { SegmentedControl: empty }, '@/components/ui/DynamicIslandToastHUD': { DynamicIslandToastHUD: empty }, './setup/ProjectSaveFeedback': { useProjectSaveFeedback: () => ({ clear() {}, notify() {}, failed: false }), ProjectSaveFeedback: empty }, '@/lib/projectVolume': { volumeId: () => 'uuid' }, '@/lib/projectWBSHierarchy': { missingLegacyWBS: () => [] }, '@/lib/api/projectWBSWorkflow': { persistWBSWorkflow: async () => {} } };
+let wbsHeaderHtml = '';
+const onTitleAccessoryChange = node => { if (node) wbsHeaderHtml += renderToString(node); };
+const onHeaderTrailingChange = node => { if (node) wbsHeaderHtml += renderToString(node); };
+const mocks = { react: { ...React, useEffect: fn => fn() }, 'react-dom': require('react-dom'), 'react-native': { View, Text, TextInput, TouchableOpacity: View, Platform: { OS: 'web' } }, '@expo/vector-icons': { Ionicons: empty }, '@/components/ui/PlatformContextMenu': { default: passthrough, __esModule: true }, '@/components/ui/PlatformIcon': { PlatformIcon: empty }, '@/components/ui/SegmentedControl': { SegmentedControl: empty }, '@/components/ui/DynamicIslandToastHUD': { DynamicIslandToastHUD: empty }, './setup/ProjectSaveFeedback': { useProjectSaveFeedback: () => ({ clear() {}, notify() {}, failed: false }), ProjectSaveFeedback: empty }, '@/lib/projectVolume': { volumeId: () => 'uuid' }, '@/lib/projectWBSHierarchy': { missingLegacyWBS: () => [] }, '@/lib/api/projectWBSWorkflow': { persistWBSWorkflow: async () => {} } };
 const cache = {};
 function load(file) {
  file = path.resolve(file); if (cache[file]) return cache[file]; const exports = {}; cache[file] = exports;
@@ -16,10 +19,10 @@ function load(file) {
 const { ProjectWBSEditor } = load('components/projects/ProjectWBSEditor.tsx');
 const items = [{ id: 's', wbs_code: 'S', title: 'Structure (Struktur)', level: 0 }];
 test('public WBS component renders the template without Component-is-not-a-function error', () => {
- assert.equal(typeof ProjectWBSEditor, 'function'); const html = renderToString(React.createElement(ProjectWBSEditor, { project: { id: 'p', meta: {} }, items, isDark: false })); assert.ok(html.includes('WBS Template')); assert.ok(html.includes('Save')); assert.ok(html.includes('Structure')); assert.ok(!html.includes('Submit WBS</span>'));
+ assert.equal(typeof ProjectWBSEditor, 'function'); wbsHeaderHtml = ''; const html = renderToString(React.createElement(ProjectWBSEditor, { onTitleAccessoryChange, onHeaderTrailingChange, project: { id: 'p', meta: {} }, items, isDark: false })) + wbsHeaderHtml; assert.ok(html.includes('WBS Template')); assert.ok(html.includes('Save')); assert.ok(html.includes('Structure')); assert.ok(!html.includes('Submit WBS</span>'));
 });
 test('submitted version renders locked with Add Revision instead of Save', () => {
- const html = renderToString(React.createElement(ProjectWBSEditor, { project: { id: 'p', meta: { wbsWorkflow: { draft: null, versions: [{ version: 1, items }] } } }, items, isDark: false })); assert.ok(html.includes('WBS v.1')); assert.ok(!html.includes('>Save</span>')); assert.ok(html.includes('readOnly'));
+ wbsHeaderHtml = ''; const html = renderToString(React.createElement(ProjectWBSEditor, { onTitleAccessoryChange, onHeaderTrailingChange, project: { id: 'p', meta: { wbsWorkflow: { draft: null, versions: [{ version: 1, items }] } } }, items, isDark: false })) + wbsHeaderHtml; assert.ok(html.includes('WBS v.1')); assert.ok(!html.includes('>Save</span>')); assert.ok(html.includes('readOnly'));
 });
 
 test('tooltip appears immediately on hover and disappears on leave', () => {

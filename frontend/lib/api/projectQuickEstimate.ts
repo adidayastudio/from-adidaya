@@ -1,6 +1,6 @@
 import { readWBSWorkflow } from '@/lib/projectWBSWorkflow';
 import { supabase } from '@/lib/supabase';
-import { QUICK_LEVELS, QuickEstimate, quickEstimateRows, quickEstimateInput, validateQuickEstimate } from '@/lib/projectQuickEstimate';
+import { QUICK_LEVELS, QuickEstimate, quickEstimateRows, quickEstimateInput, reconcileQuickLocks, validateQuickEstimate } from '@/lib/projectQuickEstimate';
 export async function saveProjectQuickEstimate(projectId: string, baseline: any, input: QuickEstimate) {
     const { data: project, error } = await supabase.from('projects').select('meta').eq('id', projectId).single();
     if (error || !project) throw new Error(error?.message || 'Unable to load project.');
@@ -17,7 +17,8 @@ export async function saveProjectQuickEstimate(projectId: string, baseline: any,
     }
     const rows = quickEstimateRows(source);
     if (input.area !== undefined && (!Number.isFinite(input.area) || input.area <= 0 || !Object.prototype.hasOwnProperty.call(QUICK_LEVELS, input.buildingClass || '') || !Number.isFinite(input.adjustmentFactor) || input.adjustmentFactor! <= 0)) throw new Error('Enter a valid area, class and price adjustment.');
-    const normalized = input.area !== undefined ? quickEstimateInput(input, rows) : input;
+    let normalized = input.area !== undefined ? quickEstimateInput(input, rows) : input;
+    if (Object.keys(normalized.locks || {}).length || normalized.excludedIds?.length) normalized = { ...normalized, percentages: reconcileQuickLocks(normalized, rows) };
     const total = validateQuickEstimate(normalized, rows);
     const meta = { ...project.meta, quickEstimate: { ...normalized, total, savedAt: new Date().toISOString() } };
     let query = supabase.from('projects').update({ meta }).eq('id', projectId);

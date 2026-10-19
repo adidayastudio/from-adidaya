@@ -31,7 +31,7 @@ const GROUPS = [
     { title: '', items: [{ id: 'overview', title: 'Overview', icon: 'home-outline' }] },
     { title: 'PLANNING', items: [
         { id: 'settings:general', title: 'Project Information', icon: 'information-circle-outline' },
-        { id: 'planning:stages', title: 'Stages & Work', icon: 'layers-outline' },
+        { id: 'planning:stages', title: 'Stages', icon: 'layers-outline' },
         { id: 'planning:wbs', title: 'WBS', icon: 'grid-outline' },
         { id: 'planning:volume', title: 'Volume', icon: 'calculator-outline' },
         { id: 'planning:rab', title: 'RAB', icon: 'cash-outline' },
@@ -62,6 +62,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     const [project, setProject] = useState(initialProject), [section, setSection] = useState('overview');
     const [planningTitleAccessory, setPlanningTitleAccessory] = useState<React.ReactNode>(null);
     const [planningToolbar, setPlanningToolbar] = useState<React.ReactNode>(null);
+    const [headerTrailing, setHeaderTrailing] = useState<React.ReactNode>(null);
     const [headerAction, setHeaderAction] = useState<HeaderToolbarAction | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['PLANNING', 'WORK']);
     const [dirty, setDirty] = useState(false), [settingsOpen, setSettingsOpen] = useState(false), [error, setError] = useState('');
@@ -72,7 +73,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
         if (Platform.OS === 'web') { if (window.confirm('Discard unsaved project settings?')) discard(); }
         else Alert.alert('Unsaved changes', 'Discard unsaved project settings?', [{ text: 'Keep editing', style: 'cancel' }, { text: 'Discard', style: 'destructive', onPress: discard }]);
     };
-    const select = (value: string) => { const next = ({ people: 'settings:team', resources: 'planning:wbs', finance: 'planning:rab', progress: 'tracking', setup: 'settings:general' } as Record<string, string>)[value] || value; if (next !== section) proceed(() => { setSection(next); setError(''); }); };
+    const select = (value: string) => { const next = ({ people: 'settings:team', resources: 'planning:wbs', finance: 'planning:rab', progress: 'tracking', setup: 'settings:general' } as Record<string, string>)[value] || value; if (next !== section) proceed(() => { setSection(next); setError(''); setPlanningTitleAccessory(null); setHeaderTrailing(null); }); };
     const refresh = async () => {
         const latest = await getProjectById(project.id);
         if (latest) setProject(latest);
@@ -128,24 +129,39 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
             </ScrollView>
         </View>}
         <View key="project-content" style={{ flex: 1, minWidth: 0, minHeight: 0 }}>
-            {focusMode && <View style={{ paddingHorizontal: 20, paddingTop: 12, paddingBottom: 8, gap: 10 }}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                    <InstantTooltip label="Back to projects"><TouchableOpacity accessibilityLabel="Back to projects" onPress={() => proceed(onClose)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}><Ionicons name="chevron-back" size={18} color={text} /></TouchableOpacity></InstantTooltip>
-                    <View style={{ flex: 1, gap: 2 }}><Text numberOfLines={1} style={{ color: text, fontSize: 14, fontWeight: '700' }}>{project.number}-{project.code} · {project.title}</Text></View>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}><HeaderToolbar isDark={isDark} textColor={text} maxDirectActions={3} actions={projectActions} />{focusToggle(focusMode)}</View>
+            {focusMode ? (
+                <View style={{ paddingHorizontal: 20, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 52 }}>
+                    <InstantTooltip label="Back to projects">
+                        <TouchableOpacity accessibilityLabel="Back to projects" onPress={() => proceed(onClose)} style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name="chevron-back" size={18} color={text} />
+                        </TouchableOpacity>
+                    </InstantTooltip>
+                    <Text numberOfLines={1} style={{ color: text, fontSize: 13, fontWeight: '700', flexShrink: 1, maxWidth: 220 }}>
+                        {project.number}-{project.code} · {project.title}
+                    </Text>
+                    <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
+                        <ProjectFocusNavigation compact section={section} isDark={isDark} onSelect={select} onOpenModule={path => proceed(() => router.push(path as any))} />
+                    </View>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        <HeaderToolbar isDark={isDark} textColor={text} maxDirectActions={3} actions={projectActions} />
+                        {focusToggle(focusMode)}
+                    </View>
                 </View>
-                <ProjectFocusNavigation section={section} isDark={isDark} onSelect={select} onOpenModule={path => proceed(() => router.push(path as any))} />
-            </View>}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, ...DESKTOP_PANEL_HEADER, minHeight: 66 }}>
-                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}><Text style={{ ...DESKTOP_PANEL_TITLE, color: text }}>{title}</Text>{section === 'planning:rab' && planningTitleAccessory}</View>
-                {!focusMode && focusToggle(true)}
-                {headerAction && ['overview', 'work'].includes(section) && <HeaderToolbar isDark={isDark} textColor={text} actions={[headerAction]} />}
-
+            ) : null}
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, ...DESKTOP_PANEL_HEADER, minHeight: 66 }}>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap', gap: 10, minWidth: 0, overflow: 'hidden' }}>
+                    <Text style={{ ...DESKTOP_PANEL_TITLE, color: text, flexShrink: 0 }}>{title}</Text>
+                    {planningTitleAccessory}
+                </View>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    {headerTrailing}
+                    {!focusMode && focusToggle(false)}
+                    {headerAction && ['work'].includes(section) && <HeaderToolbar isDark={isDark} textColor={text} actions={[headerAction]} />}
+                </View>
             </View>
-            {section === 'planning:wbs' && planningToolbar && <View style={{ paddingHorizontal: 24, paddingVertical: 8, minHeight: 62 }}>{planningToolbar}</View>}
             {!!error && <Text accessibilityRole="alert" style={{ color: '#FF3B30', padding: 16 }}>{error}</Text>}
             {Screen ? <Screen key={`${project.id}-${section}`} projectId={project.id} isEmbedded onDirtyChange={setDirty} onSaved={refresh} />
-                : section.startsWith('planning:') ? <ProjectPlanningPanel onTitleAccessoryChange={setPlanningTitleAccessory} onNavigatePlanning={value => select(`planning:${value}`)} onToolbarChange={setPlanningToolbar} key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
+                : section.startsWith('planning:') ? <ProjectPlanningPanel onHeaderTrailingChange={setHeaderTrailing} onTitleAccessoryChange={setPlanningTitleAccessory} onNavigatePlanning={value => select(`planning:${value}`)} onToolbarChange={setPlanningToolbar} key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
                 : renderContent(project, section, select, () => { setSettingsOpen(true); select('settings:general'); }, setHeaderAction)}
         </View>
     </View>;

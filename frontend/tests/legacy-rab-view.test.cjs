@@ -102,3 +102,16 @@ test('RAB uses WBS codes, starts at one and persists independent bilingual overr
  assert.equal(meta.estimateValues.S.titleId,'Struktur');assert.equal(meta.estimateValues.S.explicit,undefined);
  assert.throws(()=>mergeRABDrafts({}, {S:{volume:'10'}},view.rows,true),/cannot be edited/);
 });
+
+test('RAB exclusion removes the full subtree from totals and summary while restore retains saved prices',()=>{
+ const original=legacyRABView(legacyProjectInfo(project,wbs,'DETAIL'),'all');const meta={...project.meta,rabExcludedIds:['measure']};
+ const excluded=legacyRABView(legacyProjectInfo({...project,meta},wbs,'DETAIL'),'all');assert.ok(!excluded.rows.some(row=>row.code==='S.1.1'));assert.ok(excluded.subtotal<original.subtotal);
+ const summary=legacyRABView(legacyProjectInfo({...project,meta},wbs,'DETAIL'),'rekap_samil');assert.equal(summary.subtotal,excluded.subtotal);
+ const group=legacyRABView(legacyProjectInfo({...project,meta:{...project.meta,rabExcludedIds:['s']}},wbs,'DETAIL'),'all');assert.equal(group.rows.length,0);assert.equal(group.subtotal,0);
+ const restored=legacyRABView(legacyProjectInfo({...project,meta:{...meta,rabExcludedIds:[]}},wbs,'DETAIL'),'all');assert.equal(restored.subtotal,original.subtotal);assert.ok(restored.rows.some(row=>row.code==='S.1.1'));assert.equal(wbs.length,4);
+});
+test('RAB saves exclusion and rounding settings separately from item data',async()=>{
+ writes=[];const meta={estimateValues:{'S.1.1':{volume:2,unitPrice:100}},other:'keep'};responses=[{data:{meta}},{data:{meta:{saved:true}}}];const source=legacyRABView(legacyProjectInfo(project,wbs,'DETAIL'),'all').rows;
+ await saveProjectRAB('p',meta,{},source,{vat:false,rounding:10000,roundingMode:'nearest'},['measure']);
+ const saved=writes.find(row=>row.meta).meta;assert.equal(saved.rabExcludedIds[0],'measure');assert.equal(saved.estimateValues['S.1.1'].volume,2);assert.equal(saved.rabTotals.rounding,10000);assert.equal(saved.other,'keep');
+});

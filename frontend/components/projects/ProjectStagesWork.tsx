@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import ContextMenu from '@/components/ui/PlatformContextMenu';
 import { SegmentedControl } from '@/components/ui/SegmentedControl';
+import { InstantTooltip } from '@/components/ui/InstantTooltip';
 import { PlatformIcon } from '@/components/ui/PlatformIcon';
 import { LiquidCard } from '@/components/ui/LiquidCard';
 import { ProjectSaveFeedback, useProjectSaveFeedback } from './setup/ProjectSaveFeedback';
@@ -11,7 +13,86 @@ import { saveStageWorkLayout } from '@/lib/api/projectStageWork';
 import { handleWeightEdit, redistributeAfterDelete, redistributeTaskWeights } from '@/lib/legacy-stages/logic/weightHelpers';
 
 const priorities = ['low', 'medium', 'high', 'urgent'] as const;
-export function ProjectStagesWork({ project, records, isDark, onDirtyChange }: { project: any; records: any[]; isDark: boolean; onDirtyChange?: (dirty: boolean) => void }) {
+
+const StagesSearchInput = React.memo(function StagesSearchInput({
+    onSearchChange,
+    isDark,
+    card,
+    secondary,
+    text,
+}: {
+    onSearchChange: (query: string) => void;
+    isDark: boolean;
+    card: string;
+    secondary: string;
+    text: string;
+}) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [value, setValue] = useState('');
+
+    const handleChange = (query: string) => {
+        setValue(query);
+        onSearchChange(query);
+    };
+
+    const handleClearOrClose = () => {
+        if (value) {
+            setValue('');
+            onSearchChange('');
+        } else {
+            setIsOpen(false);
+        }
+    };
+
+    if (!isOpen && !value) {
+        return (
+            <TouchableOpacity
+                accessibilityLabel="Search work"
+                onPress={() => setIsOpen(true)}
+                style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: card, alignItems: 'center', justifyContent: 'center' }}
+            >
+                <Ionicons name="search-outline" size={16} color={secondary} />
+            </TouchableOpacity>
+        );
+    }
+
+    return (
+        <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: card, borderRadius: 999, height: 34, paddingLeft: 12, paddingRight: 8, gap: 8, width: 220 }}>
+            <Ionicons name="search-outline" size={15} color={secondary} />
+            <TextInput
+                autoFocus
+                accessibilityLabel="Search work"
+                placeholder="Search work"
+                placeholderTextColor={secondary}
+                value={value}
+                onChangeText={handleChange}
+                style={{
+                    flex: 1,
+                    color: text,
+                    fontSize: 12,
+                    padding: 0,
+                    ...(Platform.OS === 'web' ? ({ outlineStyle: 'none' } as any) : {}),
+                }}
+            />
+            <TouchableOpacity
+                accessibilityLabel="Clear and cancel search"
+                onPress={handleClearOrClose}
+                style={{
+                    width: 20,
+                    height: 20,
+                    borderRadius: 10,
+                    backgroundColor: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.08)',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}
+            >
+                <Ionicons name="close" size={12} color={secondary} />
+            </TouchableOpacity>
+        </View>
+    );
+});
+
+export function ProjectStagesWork({ project, records, isDark, onDirtyChange, onTitleAccessoryChange, onHeaderTrailingChange }: { project: any; records: any[]; isDark: boolean; onDirtyChange?: (dirty: boolean) => void; onTitleAccessoryChange?: (accessory: React.ReactNode) => void; onHeaderTrailingChange?: (trailing: React.ReactNode) => void }) {
     const [meta, setMeta] = useState(project.meta || {});
     const stages = useMemo(() => [...new Set([...LEGACY_STAGE_KEYS, ...records.map(row => normalizeStage(row.stage_code)).filter(Boolean), ...Object.keys(meta.stageWorkLayouts || {})])], [records, meta]);
     const [stage, setStage] = useState('KO');
@@ -79,16 +160,91 @@ export function ProjectStagesWork({ project, records, isDark, onDirtyChange }: {
     };
     const query = search.trim().toLowerCase();
     const revisions = meta.stageWorkRevisions?.[stage] || [];
-    return <View onLayout={event => setContentWidth(event.nativeEvent.layout.width)} style={{ gap: 10, paddingBottom: 64 }}>
-        <SegmentedControl segments={stages.map(id => ({ id, label: id }))} activeSegment={stage} onSegmentChange={key => { if (saving || key === stage) return; if (dirty) { feedback.notify('Error', 'Save changes before switching stages.'); return; } const next = initial(key); setStage(key); setLayout(next); setBaseline(meta.stageWorkLayouts?.[key] || null); setOpen([next.sections[0]?.code].filter(Boolean)); feedback.clear(); }} />
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <TextInput accessibilityLabel="Search work" placeholder="Search work" placeholderTextColor={secondary} value={search} onChangeText={setSearch} style={{ ...input, backgroundColor: card, borderRadius: 999, paddingHorizontal: 12, flexGrow: 1, flexBasis: 150, minWidth: 130 }} />
-            <TouchableOpacity style={pill} onPress={() => setOpen(layout.sections.map(item => item.code))}><Text style={labelStyle}>Expand All</Text></TouchableOpacity>
-            <TouchableOpacity style={pill} onPress={() => setOpen([])}><Text style={labelStyle}>Collapse All</Text></TouchableOpacity>
-            <ContextMenu title="Export" dropdownMenuMode style={{ width: 32, height: 32 }} actions={['CSV', 'XLS', 'PDF'].map(title => ({ title }))} onPress={event => exportWork((['csv', 'xls', 'pdf'] as const)[event.nativeEvent.index])}><View accessibilityLabel="Export" style={{ ...pill, width: 32, height: 32, paddingHorizontal: 0, alignItems: 'center' }}><PlatformIcon name="square.and.arrow.up" size={17} tintColor={text} /></View></ContextMenu>
-            <TouchableOpacity disabled={saving} style={pill} onPress={() => save(true)}><Text style={{ ...labelStyle, color: '#007AFF' }}>＋ Add Revision</Text></TouchableOpacity>
-            {!!revisions.length && <ContextMenu dropdownMenuMode actions={revisions.map((item: any) => ({ title: `Revision ${item.version} · ${new Date(item.createdAt).toLocaleDateString()}` }))} onPress={event => { if (!saving) change(JSON.parse(JSON.stringify(revisions[event.nativeEvent.index].layout))); }}><View style={pill}><Text style={labelStyle}>Revisions ⌄</Text></View></ContextMenu>}
-        </View>
+    const allExpanded = layout.sections.length > 0 && layout.sections.every(item => open.includes(item.code));
+
+    useEffect(() => {
+        onTitleAccessoryChange?.(
+            <SegmentedControl
+                compact
+                segments={stages.map(id => ({ id, label: id }))}
+                activeSegment={stage}
+                onSegmentChange={key => {
+                    if (saving || key === stage) return;
+                    if (dirty) { feedback.notify('Error', 'Save changes before switching stages.'); return; }
+                    const next = initial(key);
+                    setStage(key);
+                    setLayout(next);
+                    setBaseline(meta.stageWorkLayouts?.[key] || null);
+                    setOpen([next.sections[0]?.code].filter(Boolean));
+                    feedback.clear();
+                }}
+            />
+        );
+        return () => onTitleAccessoryChange?.(null);
+    }, [stages, stage, saving, dirty, meta]);
+
+    useEffect(() => {
+        onHeaderTrailingChange?.(
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <StagesSearchInput
+                    onSearchChange={setSearch}
+                    isDark={isDark}
+                    card={card}
+                    secondary={secondary}
+                    text={text}
+                />
+
+                <InstantTooltip label={allExpanded ? 'Collapse All' : 'Expand All'}>
+                    <TouchableOpacity
+                        accessibilityLabel={allExpanded ? 'Collapse All' : 'Expand All'}
+                        onPress={() => setOpen(allExpanded ? [] : layout.sections.map(item => item.code))}
+                        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: card, alignItems: 'center', justifyContent: 'center' }}
+                    >
+                        <Ionicons name={allExpanded ? 'contract-outline' : 'expand-outline'} size={16} color={text} />
+                    </TouchableOpacity>
+                </InstantTooltip>
+
+                <ContextMenu
+                    title="Export"
+                    dropdownMenuMode
+                    actions={['CSV', 'XLS', 'PDF'].map(title => ({ title }))}
+                    onPress={event => exportWork((['csv', 'xls', 'pdf'] as const)[event.nativeEvent.index])}
+                >
+                    <View
+                        accessibilityLabel="Export"
+                        style={{ height: 34, paddingHorizontal: 12, borderRadius: 999, backgroundColor: card, flexDirection: 'row', alignItems: 'center', gap: 6 }}
+                    >
+                        <PlatformIcon name="square.and.arrow.up" size={15} tintColor={text} />
+                        <Text style={{ color: text, fontSize: 12, fontWeight: '500' }}>Export</Text>
+                    </View>
+                </ContextMenu>
+
+                <TouchableOpacity
+                    disabled={saving}
+                    onPress={() => save(true)}
+                    style={{ height: 34, paddingHorizontal: 14, borderRadius: 999, backgroundColor: '#007AFF', flexDirection: 'row', alignItems: 'center', gap: 6, opacity: saving ? 0.6 : 1 }}
+                >
+                    <Ionicons name="add" size={16} color="#FFFFFF" />
+                    <Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>Add Revision</Text>
+                </TouchableOpacity>
+
+                {!!revisions.length && (
+                    <ContextMenu
+                        dropdownMenuMode
+                        actions={revisions.map((item: any) => ({ title: `Revision ${item.version} · ${new Date(item.createdAt).toLocaleDateString()}` }))}
+                        onPress={event => { if (!saving) change(JSON.parse(JSON.stringify(revisions[event.nativeEvent.index].layout))); }}
+                    >
+                        <View style={{ height: 34, width: 34, borderRadius: 17, backgroundColor: card, alignItems: 'center', justifyContent: 'center' }}>
+                            <Ionicons name="time-outline" size={16} color={secondary} />
+                        </View>
+                    </ContextMenu>
+                )}
+            </View>
+        );
+        return () => onHeaderTrailingChange?.(null);
+    }, [allExpanded, layout, saving, revisions, isDark, card, secondary, text]);
+
+    return <View onLayout={event => setContentWidth(event.nativeEvent.layout.width)} style={{ gap: 12, paddingBottom: 64, width: '100%', maxWidth: 960, alignSelf: 'center' }}>
         <ProjectSaveFeedback {...feedback} />
         {layout.sections.map(section => {
             const tasks = layout.tasks.filter(task => task.sectionCode === section.code);

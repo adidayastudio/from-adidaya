@@ -1,5 +1,6 @@
 import { PlanningRevisionBar } from './PlanningRevisionBar';
 import { planningRevision } from '@/lib/projectPlanningRevisions';
+import { persistPlanningRevision } from '@/lib/api/projectPlanningRevisions';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,20 +16,127 @@ import { calculateVolume, VolumeCalc, VolumeFormula, volumeId } from '@/lib/proj
 import { loadVolumeDraft, newVolumeRow, VOLUME_FIELDS, VOLUME_FORMULAS, VolumeDraft, volumeDraftTotal, volumeFormulaUnit, volumeUnitMismatch, applyVolumeFormula, setVolumeItemUnit, volumeDraftStatus } from '@/lib/projectVolumeEditor';
 import { saveProjectVolume } from '@/lib/api/projectVolume';
 
-type VolumeProps = { project: any; isDark: boolean; wbs: any[]; calculations: any[]; onDirtyChange?: (value: boolean) => void };
+type VolumeProps = {
+    project: any;
+    isDark: boolean;
+    wbs: any[];
+    calculations: any[];
+    onDirtyChange?: (value: boolean) => void;
+    onTitleAccessoryChange?: (accessory: React.ReactNode) => void;
+    onHeaderTrailingChange?: (trailing: React.ReactNode) => void;
+};
 export function ProjectVolumeCalculator(props: VolumeProps) {
     const [view, setView] = useState('detail');
     const [meta, setMeta] = useState(props.project.meta || {});
     const [revisionBusy, setRevisionBusy] = useState(false);
     const [liveCalculations, setLiveCalculations] = useState(props.calculations);
+    const [volumeError, setVolumeError] = useState('');
     const state = planningRevision(meta, 'volume');
     const [selectedVersion, setSelectedVersion] = useState(() => state.draft ? 0 : state.versions.slice(-1)[0]?.version || 0);
     const [dirty, setDirty] = useState(false), [openItem, setOpenItem] = useState<{ id: string } | null>(null);
     const onDirtyChange = props.onDirtyChange;
     const dirtyChange = useCallback((value: boolean) => { setDirty(value); onDirtyChange?.(value); }, [onDirtyChange]);
     const snapshot = state.versions.find(item => item.version === selectedVersion)?.snapshot;
+
+    const choices = useMemo(() => [
+        ...(state.draft ? [{ title: 'Volume Draft', version: 0 }] : []),
+        ...[...state.versions].reverse().map(version => ({ title: `Volume v.${version.version}`, version: version.version }))
+    ], [state]);
+    const source = selectedVersion ? state.versions.find(item => item.version === selectedVersion) : null;
+    const latest = state.versions.slice(-1)[0];
+    const color = props.isDark ? '#F5F5F7' : '#1C1C1E';
+    const muted = props.isDark ? '#9898A2' : '#73737D';
+    const card = props.isDark ? '#1C1C1E' : '#FFFFFF';
+
+    const act = async (action: 'start' | 'publish' | 'review', id?: string) => {
+        if (dirty) { setVolumeError('Save or reset unsaved calculations before continuing.'); return; }
+        setRevisionBusy(true); setVolumeError('');
+        try {
+            const next = await persistPlanningRevision(props.project.id, 'volume', action, id);
+            setMeta(next);
+            if (action !== 'review') setSelectedVersion(action === 'start' ? 0 : planningRevision(next, 'volume').versions.slice(-1)[0].version);
+        } catch (err: any) {
+            setVolumeError(err.message || 'Unable to update revision.');
+        } finally {
+            setRevisionBusy(false);
+        }
+    };
+
+    // Mount title accessory: [Calculation | BOQ Sheet] [Volume Draft ⌵] Draft · Not published
+    useEffect(() => {
+        props.onTitleAccessoryChange?.(
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <SegmentedControl
+                    compact
+                    segments={[{ id: 'detail', label: 'Calculation' }, { id: 'sheet', label: 'BOQ Sheet' }]}
+                    activeSegment={view}
+                    onSegmentChange={setView}
+                />
+                <ContextMenu
+                    title="Volume versions"
+                    dropdownMenuMode
+                    disabled={revisionBusy}
+                    actions={choices.map(choice => ({ title: choice.title, selected: choice.version === selectedVersion }))}
+                    onPress={event => {
+                        if (dirty) { setVolumeError('Save or reset unsaved changes before switching versions.'); return; }
+                        setSelectedVersion(choices[event.nativeEvent.index].version);
+                    }}
+                >
+                    <View style={{ height: 34, paddingHorizontal: 12, borderRadius: 999, backgroundColor: card, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={{ color, fontSize: 12, fontWeight: '600' }}>
+                            {selectedVersion ? `Volume v.${selectedVersion}` : 'Volume Draft'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={12} color={muted} />
+                    </View>
+                </ContextMenu>
+                <Text numberOfLines={1} style={{ color: muted, fontSize: 11, flexShrink: 1 }}>
+                    {source ? `Published · WBS v.${source.wbsVersion}` : latest ? `Draft revision of Volume v.${latest.version}` : 'Draft · Not published'}
+                </Text>
+            </View>
+        );
+        return () => props.onTitleAccessoryChange?.(null);
+    }, [view, choices, selectedVersion, revisionBusy, dirty, source, latest, color, muted, card]);
+
+    // Mount trailing header: [Export ⌵] [Publish Volume]
+    useEffect(() => {
+        props.onHeaderTrailingChange?.(
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <ContextMenu
+                    title="Export"
+                    dropdownMenuMode
+                    actions={['XLS', 'CSV', 'PDF'].map(format => ({ title: `${format} · Coming soon`, disabled: true }))}
+                    onPress={() => {}}
+                >
+                    <View style={{ height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: card, flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Ionicons name="download-outline" size={15} color="#007AFF" />
+                        <Text style={{ color: '#007AFF', fontSize: 12, fontWeight: '600' }}>Export</Text>
+                        <Ionicons name="chevron-down" size={11} color="#007AFF" />
+                    </View>
+                </ContextMenu>
+                <TouchableOpacity
+                    disabled={revisionBusy || dirty}
+                    onPress={() => act(state.draft && !selectedVersion ? 'publish' : 'start')}
+                    style={{
+                        height: 34,
+                        paddingHorizontal: 14,
+                        borderRadius: 999,
+                        backgroundColor: card,
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        opacity: revisionBusy || dirty ? 0.45 : 1
+                    }}
+                >
+                    <Text style={{ color: '#007AFF', fontSize: 12, fontWeight: '600' }}>
+                        {revisionBusy ? 'Please wait…' : state.draft ? selectedVersion ? 'Open Draft' : latest ? 'Publish Revision' : 'Publish Volume' : 'Add Revision'}
+                    </Text>
+                </TouchableOpacity>
+            </View>
+        );
+        return () => props.onHeaderTrailingChange?.(null);
+    }, [revisionBusy, dirty, state, selectedVersion, latest, card]);
+
     return <View style={{ flex: 1, minHeight: 0 }}>
-        <PlanningRevisionBar projectId={props.project.id} meta={meta} module="volume" leading={<SegmentedControl segments={[{ id: 'detail', label: 'Calculation' }, { id: 'sheet', label: 'BOQ Sheet' }]} activeSegment={view} onSegmentChange={setView} />} beforePublish={<ContextMenu title="Export · Coming soon" dropdownMenuMode actions={['XLS', 'CSV', 'PDF'].map(format => ({ title: `${format} · Coming soon`, disabled: true }))} onPress={() => {}}><View style={{ height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: props.isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row', alignItems: 'center', gap: 6 }}><Ionicons name="download-outline" size={16} color="#007AFF" /><Text style={{ color: '#007AFF', fontSize: 12, fontWeight: '600' }}>Export</Text><Ionicons name="chevron-down" size={12} color="#007AFF" /></View></ContextMenu>} dirty={dirty} isDark={props.isDark} selected={selectedVersion} onSelect={setSelectedVersion} onMetaChange={setMeta} onBusyChange={setRevisionBusy} onOpenItem={id => setOpenItem({ id })} />
+        {!!volumeError && <Text accessibilityRole="alert" style={{ color: '#FF9500', fontSize: 12, paddingBottom: 8 }}>{volumeError}</Text>}
         <VolumeCalculationEditor view={view} setView={setView} key={selectedVersion} {...props} project={{ ...props.project, meta: snapshot?.meta || meta }} wbs={snapshot?.wbs || props.wbs} calculations={snapshot?.calculations || liveCalculations} onSaved={(code, records) => setLiveCalculations(current => [...current.filter(row => row.wbs_code !== code), ...records])} onDirtyChange={dirtyChange} readOnly={!!selectedVersion || revisionBusy} onMetaChange={setMeta} openItem={openItem} />
     </View>;
 }
@@ -94,7 +202,7 @@ function VolumeCalculationEditor({ project, wbs, calculations, onDirtyChange, is
     const rowActions = (row: VolumeCalc) => <View style={{ flexDirection: 'row', justifyContent: 'center' }}>{[['Duplicate row', 'copy-outline'], ['Delete row', 'trash-outline']].map(([title, icon], index) => <InstantTooltip key={title} label={title}><TouchableOpacity accessibilityLabel={title} disabled={saving} onPress={() => { if (index === 0) { const copied = { ...row, id: volumeId(), name: `${row.name} copy`, parameters: { ...row.parameters }, details: { ...row.details } }; update(selectedCode, { rows: [...draft.rows, copied] }); setActiveRow(copied.id); } else update(selectedCode, { rows: draft.rows.filter(item => item.id !== row.id) }); }} style={{ width: 28, height: 32, alignItems: 'center', justifyContent: 'center' }}><Ionicons name={icon as any} size={14} color={muted} /></TouchableOpacity></InstantTooltip>)}</View>;
     const dimensions = [...new Set((draft?.rows || []).flatMap(row => VOLUME_FORMULAS[row.formula_type]?.fields || []))];
     const columns = [{ title: '#', width: 32 }, { title: 'Location / description', width: 170 }, { title: 'Formula', width: 120 }, ...dimensions.map(field => ({ title: VOLUME_FIELDS[field], width: 86 })), { title: 'Qty', width: 58 }, { title: draft && volumeUnitMismatch(draft) ? 'Volume' : `Volume (${draft?.unit || ''})`, width: 104 }, { title: 'Notes', width: 140 }, { title: '', width: 64 }];
-    const unitChoices = [...new Set(['m', 'm²', 'm³', 'pcs', 'ls', 'month', 'point', draft?.unit || ''].filter(Boolean))];
+    const unitChoices = [...new Set(['m', 'm²', 'm³', 'pcs', 'set', 'unit', 'kg', 'ls', 'month', 'point', draft?.unit || ''].filter(Boolean))];
     const disciplineTree = sheetDiscipline ? tree.filter(node => node.code === sheetDiscipline) : tree;
     const groupCodes: string[] = [];
     const collectGroups = (nodes: any[]) => nodes.forEach(node => { if (node.children?.length) { groupCodes.push(node.code); collectGroups(node.children); } });

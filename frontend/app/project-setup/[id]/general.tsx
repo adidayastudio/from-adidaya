@@ -487,6 +487,26 @@ export default function ProjectSetupGeneralScreen({
         }
     };
 
+    const handleCancel = () => {
+        if (!savedSnapshot) return;
+        try {
+            const prev = JSON.parse(savedSnapshot);
+            setProjectName(prev.projectName || '');
+            setProjectNumber(prev.projectNumber || '');
+            setProjectCode(prev.projectCode || '');
+            setSelectedType(prev.selectedType || '');
+            setSelectedStatus(prev.selectedStatus || '');
+            setStartDate(prev.startDate ? new Date(prev.startDate) : new Date());
+            setTargetDate(prev.targetDate ? new Date(prev.targetDate) : null);
+            setSelectedLeadId(prev.selectedLeadId || '');
+            setInformation(prev.information || {});
+            setSaveError('');
+            feedback.clear();
+        } catch (e) {
+            console.error('Failed to revert changes:', e);
+        }
+    };
+
     if (isLoading) {
         return (
             <View style={[s.container, { backgroundColor: bgColor, justifyContent: 'center', alignItems: 'center' }]}>
@@ -545,6 +565,9 @@ export default function ProjectSetupGeneralScreen({
                     paddingBottom: insets.bottom + (isEmbedded ? 120 : 40),
                     paddingHorizontal: 16,
                     gap: 22,
+                    maxWidth: 960,
+                    width: '100%',
+                    alignSelf: 'center',
                 }}
                 showsVerticalScrollIndicator={false}
                 keyboardShouldPersistTaps="handled"
@@ -807,9 +830,14 @@ export default function ProjectSetupGeneralScreen({
                 <LiquidCard variant="clear" contentStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
                         <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF3B30' }} /><Text style={{ color: textColor, fontSize: 16, fontWeight: '600' }}>Unsaved Changes</Text></View>
-                        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Save project information" onPress={handleSave} disabled={isSaving} style={{ backgroundColor: formaBlue, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 999, opacity: isSaving ? 0.6 : 1 }}>
-                            {isSaving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Save</Text>}
-                        </TouchableOpacity>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Cancel changes" onPress={handleCancel} disabled={isSaving} style={{ backgroundColor: isDark ? '#2C2C2E' : '#E5E5EA', paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999 }}>
+                                <Text style={{ color: textColor, fontSize: 15, fontWeight: '600' }}>Cancel</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity accessibilityRole="button" accessibilityLabel="Save project information" onPress={handleSave} disabled={isSaving} style={{ backgroundColor: formaBlue, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 999, opacity: isSaving ? 0.6 : 1 }}>
+                                {isSaving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Save</Text>}
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </LiquidCard>
             </Animated.View>}

@@ -186,25 +186,25 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
             id: 'tasks',
             label: 'Active Tasks',
             value: loading ? '...' : String(statsData.activeTasks),
-            icon: 'checkbox-outline',
+            icon: 'checkbox',
         },
         {
             id: 'actions',
             label: 'Open Actions',
             value: loading ? '...' : String(statsData.openActions),
-            icon: 'flash-outline',
+            icon: 'flash',
         },
         {
             id: 'docs',
             label: 'Documents',
             value: loading ? '...' : String(statsData.documents),
-            icon: 'document-text-outline',
+            icon: 'document-text',
         },
         {
             id: 'members',
             label: 'Project Members',
             value: loading ? '...' : String(teamMembers.length || statsData.projectMembers),
-            icon: 'people-outline',
+            icon: 'people',
         },
     ];
 
@@ -242,10 +242,12 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
     // Progress percentage
     const progressPercent = progressState.progressPercent || 0;
 
-    // Recent activities (3-5 latest activities)
+    // Recent activities (3-5 latest activities, excluding mockups)
     const recentActivities = useMemo(() => {
         if (project.meta?.activities && Array.isArray(project.meta.activities)) {
-            return project.meta.activities.slice(0, 5);
+            return project.meta.activities
+                .filter((a: any) => a.id && !a.id.startsWith('feed-') && !a.id.startsWith('log-'))
+                .slice(0, 5);
         }
         return [];
     }, [project.meta]);

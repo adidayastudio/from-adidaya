@@ -5,7 +5,7 @@ import { SegmentedControl } from '@/components/ui/SegmentedControl';
 import { PlanningSection, ProjectPlanningPanel } from './ProjectPlanningPanel';
 
 const SECTIONS: { id: PlanningSection; label: string }[] = [
-    { id: 'stages', label: 'Stages & Work' },
+    { id: 'stages', label: 'Stages' },
     { id: 'wbs', label: 'WBS' },
     { id: 'volume', label: 'Volume' },
     { id: 'rab', label: 'RAB' },

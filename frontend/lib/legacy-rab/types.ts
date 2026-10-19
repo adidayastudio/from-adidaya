@@ -5,5 +5,5 @@ export interface RABRowData {
 export interface ProjectV3Info {
  projectId?: string; projectName?: string; projectCode?: string;
  buildingArea?: number; buildingClass?: 'A' | 'B' | 'C' | 'D';
- estimateValues?: Record<string, any>; wbsTree?: any[]; stage?: string;
+ rabExcludedCodes?: string[]; estimateValues?: Record<string, any>; wbsTree?: any[]; stage?: string;
 }

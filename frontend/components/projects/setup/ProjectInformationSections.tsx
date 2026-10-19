@@ -20,6 +20,7 @@ export function ProjectInformationSections({ value, onChange, scopeId, currentSt
     const [classes, setClasses] = useState<Option[]>(['Luxury', 'Premium', 'Standard', 'Basic'].map((name, index) => ({ value: String.fromCharCode(65 + index), label: `Class ${String.fromCharCode(65 + index)} - ${name}` })));
     const [newDiscipline, setNewDiscipline] = useState('');
     const [stages, setStages] = useState<any[]>([]), [optionError, setOptionError] = useState('');
+    const [customCityMode, setCustomCityMode] = useState(false);
     useEffect(() => {
         let active = true;
         (async () => {
@@ -46,12 +47,64 @@ export function ProjectInformationSections({ value, onChange, scopeId, currentSt
         return section('Applicable Stages', <View>{rows.length > 0 && select('Current Stage', activeCode || currentStage || '', rows.map(([code, name]) => ({ value: code, label: `${code} · ${name}` })), next => patch('currentStage', next))}{rows.length ? rows.map(([code, name], index) => <View key={code} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderBottomWidth: 0.5, borderBottomColor: divider }}><Text style={{ color: secondary, width: 22 }}>{index + 1}</Text><Text style={{ color: text, flex: 1 }}>{code} · {name}</Text>{(activeCode === code) && <Text style={{ color: '#007AFF', fontSize: 11, fontWeight: '700' }}>CURRENT</Text>}</View>) : <Text style={{ color: secondary, padding: 16 }}>No applicable stages configured for this scope.</Text>}</View>);
     }
     const province = INDONESIAN_REGIONS.find(item => item.province === value.location.province);
+    const knownCities = province?.cities || [];
+    const isKnownCity = knownCities.includes(value.location.city || '');
+    const isCustomCityActive = customCityMode || (!!value.location.city && !isKnownCity) || (!!value.location.province && knownCities.length === 0);
     return <View style={{ gap: 22 }}>
         {!!optionError && <Text style={{ color: secondary }}>{optionError}</Text>}
         {section('Location', <>
             {field('Address', value.location.address, next => patchLocation('address', next))}
-            {select('Province', value.location.province || '', INDONESIAN_REGIONS.map(item => ({ value: item.province, label: item.province })), next => onChange({ ...value, location: { ...value.location, province: next, city: '' } }))}
-            {select('City', value.location.city || '', (province?.cities || []).map(city => ({ value: city, label: city })), next => patchLocation('city', next))}
+            {select('Province', value.location.province || '', INDONESIAN_REGIONS.map(item => ({ value: item.province, label: item.province })), next => { setCustomCityMode(false); onChange({ ...value, location: { ...value.location, province: next, city: '' } }); })}
+            {isCustomCityActive ? (
+                <View key="city-custom" style={{ flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14, borderBottomWidth: 0.5, borderBottomColor: divider }}>
+                    <Text style={{ color: text, fontSize: 16, flex: 1 }}>City</Text>
+                    <TextInput
+                        accessibilityLabel="City"
+                        value={value.location.city || ''}
+                        onChangeText={next => patchLocation('city', next)}
+                        placeholder="Enter custom city or regency"
+                        placeholderTextColor={secondary}
+                        style={{ color: text, fontSize: 16, textAlign: 'right', flex: 1.3, minWidth: 100, padding: 0 }}
+                    />
+                    {knownCities.length > 0 && (
+                        <TouchableOpacity
+                            accessibilityLabel="Pick from list"
+                            onPress={() => {
+                                setCustomCityMode(false);
+                                if (!isKnownCity) patchLocation('city', knownCities[0] || '');
+                            }}
+                            style={{ paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}
+                        >
+                            <Text style={{ color: '#007AFF', fontSize: 12 }}>List</Text>
+                        </TouchableOpacity>
+                    )}
+                </View>
+            ) : (
+                <ContextMenu
+                    key="city-select"
+                    dropdownMenuMode
+                    actions={[
+                        ...knownCities.map(city => ({ title: city, selected: value.location.city === city })),
+                        { title: '✎ Other (Enter custom city)…', selected: false }
+                    ]}
+                    onPress={event => {
+                        const idx = event.nativeEvent.index;
+                        if (idx === knownCities.length) {
+                            setCustomCityMode(true);
+                        } else if (knownCities[idx]) {
+                            patchLocation('city', knownCities[idx]);
+                        }
+                    }}
+                >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', padding: 16, gap: 14, borderBottomWidth: 0.5, borderBottomColor: divider }}>
+                        <Text style={{ color: text, fontSize: 16, flex: 1 }}>City</Text>
+                        <Text style={{ color: value.location.city ? text : secondary, fontSize: 16 }}>
+                            {value.location.city || 'Select City'}
+                        </Text>
+                        <Ionicons name="chevron-down" size={14} color={secondary} />
+                    </View>
+                </ContextMenu>
+            )}
             {field('Google Maps Link', value.location.mapsLink, next => patchLocation('mapsLink', next))}
             {!!value.location.mapsLink && <TouchableOpacity onPress={() => { if (/^https?:\/\//i.test(value.location.mapsLink)) Linking.openURL(value.location.mapsLink); }} style={{ paddingHorizontal: 16, paddingVertical: 10, alignSelf: 'flex-end', margin: 8, borderRadius: 999, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7' }}><Text style={{ color: '#007AFF' }}>Open Map ↗</Text></TouchableOpacity>}
             {field('Latitude', value.location.latitude, next => patchLocation('latitude', next), true)}
