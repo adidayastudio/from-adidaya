@@ -273,7 +273,7 @@ export function AttendanceCorrectionModal({
             const newReq = await createCorrectionRequest({
                 userId: user?.id || record?.userId || '00000000-0000-0000-0000-000000000000',
                 userName: profile?.full_name || record?.userName || 'Employee',
-                attendanceRecordId: record?.id,
+                attendanceRecordId: record?.summaryPending ? undefined : record?.id,
                 attendanceDate: effectiveDateStr,
                 correctionType: activeFieldKey,
                 originalValue,

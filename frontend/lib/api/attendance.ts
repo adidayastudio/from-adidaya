@@ -1,3 +1,4 @@
+import { reconcileAttendanceSessions } from '../attendanceSessionRecords';
 import { writeAdidayaClock } from './adidayaClock';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from "../supabase";
@@ -9,11 +10,12 @@ const mockSessions: any[] = [];
 const mockRecords: any[] = [];
 const LOCAL_CORRECTIONS_KEY = 'adidaya_attendance_corrections_list';
 
-export type AttendanceStatus = "ontime" | "intime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday" | "cuti-bersama";
+export type AttendanceStatus = "present" | "ontime" | "intime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday" | "cuti-bersama";
 
 export interface AttendanceRecord {
     id: string;
     userId: string;
+    summaryPending?: boolean;
     date: string;
     clockIn: string | null;
     clockOut: string | null;
@@ -126,12 +128,27 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
         const fallbackRes = await fallbackQuery.order("date", { ascending: false });
         data = fallbackRes.data;
         if (fallbackRes.error) {
-            console.error("❌ Error fetching attendance:", fallbackRes.error.message);
-            return [];
+            throw fallbackRes.error;
         }
     }
 
-    const filteredData = (data || []).filter((row: any) => {
+    let sessionsQuery = supabase.from('attendance_sessions').select(`
+        *, profiles:user_id (full_name, department, avatar_url, account_type, include_in_performance)
+    `);
+    if (userId) sessionsQuery = sessionsQuery.eq('user_id', userId);
+    if (startDate) sessionsQuery = sessionsQuery.gte('date', startDate);
+    if (endDate) sessionsQuery = sessionsQuery.lte('date', endDate);
+    let sessionsResult = await sessionsQuery;
+    if (sessionsResult.error) {
+        let fallback = supabase.from('attendance_sessions').select('*');
+        if (userId) fallback = fallback.eq('user_id', userId);
+        if (startDate) fallback = fallback.gte('date', startDate);
+        if (endDate) fallback = fallback.lte('date', endDate);
+        sessionsResult = await fallback;
+        if (sessionsResult.error) throw sessionsResult.error;
+    }
+    const reconciled = reconcileAttendanceSessions(data || [], sessionsResult.data || []);
+    const filteredData = reconciled.filter((row: any) => {
         if (!row.profiles) return true;
         const isHuman = (row.profiles.account_type || 'human').toLowerCase() !== 'system';
         const isIncluded = row.profiles.include_in_performance !== false;
@@ -140,6 +157,7 @@ export async function fetchAttendanceRecords(userId?: string, startDate?: string
 
     return filteredData.map((row: any) => ({
         id: row.id,
+        summaryPending: row.summary_pending,
         userId: row.user_id,
         date: row.date,
         clockIn: row.clock_in || row.check_in,

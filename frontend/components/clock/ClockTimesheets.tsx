@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Share, SafeAreaView, Platform, Modal, TextInput } from 'react-native';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { StyleSheet, View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Image, Share, SafeAreaView, Platform, Modal, TextInput, AppState } from 'react-native';
 import { GlassView } from '../ui/GlassView';
 import { LiquidCard } from '../ui/LiquidCard';
 import { useUserContext } from '@/context/UserProvider';
@@ -67,6 +67,7 @@ const getDateIndicator = (dateStr: string) => {
 
 const getStatusDisplayInfo = (status?: AttendanceStatus | string) => {
     switch (status) {
+        case 'present': return { type: 'icon', value: 'checkmark-circle', color: '#34C759' };
         case 'ontime': return { type: 'icon', value: 'checkmark-circle', color: '#34C759' };
         case 'intime': return { type: 'icon', value: 'alert-circle', color: '#FF9500' };
         case 'late': return { type: 'icon', value: 'alert-circle', color: '#FF3B30' };
@@ -224,7 +225,9 @@ export function ClockTimesheets({
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [records, setRecords] = useState<AttendanceRecord[]>([]);
     const [teamProfiles, setTeamProfiles] = useState<Array<{ id: string; fullName: string }>>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
+    const requestVersion = useRef(0);
     const [expandedRecordId, setExpandedRecordId] = useState<string | null>(null);
     const [previewPhoto, setPreviewPhoto] = useState<string | null>(null);
     const [activeStatKey, setActiveStatKey] = useState<string | null>(null);
@@ -316,9 +319,10 @@ export function ClockTimesheets({
     }, [currentMonth, periodConfig]);
 
     // Fetch records
-    const loadRecords = async () => {
+    const loadRecords = useCallback(async (background = false) => {
         if (!user) return;
-        if (records.length === 0) setLoading(true);
+        const version = ++requestVersion.current;
+        if (!background) setLoading(true);
         try {
             const start = format(periodDateRange.start, 'yyyy-MM-dd');
             const end = format(periodDateRange.end, 'yyyy-MM-dd');
@@ -328,7 +332,9 @@ export function ClockTimesheets({
                 fetchCorrectionRequests(viewMode === 'personal' ? user.id : undefined),
                 getClockSetting<AttendanceCorrectionConfig>('ATTENDANCE_CORRECTIONS', DEFAULT_ATTENDANCE_CORRECTION),
             ]);
+            if (version !== requestVersion.current) return;
             setRecords(data);
+            setLoadError(false);
             if (corrs) setCorrectionRequests(corrs);
             if (pol) setCorrectionPolicy(pol);
 
@@ -348,10 +354,11 @@ export function ClockTimesheets({
                     const tenantId = activeTenant?.id;
                     let tenantUserIds: string[] | null = null;
                     if (tenantId) {
-                        const { data: tmData } = await supabase
+                        const { data: tmData, error: tenantError } = await supabase
                             .from('tenant_members')
                             .select('user_id')
                             .eq('tenant_id', tenantId);
+                        if (tenantError) throw tenantError;
                         if (tmData && tmData.length > 0) {
                             tenantUserIds = tmData.map(t => t.user_id).filter(Boolean);
                         }
@@ -366,6 +373,8 @@ export function ClockTimesheets({
                         profQuery = profQuery.eq('tenant_id', tenantId);
                     }
                     const profRes = await profQuery;
+                    if (version !== requestVersion.current) return;
+                    if (profRes.error) throw profRes.error;
                     const profList = (profRes.data || [])
                         .filter((p: any) => {
                             const accType = (p.account_type || 'human').toLowerCase();
@@ -393,16 +402,53 @@ export function ClockTimesheets({
                 }
             }
         } catch (error) {
+            if (version !== requestVersion.current) return;
+            setLoadError(true);
             console.error('Error loading timesheets:', error);
         } finally {
-            setLoading(false);
+            if (version === requestVersion.current) setLoading(false);
         }
-    };
+    }, [user?.id, viewMode, periodDateRange, activeTenant?.id]);
+
+    useFocusEffect(useCallback(() => {
+        if (!user?.id) return;
+        let active = true;
+        let refreshing = false;
+        let pending = false;
+        const refresh = async (background = true) => {
+            if (!active) return;
+            if (refreshing) { pending = true; return; }
+            refreshing = true;
+            try {
+                do {
+                    pending = false;
+                    await loadRecords(background);
+                    background = true;
+                } while (active && pending);
+            } finally { refreshing = false; }
+        };
+        void refresh(false);
+        const channel = supabase.channel(`timesheets-${user.id}-${viewMode}-${activeTenant?.id || 'default'}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_records' }, () => { void refresh(); })
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'attendance_sessions' }, () => { void refresh(); })
+            .subscribe(status => { if (status === 'SUBSCRIBED') void refresh(); });
+        const timer = setInterval(() => { void refresh(); }, 30000);
+        const onFocus = () => { void refresh(); };
+        const listener = AppState.addEventListener('change', state => { if (state === 'active') onFocus(); });
+        if (Platform.OS === 'web') window.addEventListener('focus', onFocus);
+        return () => {
+            active = false;
+            requestVersion.current++;
+            clearInterval(timer);
+            listener.remove();
+            if (Platform.OS === 'web') window.removeEventListener('focus', onFocus);
+            void supabase.removeChannel(channel);
+        };
+    }, [user?.id, activeTenant?.id, viewMode, loadRecords]));
 
     useEffect(() => {
-        loadRecords();
-        setSelectedDay(null); // Reset day filter on month/viewMode change
-    }, [user?.id, currentMonth, viewMode, periodDateRange]);
+        setSelectedDay(null);
+    }, [currentMonth, viewMode, periodDateRange]);
 
     const daysInMonth = useMemo(() => {
         const start = periodDateRange.start;
@@ -862,6 +908,8 @@ export function ClockTimesheets({
 
     const getStatusBadgeConfig = (status: AttendanceStatus) => {
         switch (status) {
+            case 'present':
+                return { label: 'Present', bg: 'rgba(52, 199, 89, 0.15)', text: '#34C759', icon: 'checkmark-circle-outline' };
             case 'ontime':
                 return { label: 'On Time', bg: 'rgba(52, 199, 89, 0.15)', text: '#34C759', icon: 'checkmark-circle-outline' };
             case 'intime':
@@ -1223,7 +1271,11 @@ export function ClockTimesheets({
                 )}
 
                 {/* Logs list */}
-                {loading ? (
+                {loadError ? (
+                    <TouchableOpacity style={s.empty} onPress={() => { void loadRecords(); }}>
+                        <Text style={{ color: textColor }}>Data absensi belum berhasil dimuat. Ketuk untuk mencoba lagi.</Text>
+                    </TouchableOpacity>
+                ) : loading ? (
                     <View style={s.loader}>
                         <ActivityIndicator size="large" color="#007AFF" />
                     </View>

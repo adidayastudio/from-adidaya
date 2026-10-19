@@ -376,7 +376,7 @@ export function AttendanceCorrectionModal({
                     createCorrectionRequest({
                         userId,
                         userName,
-                        attendanceRecordId: record.id,
+                        attendanceRecordId: record.summaryPending ? undefined : record.id,
                         attendanceDate: record.date,
                         correctionType: item.type,
                         originalValue: item.original,

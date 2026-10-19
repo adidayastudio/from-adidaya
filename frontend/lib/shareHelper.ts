@@ -19,6 +19,7 @@ const formatTime = (isoString: string | null) => {
 
 const getStatusLabel = (status: string) => {
     switch (status) {
+        case 'present': return 'Present';
         case 'ontime': return 'On Time';
         case 'intime': return 'In Time';
         case 'late': return 'Late';

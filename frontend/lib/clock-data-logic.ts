@@ -1,7 +1,7 @@
 import { addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, format, isWeekend, isSameDay, getDaysInMonth, startOfMonth, endOfMonth, isSaturday, isSunday } from "date-fns";
 import { HOLIDAYS_2026 } from "./constants/holidays";
 
-export type AttendanceStatus = "ontime" | "intime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday";
+export type AttendanceStatus = "present" | "ontime" | "intime" | "late" | "absent" | "sick" | "leave" | "weekend" | "holiday";
 
 export interface AttendanceRecord {
     id: string;
@@ -231,7 +231,7 @@ export function calculateAdidayaScore(
     overrideTotalDays?: number
 ): AdidayaScoreResult {
     // 1. Core Inputs
-    const days_present = records.filter(r => ["ontime", "intime", "late"].includes(r.status)).length;
+    const days_present = records.filter(r => ["present", "ontime", "intime", "late"].includes(r.status)).length;
     const late_arrivals = records.filter(r => r.status === "late").length;
     const total_overtime_minutes = records.reduce((sum, r) => sum + (r.overtimeMinutes || 0), 0);
     const overtime_hours = total_overtime_minutes / 60;
