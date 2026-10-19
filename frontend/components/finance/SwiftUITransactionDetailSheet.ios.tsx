@@ -1,3 +1,4 @@
+import { normalizeFinanceAttachments, resolveFinanceAttachments } from '@/lib/financeAttachments';
 import { resolveFinanceUrl } from '@/lib/api/finance';
 import { attachmentKind, requestAttachments, splitReferenceNotes } from '@/lib/financeRequestPresentation';
 import React, { useState, useEffect, useMemo } from 'react';
@@ -102,13 +103,7 @@ export const SwiftUITransactionDetailSheet: React.FC<SwiftUITransactionDetailShe
 
     const invoiceCount = useMemo(() => requestAttachments(request).length, [request]);
 
-    const proofCount = useMemo(() => {
-        if (!request) return 0;
-        if (request.payment_proof_url && typeof request.payment_proof_url === 'string') {
-            return request.payment_proof_url.split(',').map((p: string) => p.trim()).filter(Boolean).length;
-        }
-        return 0;
-    }, [request]);
+    const proofCount = useMemo(() => normalizeFinanceAttachments(request?.payment_proof_url, 'Payment Proof').length, [request]);
 
     // Silent background load URLs on mount / request change
     useEffect(() => {
@@ -137,70 +132,16 @@ export const SwiftUITransactionDetailSheet: React.FC<SwiftUITransactionDetailShe
             setIsResolvingInvoice(invoiceCount > 0);
             setIsResolvingProof(proofCount > 0);
             try {
-                // Invoices
-                let invList: { url: string; name: string; path: string }[] = [];
-                if (requestAttachments(request).length > 0) {
-                    const resolved = await Promise.all(
-                        requestAttachments(request).map(async (inv: any, i: number) => {
-                            const url = await resolveFinanceUrl(inv.invoice_url);
-                            return url ? {
-                                url,
-                                name: request.moduleType === 'reimbursement' ? `Invoice #${i + 1}` : (inv.invoice_name || `Receipt ${i + 1}`),
-                                path: inv.invoice_url
-                            } : null;
-                        })
-                    );
-                    invList = resolved.filter((item): item is NonNullable<typeof item> => item !== null);
-                } else if (request.invoice_url && typeof request.invoice_url === 'string') {
-                    const paths = request.invoice_url.split(',').map((p: string) => p.trim()).filter(Boolean);
-                    const resolved = await Promise.all(
-                        paths.map(async (p: string, i: number) => {
-                            const url = await resolveFinanceUrl(p);
-                            return url ? {
-                                url,
-                                name: paths.length === 1 ? 'Receipt' : `Receipt ${i + 1}`,
-                                path: p
-                            } : null;
-                        })
-                    );
-                    invList = resolved.filter((item): item is NonNullable<typeof item> => item !== null);
-                }
-                
+                const [invoices, expenseProofs, paymentProofs] = await Promise.all([
+                    resolveFinanceAttachments(normalizeFinanceAttachments(requestAttachments(request)), resolveFinanceUrl),
+                    resolveFinanceAttachments(normalizeFinanceAttachments(request.expense_proof_url, 'Expense Payment Proof'), resolveFinanceUrl),
+                    resolveFinanceAttachments(normalizeFinanceAttachments(request.payment_proof_url, 'Payment Proof'), resolveFinanceUrl),
+                ]);
                 if (isCurrent) {
-                    setResolvedInvoices(invList);
+                    setResolvedInvoices(invoices);
+                    setResolvedExpenseProofs(expenseProofs);
+                    setResolvedProofs(paymentProofs);
                     setIsResolvingInvoice(false);
-                }
-
-                if (request.expense_proof_url) {
-                    const paths = String(request.expense_proof_url).split(',').map(path => path.trim()).filter(Boolean);
-                    const resolved = await Promise.all(paths.map(async (path, index) => {
-                        const url = await resolveFinanceUrl(path);
-                        return url ? { url, name: `Proof #${index + 1}`, path } : null;
-                    }));
-                    if (isCurrent) {
-                        setResolvedExpenseProofs(resolved.filter((item): item is NonNullable<typeof item> => item !== null));
-                    }
-                }
-
-                // Proofs
-                let proofList: { url: string; name: string; path: string }[] = [];
-                if (request.payment_proof_url && typeof request.payment_proof_url === 'string') {
-                    const paths = request.payment_proof_url.split(',').map((p: string) => p.trim()).filter(Boolean);
-                    const resolved = await Promise.all(
-                        paths.map(async (p: string, i: number) => {
-                            const url = await resolveFinanceUrl(p);
-                            return url ? {
-                                url,
-                                name: paths.length === 1 ? 'Payment Proof' : `Proof ${i + 1}`,
-                                path: p
-                            } : null;
-                        })
-                    );
-                    proofList = resolved.filter((item): item is NonNullable<typeof item> => item !== null);
-                }
-                
-                if (isCurrent) {
-                    setResolvedProofs(proofList);
                     setIsResolvingProof(false);
                 }
             } catch (e) {

@@ -1,6 +1,6 @@
 import { FinanceAttachmentPreview } from './FinanceAttachmentPreview';
 import { resolveFinanceUrl } from '@/lib/api/finance';
-import { financeProofs } from '@/lib/financeAttachments';
+import { financeProofs, resolveFinanceAttachments } from '@/lib/financeAttachments';
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Modal, ScrollView, Platform, Alert, Clipboard, Linking, Image, ActivityIndicator, Share, Animated, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
@@ -156,40 +156,13 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
         const loadUrls = async () => {
             setIsLoadingDocs(true);
             try {
-                // Load invoices/receipts in parallel
-                const rawInvoices = getInvoiceList(request);
-                const resolvedInvs = await Promise.all(
-                    rawInvoices.map(async (inv, i: number) => {
-                        const url = await resolveFinanceUrl(inv.path);
-                        return url ? {
-                            url,
-                            name: inv.name || `Receipt ${i + 1}`,
-                            path: inv.path
-                        } : null;
-                    })
-                );
-                const invList = resolvedInvs.filter((item): item is NonNullable<typeof item> => item !== null);
-
+                const [invoices, proofs] = await Promise.all([
+                    resolveFinanceAttachments(getInvoiceList(request), resolveFinanceUrl),
+                    resolveFinanceAttachments(getProofList(request), resolveFinanceUrl),
+                ]);
                 if (isCurrent) {
-                    setResolvedInvoices(invList);
-                }
-
-                // Load proofs in parallel
-                const rawProofs = getProofList(request);
-                const resolvedPrfs = await Promise.all(
-                    rawProofs.map(async (proof, i: number) => {
-                        const url = await resolveFinanceUrl(proof.path);
-                        return url ? {
-                            url,
-                            name: proof.name || `Proof ${i + 1}`,
-                            path: proof.path
-                        } : null;
-                    })
-                );
-                const proofList = resolvedPrfs.filter((item): item is NonNullable<typeof item> => item !== null);
-
-                if (isCurrent) {
-                    setResolvedProofs(proofList);
+                    setResolvedInvoices(invoices);
+                    setResolvedProofs(proofs);
                 }
             } catch (e) {
                 console.error("Error loading files in parallel:", e);
@@ -408,7 +381,7 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
 
             if (Platform.OS === 'web') {
                 const response = await fetch(activeDocUrl);
-                if (!response.ok) throw new Error('File gagal diunduh dari server.');
+                if (!response.ok) throw new Error('File could not be downloaded from the server.');
                 const url = URL.createObjectURL(await response.blob());
                 const anchor = document.createElement('a');
                 anchor.href = url;

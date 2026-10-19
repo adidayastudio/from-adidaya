@@ -26,7 +26,7 @@ export function FinanceAttachmentPreview({ url }: { url: string }) {
                 if (result.kind === 'file') setLoading(false);
             }).catch(failure => {
                 if (!active) return;
-                setError(failure?.message || 'File gagal dimuat.');
+                setError(failure?.message || 'File failed to load.');
                 setLoading(false);
             });
         }
@@ -36,26 +36,26 @@ export function FinanceAttachmentPreview({ url }: { url: string }) {
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
     }, [url, attempt]);
-    const failed = () => { setLoading(false); setError('Pratinjau gagal dimuat. Coba muat ulang atau unduh file.'); };
+    const failed = () => { setLoading(false); setError('Preview failed to load. Try again or download the file.'); };
     return (
         <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
             {!error && source && (kind === 'pdf' && Platform.OS === 'web' ? (
-                <iframe title="Pratinjau PDF" src={source} onLoad={() => setLoading(false)} onError={failed}
+                <iframe title="PDF preview" src={source} onLoad={() => setLoading(false)} onError={failed}
                     style={{ width: '100%', height: '100%', border: 0, backgroundColor: '#fff' }} />
             ) : kind === 'image' ? (
                 <Image source={{ uri: source }} resizeMode="contain" style={{ width: '100%', height: '100%' }}
                     onLoad={() => setLoading(false)} onError={failed} />
             ) : (
-                <Text style={{ color: '#fff' }}>Pratinjau belum tersedia untuk jenis file ini. Gunakan Download File.</Text>
+                <Text style={{ color: '#fff' }}>Preview is unavailable for this file type. Use Download File.</Text>
             ))}
             {loading && <View style={{ position: 'absolute', alignItems: 'center', gap: 10 }}>
                 <ActivityIndicator color="#fff" />
-                <Text style={{ color: '#fff' }}>Memuat file...</Text>
+                <Text style={{ color: '#fff' }}>Loading file...</Text>
             </View>}
             {!!error && <View style={{ alignItems: 'center', gap: 16, padding: 24 }}>
                 <Text style={{ color: '#fff', textAlign: 'center' }}>{error}</Text>
-                <TouchableOpacity onPress={() => setAttempt(value => value + 1)}><Text style={{ color: '#66b5ff' }}>Muat ulang</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => { void Linking.openURL(url); }}><Text style={{ color: '#66b5ff' }}>Buka file langsung</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => setAttempt(value => value + 1)}><Text style={{ color: '#66b5ff' }}>Retry</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => { void Linking.openURL(url); }}><Text style={{ color: '#66b5ff' }}>Open file directly</Text></TouchableOpacity>
             </View>}
         </View>
     );

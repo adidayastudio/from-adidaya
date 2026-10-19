@@ -1594,7 +1594,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                             <HStack modifiers={[frame({ maxWidth: Infinity }), frame({ height: 42 })]}>
                                 <Spacer />
                                 <SwiftUIText size={17} weight="semibold" color="#FFFFFF" lineLimit={1}>
-                                    {isSubmitting ? (uploadProgress ? `Mengunggah (${uploadProgress.done}/${uploadProgress.total})...` : 'Menyimpan request...') : 'Submit Request'}
+                                    {isSubmitting ? (uploadProgress ? `Uploading (${uploadProgress.done}/${uploadProgress.total})...` : 'Saving request...') : 'Submit Request'}
                                 </SwiftUIText>
                                 <Spacer />
                             </HStack>

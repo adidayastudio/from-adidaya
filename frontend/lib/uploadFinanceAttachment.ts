@@ -49,6 +49,6 @@ export async function uploadFinanceAttachment(file: UploadFile, folder: string, 
         onUploaded?.();
         return path;
     } catch (error: any) {
-        throw new Error(`Gagal mengunggah ${file.fileName || file.name || 'lampiran'}: ${error?.message || 'Silakan coba lagi.'}`);
+        throw new Error(`Failed to upload ${file.fileName || file.name || 'attachment'}: ${error?.message || 'Please try again.'}`);
     }
 }

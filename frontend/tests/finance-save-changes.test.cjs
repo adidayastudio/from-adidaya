@@ -46,7 +46,7 @@ test('Save Changes calls the update API and closes only after it succeeds', asyn
 test('validation and server errors remain visible and save unlocks for retry', async () => {
     const missing = submit({ projectCode: '' });
     await missing.run(false);
-    assert.match(missing.errors[0], /Proyek atau Departemen/);
+    assert.match(missing.errors[0], /Project or Department/);
     assert.equal(missing.saves.length, 0);
     const failed = submit({ updatePurchasingRequest: async () => { throw Error('Server rejected attachment'); } });
     await failed.run(false);

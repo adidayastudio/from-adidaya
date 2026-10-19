@@ -17,9 +17,9 @@ for (const [mime, name, kind] of [['application/pdf', 'invoice.pdf', 'pdf'], ['i
     });
 }
 test('missing, inaccessible and empty files report errors instead of a black preview', async () => {
-    await assert.rejects(preview({ ok: false, status: 404 })('url'), /tidak ditemukan/);
-    await assert.rejects(preview({ ok: false, status: 403 })('url'), /belum bisa diakses/);
-    await assert.rejects(preview({ ok: true, blob: async () => ({ type: 'image/png', size: 0 }) })('url'), /kosong/);
+    await assert.rejects(preview({ ok: false, status: 404 })('url'), /not found/);
+    await assert.rejects(preview({ ok: false, status: 403 })('url'), /unavailable/);
+    await assert.rejects(preview({ ok: true, blob: async () => ({ type: 'image/png', size: 0 }) })('url'), /empty/);
 });
 test('the web SwiftUI adapter never loads native modules', () => {
     const context = { exports: {}, require: name => {

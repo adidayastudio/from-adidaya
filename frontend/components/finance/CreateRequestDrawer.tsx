@@ -540,15 +540,15 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         const selectedProject = projects.find(p => p.project_code === projectCode);
         const selectedDept = departments.find(d => d.id === departmentId);
         if (!selectedProject && !selectedDept) {
-            showFormError('Informasi', 'Pilih salah satu Proyek atau Departemen.');
+            showFormError('Information', 'Select a Project or Department.');
             return;
         }
         if (!category) {
-            showFormError('Informasi', 'Pilih kategori request.');
+            showFormError('Information', 'Select a request category.');
             return;
         }
         if (!activeItems.length || activeItems.some(i => !i.name.trim())) {
-            showFormError('Informasi', 'Isi nama atau deskripsi setiap item.');
+            showFormError('Information', 'Enter a name or description for every item.');
             return;
         }
 
@@ -818,7 +818,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         : (activeTab === 'purchase' ? 'Purchase Request' : 'Reimburse Request');
 
     const submitLabel = isSubmitting
-        ? (uploadProgress ? `Mengunggah file (${uploadProgress.done}/${uploadProgress.total})...` : 'Menyimpan request...')
+        ? (uploadProgress ? `Uploading files (${uploadProgress.done}/${uploadProgress.total})...` : 'Saving request...')
         : isEditMode
             ? (isDraft ? 'Save Draft' : 'Save Changes')
             : (isDraft ? 'Save Draft' : (activeTab === 'purchase' ? 'Submit Request' : 'Submit Claim'));
@@ -1288,10 +1288,10 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                             </Text>
                             <View style={[s.section, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
                                 {(activeTab === 'purchase' ? [
-                                    { kind: 'invoice' as const, label: 'Tambah gambar / PDF' },
+                                    { kind: 'invoice' as const, label: 'Add image / PDF' },
                                 ] : [
-                                    { kind: 'invoice' as const, label: 'Tambah invoice (gambar / PDF)' },
-                                    { kind: 'expense_proof' as const, label: 'Tambah bukti bayar (gambar / PDF)' },
+                                    { kind: 'invoice' as const, label: 'Add invoice (image / PDF)' },
+                                    { kind: 'expense_proof' as const, label: 'Add payment proof (image / PDF)' },
                                 ]).map(option => (
                                     <TouchableOpacity
                                         key={option.kind}

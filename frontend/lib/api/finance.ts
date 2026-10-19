@@ -298,6 +298,24 @@ export async function fetchPurchasingRequests(userId: string, isTeam: boolean, o
     }
 
     if (!data || data.length === 0) return [];
+    // Fallback request queries omit nested invoices. Retrieve those rows separately
+    // so older requests with only the first path on the parent retain every file.
+    const missingInvoiceIds = data.filter((request: any) => !Array.isArray(request.invoices)).map((request: any) => request.id);
+    if (missingInvoiceIds.length) {
+        const { data: invoiceRows, error: invoiceError } = await supabase.from('purchasing_invoices')
+            .select('*').in('request_id', missingInvoiceIds).order('created_at', { ascending: true }).range(0, 4999);
+        if (invoiceError) console.warn('Unable to load purchasing attachments:', invoiceError.message);
+        else {
+            const invoicesByRequest = new Map<string, any[]>();
+            for (const invoice of invoiceRows || []) {
+                const files = invoicesByRequest.get(invoice.request_id) || [];
+                files.push(invoice);
+                invoicesByRequest.set(invoice.request_id, files);
+            }
+            data = data.map((request: any) => Array.isArray(request.invoices) ? request
+                : { ...request, invoices: invoicesByRequest.get(request.id) || [] });
+        }
+    }
     // Fetch profiles manually to avoid PostgREST PGRST200 join errors
     const userIds = Array.from(new Set((data || []).map((r: any) => r.created_by).filter(Boolean)));
     const profileMap = new Map<string, any>();
@@ -806,7 +824,7 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
             ...stored.commercial,
             ...reimbursementMetadata,
             invoice_url: req.invoice_url,
-            expense_proof_url: reimbursementMetadata.expense_proof_url || legacyDocuments[1] || undefined,
+            expense_proof_url: reimbursementMetadata.expense_proof_url || legacyDocuments.slice(1).join(',') || undefined,
             notes: stored.notes || (cleanNotes || undefined),
             details: tripDetails,
             title: req.description || getReimbursementTitle(itemsList),

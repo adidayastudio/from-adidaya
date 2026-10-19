@@ -29,3 +29,18 @@ export function financeReceipts(request: any): FinanceAttachment[] {
 export function financeProofs(request: any): FinanceAttachment[] {
     return normalizeFinanceAttachments([request?.payment_proof_url, request?.proof_url, request?.payment_proofs, request?.expense_proof_url], 'Payment Proof');
 }
+
+export async function resolveFinanceAttachments(
+    files: FinanceAttachment[],
+    resolveUrl: (path: string) => Promise<string>,
+): Promise<{ url: string; name: string; path: string }[]> {
+    const results = await Promise.all(files.map(async file => {
+        try {
+            const url = await resolveUrl(file.path);
+            return url ? { url, name: file.name, path: file.path } : null;
+        } catch {
+            return null;
+        }
+    }));
+    return results.filter((file): file is NonNullable<typeof file> => file !== null);
+}
