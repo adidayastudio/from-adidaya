@@ -17,7 +17,7 @@ export interface PurchasingRequest {
     title?: string;
     department_id?: string | null;
     id?: string;
-    project_id?: string;
+    project_id?: string | null;
     date: string;
     vendor?: string;
     description: string;
@@ -51,7 +51,7 @@ export interface ReimburseRequest {
     id?: string;
     title?: string;
     department_id?: string | null;
-    project_id?: string;
+    project_id?: string | null;
     category: string;
     subcategory?: string;
     date: string;
@@ -205,16 +205,21 @@ function stripFinanceMetadataFromNotes(notes: string | null | undefined): string
         .trim();
 }
 
+function validateRequestTarget(payload: { project_id?: string | null; department_id?: string | null }) {
+    if (!payload.project_id && !payload.department_id) throw new Error('Select a Project or Department for this request.');
+}
+
 function reimbursementActualTotal(items: any[] | undefined, payload: Record<string, any>): number {
     if (!items?.length) return Number(payload.amount) || 0;
     const subtotal = items.reduce((sum, item) => {
-        const qty = Number(item.qty) || 0;
-        const unitPrice = Number(item.unitPrice ?? item.unit_price) || 0;
+        const qty = Number(item.qty);
+        const unitPrice = Number(item.unitPrice ?? item.unit_price);
+        if (!Number.isFinite(qty) || !Number.isFinite(unitPrice)) throw new Error('Quantity and unit price must be valid numbers.');
         return sum + (qty * unitPrice);
     }, 0);
     const discount = Number(payload.discount_amount) || 0;
     const tax = Number(payload.tax_amount) || 0;
-    return Math.max(0, subtotal - discount + (payload.tax_type === 'withholding' ? -tax : tax));
+    return subtotal - discount + (payload.tax_type === 'withholding' ? -tax : tax);
 }
 
 function validateReimbursementSubmission(payload: {
@@ -225,7 +230,7 @@ function validateReimbursementSubmission(payload: {
     beneficiary_name?: string;
     amount?: number;
 }, items?: any[]) {
-    if (!items?.length || items.some(item => !String(item.name || '').trim() || Number(item.qty) <= 0 || Number(item.unitPrice ?? item.unit_price) <= 0)) {
+    if (!items?.length || items.some(item => !String(item.name || '').trim() || !Number.isFinite(Number(item.qty)) || Number(item.qty) === 0 || !Number.isFinite(Number(item.unitPrice ?? item.unit_price)) || Number(item.unitPrice ?? item.unit_price) === 0)) {
         throw new Error('Every reimbursement item must contain an actual quantity and unit price.');
     }
     if (!payload.invoice_url) throw new Error('Invoice document is required for reimbursement.');
@@ -233,7 +238,7 @@ function validateReimbursementSubmission(payload: {
     if (!String(payload.beneficiary_bank || '').trim() || !String(payload.beneficiary_number || '').trim() || !String(payload.beneficiary_name || '').trim()) {
         throw new Error('Complete the reimbursement destination account.');
     }
-    if (!payload.amount || payload.amount <= 0) throw new Error('Actual reimbursement amount must be greater than zero.');
+    if (!Number.isFinite(payload.amount) || payload.amount === 0) throw new Error('Actual reimbursement amount must be a valid non-zero number.');
 }
 
 function formatReferenceNumber(type: 'PO' | 'RE', project: any, requestNumber: any, id: string): string {
@@ -433,6 +438,7 @@ export async function fetchProjects() {
 export async function createPurchasingRequest(userId: string, payload: PurchasingRequest & { category?: string; vendor_name?: string; status?: string; statusTag?: string }) {
     const { items, invoices, category, vendor_name, status, statusTag, ...rest } = payload as any;
 
+    validateRequestTarget(rest);
     const isDraft = (status || rest.approval_status || '').toUpperCase() === 'DRAFT';
     const finalDescription = (rest.title?.trim() || rest.description?.trim() || getRequestTitle(rest.description, items).trim() || 'Purchase Request');
 
@@ -534,6 +540,7 @@ export async function updatePurchasingRequest(
 ) {
     const { items, invoices, category, vendor_name, status, statusTag, isDraft, ...rest } = payload as any;
 
+    if ('project_id' in rest && 'department_id' in rest) validateRequestTarget(rest);
     const approval_status = resolveEditApprovalStatus(statusTag, isDraft ?? (status?.toUpperCase() === 'DRAFT'), rest.approval_status);
     const finalDescription = (rest.title?.trim() || rest.description?.trim() || getRequestTitle(rest.description, items).trim() || 'Purchase Request');
 
@@ -564,7 +571,8 @@ export async function updatePurchasingRequest(
     if (reqError) throw reqError;
 
     if (items) {
-        await supabase.from('purchasing_items').delete().eq('request_id', id);
+        const { error: deleteError } = await supabase.from('purchasing_items').delete().eq('request_id', id);
+        if (deleteError) throw new Error(`Request updated, but previous rows could not be replaced: ${deleteError.message}`);
         if (items.length > 0) {
             const itemsData = items.map((item: any) => ({
                 request_id: id,
@@ -581,7 +589,8 @@ export async function updatePurchasingRequest(
     }
 
     if (invoices !== undefined) {
-        await supabase.from('purchasing_invoices').delete().eq('request_id', id);
+        const { error: deleteError } = await supabase.from('purchasing_invoices').delete().eq('request_id', id);
+        if (deleteError) throw new Error(`Request updated, but previous rows could not be replaced: ${deleteError.message}`);
         if (invoices.length > 0) {
             const invoicesData = invoices.map((inv: any) => ({
                 request_id: id,
@@ -606,6 +615,7 @@ export async function updateReimburseRequest(
 ) {
     const { items, details, expense_proof_url, statusTag, isDraft, ...rest } = payload as any;
 
+    if ('project_id' in rest && 'department_id' in rest) validateRequestTarget(rest);
     const dbStatus = resolveEditReimburseStatus(statusTag, isDraft ?? (rest.status?.toUpperCase() === 'DRAFT'), rest.status);
     const amount = reimbursementActualTotal(items, rest);
     const reimbursementTitle = getReimbursementTitle(items);
@@ -651,14 +661,15 @@ export async function updateReimburseRequest(
     if (reqError) throw reqError;
 
     if (items) {
-        await supabase.from('reimbursement_items').delete().eq('reimbursement_id', id);
+        const { error: deleteError } = await supabase.from('reimbursement_items').delete().eq('reimbursement_id', id);
+        if (deleteError) throw new Error(`Request updated, but previous rows could not be replaced: ${deleteError.message}`);
         if (items.length > 0) {
             const itemsData = items.map((item: any) => ({
                 reimbursement_id: id,
                 name: item.name,
                 qty: item.qty,
                 unit: item.unit,
-                unit_price: item.unitPrice || item.unit_price,
+                unit_price: item.unitPrice ?? item.unit_price,
                 total: item.total,
             }));
             const { error: itemError } = await supabase.from('reimbursement_items').insert(itemsData);
@@ -838,6 +849,7 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
 export async function createReimburseRequest(userId: string, payload: ReimburseRequest & { details?: TripDetails; statusTag?: string }) {
     const { items, details, expense_proof_url, statusTag, ...rest } = payload as any;
 
+    validateRequestTarget(rest);
     const isDraft = (rest.status || '').toUpperCase() === 'DRAFT';
     const amount = reimbursementActualTotal(items, rest);
     const reimbursementTitle = getReimbursementTitle(items);
@@ -894,7 +906,7 @@ export async function createReimburseRequest(userId: string, payload: ReimburseR
             name: item.name,
             qty: item.qty,
             unit: item.unit,
-            unit_price: item.unitPrice || item.unit_price,
+            unit_price: item.unitPrice ?? item.unit_price,
             total: item.total
         }));
         const { error: itemError } = await supabase.from('reimbursement_items').insert(itemsData);
@@ -1050,8 +1062,8 @@ export async function resolveFinanceUrl(path: string): Promise<string> {
         console.log("Error resolving finance storage URL in parallel:", e);
     }
 
-    // Final fallback to public URL of finance-documents bucket
-    return `https://fmgcvwximerhgjgctpsp.supabase.co/storage/v1/object/public/finance-documents/${cleanPath}`;
+    // A failed storage lookup must not become a fabricated, apparently available file URL.
+    return '';
 }
 
 

@@ -24,10 +24,9 @@ import { padding, frame, background, ignoreSafeArea, tint, disabled, foregroundC
 import { useFinance } from '@/context/FinanceContext';
 import { useTheme } from '@/context/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
+import { isLocalFinanceAttachment, uploadFinanceAttachment } from '@/lib/uploadFinanceAttachment';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
 import { 
-    uploadFinanceFileBase64, 
     fetchBeneficiaryAccounts,
     saveBeneficiaryAccount,
     fetchProjects,
@@ -69,6 +68,8 @@ interface RequestItem {
     qty: number;
     unit: string;
     price: number;
+    qtyInput?: string;
+    priceInput?: string;
 }
 
 interface UploadedFile {
@@ -144,6 +145,8 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
     
     // Core Form State
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const submitInFlight = useRef(false);
+    const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
     const [requestTitle, setRequestTitle] = useState('');
 
     // 1. General Information State
@@ -218,12 +221,12 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
     }, [projects, departments]);
 
     const selectedTarget = useMemo(() => {
-        if (targetIndex === 0) return null;
+        if (targetIndex <= 0) return null;
         if (targetIndex <= projects.length) {
             return { type: 'project' as const, project: projects[targetIndex - 1] };
         }
         const dIdx = targetIndex - 1 - projects.length;
-        return { type: 'department' as const, department: departments[dIdx] };
+        return departments[dIdx] ? { type: 'department' as const, department: departments[dIdx] } : null;
     }, [targetIndex, projects, departments]);
 
     // Categories & Subcategories
@@ -319,7 +322,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
 
     useEffect(() => {
         if (discountTypeIndex !== 2 || discountValue === '') return;
-        const maximum = Math.max(0, Math.floor(subtotalAmount));
+        const maximum = Math.max(0, subtotalAmount);
         if (Number(discountValue) > maximum) {
             const value = String(maximum);
             setDiscountValue(value);
@@ -332,14 +335,15 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
         const cleanVal = parseFloat(discountValue.replace(/[^0-9.]/g, '')) || 0;
         if (discountTypeIndex === 1) { // %
             const pct = Math.min(100, Math.max(0, cleanVal));
-            return Math.round((subtotalAmount * pct) / 100);
+            const factor = 100;
+            return Math.round(((subtotalAmount * pct) / 100) * factor) / factor;
         }
         // 2 = Rp
-        return Math.min(subtotalAmount, cleanVal);
+        return Math.min(Math.max(0, subtotalAmount), cleanVal);
     }, [discountTypeIndex, discountValue, subtotalAmount]);
 
     const netSubtotal = useMemo(() => {
-        return Math.max(0, subtotalAmount - discountAmount);
+        return subtotalAmount - discountAmount;
     }, [subtotalAmount, discountAmount]);
 
     const taxBreakdown = useMemo(() => {
@@ -736,6 +740,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
 
     // Submit / Save Draft Handler
     const handleSaveOrSubmit = async (asDraft = false) => {
+        if (submitInFlight.current) return;
         if (!selectedTarget) {
             Alert.alert('Selection Required', 'Please select a Project or Department for this request.');
             return;
@@ -747,7 +752,12 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
             return;
         }
 
-        if (isReimburse && validItems.some(item => item.qty === 0 || item.price === 0)) {
+        if (validItems.some(item => !Number.isFinite(item.qty) || !Number.isFinite(item.price)
+            || [item.qtyInput, item.priceInput].some(value => value !== undefined && value !== '' && !Number.isFinite(Number(value.replace(',', '.')))))) {
+            Alert.alert('Invalid Amount', 'Enter a valid quantity and price. Negative numbers and decimals are allowed.');
+            return;
+        }
+        if (isReimburse && !asDraft && validItems.some(item => item.qty === 0 || item.price === 0)) {
             Alert.alert('Actual Amount Required', 'Every reimbursement item must have an actual non-zero quantity and unit price.');
             return;
         }
@@ -786,16 +796,22 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
             }
         }
 
+        submitInFlight.current = true;
         setIsSubmitting(true);
         try {
-            const uploadDocuments = async (files: UploadedFile[], folder: string) => Promise.all(files.map(async file => {
-                if (!file.uri.startsWith('file://') && !file.uri.startsWith('ph://')) {
-                    return file.path || file.uri;
-                }
-                const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
-                const ext = file.uri.split('.').pop() || 'pdf';
-                return uploadFinanceFileBase64(base64, ext, file.mimeType || 'application/pdf', folder);
-            }));
+            const filesToUpload = [
+                ...((isReimburse || invoiceAvailable) ? invoiceDocuments : []),
+                ...(isReimburse ? expenseProofDocuments : []),
+                ...(isReimburse ? [] : references.filter((ref): ref is ReferenceItem & { uri: string } => ref.type !== 'link' && Boolean(ref.uri))),
+            ];
+            const total = filesToUpload.filter(isLocalFinanceAttachment).length;
+            setUploadProgress(total ? { done: 0, total } : null);
+            const onUploaded = () => setUploadProgress(previous => previous ? { ...previous, done: previous.done + 1 } : previous);
+            const uploadDocuments = async (files: UploadedFile[], folder: string) => {
+                const urls: string[] = [];
+                for (const file of files) urls.push(await uploadFinanceAttachment(file, folder, onUploaded));
+                return urls;
+            };
 
             const uploadedInvoiceUrls = await uploadDocuments(
                 (isReimburse || invoiceAvailable) ? invoiceDocuments : [],
@@ -815,26 +831,12 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                         type: 'LINK',
                     });
                 } else if (ref.uri) {
-                    if (ref.uri.startsWith('file://') || ref.uri.startsWith('ph://')) {
-                        const base64 = await FileSystem.readAsStringAsync(ref.uri, {
-                            encoding: FileSystem.EncodingType.Base64,
-                        });
-                        const ext = ref.uri.split('.').pop() || (ref.type === 'image' ? 'jpg' : 'pdf');
-                        const url = await uploadFinanceFileBase64(base64, ext, ref.mimeType || 'image/jpeg', 'purchase');
-                        uploadedReferences.push({
-                            url,
-                            name: ref.name,
-                            type: ref.type === 'image' ? 'IMAGE' : 'DOCUMENT',
-                        });
-                    } else {
-                        uploadedReferences.push({
-                            url: ref.path || ref.uri,
-                            name: ref.name,
-                            type: ref.type === 'image' ? 'IMAGE' : 'DOCUMENT',
-                        });
-                    }
+                    const url = await uploadFinanceAttachment(ref as ReferenceItem & { uri: string }, 'purchase', onUploaded);
+                    uploadedReferences.push({ url, name: ref.name, type: ref.type === 'image' ? 'IMAGE' : 'DOCUMENT' });
                 }
             }
+
+            setUploadProgress(null);
 
             // Save Beneficiary Account if Save Switch is ON
             if (saveAccountToggle && bankName && accountNumber && accountName) {
@@ -981,7 +983,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                     unit_price: i.price,
                     total: i.qty * i.price
                 })),
-                invoice_url: uploadedInvoiceUrls[0] || null,
+                invoice_url: allInvoicesPayload.map(file => file.invoice_url).join(',') || null,
                 invoices: allInvoicesPayload,
                 notes: structuredNotes || undefined,
                 statusTag: asDraft ? 'draft' : 'pending',
@@ -1005,6 +1007,8 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
             console.error(`${isReimburse ? 'Reimbursement' : 'Purchase'} Submit Error:`, error);
             Alert.alert('Error', error.message || `Failed to submit ${isReimburse ? 'Reimbursement' : 'Purchase'} Request.`);
         } finally {
+            submitInFlight.current = false;
+            setUploadProgress(null);
             setIsSubmitting(false);
         }
     };
@@ -1031,6 +1035,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                     variant="glass"
                     color="gray"
                     onPress={onClose}
+                    disabled={isSubmitting}
                 />
             </HStack>
 
@@ -1129,9 +1134,10 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                                             defaultValue={item.qty !== 0 ? String(item.qty) : ''}
                                             keyboardType="numbers-and-punctuation"
                                             onChangeText={(v) => {
-                                                if (/^-?\d*(?:[.,]\d*)?$/.test(v)) {
-                                                    handleUpdateItem(item.id, { qty: Number(v.replace(',', '.')) || 0 });
-                                                }
+                                                handleUpdateItem(item.id, {
+                                                    qtyInput: v,
+                                                    qty: /^-?\d*(?:[.,]\d*)?$/.test(v) ? Number(v.replace(',', '.')) || 0 : NaN,
+                                                });
                                             }}
                                             modifiers={textFieldModifiers}
                                         />
@@ -1155,9 +1161,10 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                                         defaultValue={item.price !== 0 ? String(item.price) : ''}
                                         keyboardType="numbers-and-punctuation"
                                         onChangeText={(v) => {
-                                            if (/^-?\d*(?:[.,]\d*)?$/.test(v)) {
-                                                handleUpdateItem(item.id, { price: Number(v.replace(',', '.')) || 0 });
-                                            }
+                                            handleUpdateItem(item.id, {
+                                                priceInput: v,
+                                                price: /^-?\d*(?:[.,]\d*)?$/.test(v) ? Number(v.replace(',', '.')) || 0 : NaN,
+                                            });
                                         }}
                                         modifiers={textFieldModifiers}
                                     />
@@ -1239,7 +1246,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                                         keyboardType="decimal-pad"
                                         onChangeText={(v) => {
                                             // Strip everything except digits and decimal point
-                                            let clean = v.replace(/[^0-9.]/g, '');
+                                            let clean = v.replace(',', '.').replace(/[^0-9.]/g, '');
                                             const parts = clean.split('.');
                                             if (parts.length > 2) {
                                                 clean = parts[0] + '.' + parts.slice(1).join('');
@@ -1272,15 +1279,19 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                                         key={`discount-fixed-${discountTypeIndex}`}
                                         placeholder="Enter amount (Rp)"
                                         defaultValue={discountValue}
-                                        keyboardType="numeric"
+                                        keyboardType="decimal-pad"
                                         onChangeText={(v) => {
-                                            // Strip everything except digits
-                                            const clean = v.replace(/[^0-9]/g, '');
+                                            const normalized = v.replace(',', '.');
+                                            if (!/^\d*(?:\.\d*)?$/.test(normalized)) {
+                                                discountFixedRef.current?.setText(discountValue);
+                                                return;
+                                            }
+                                            const clean = normalized;
                                             let finalValue = clean;
                                             // Clamp to subtotal max
-                                            const num = parseInt(clean, 10);
+                                            const num = parseFloat(clean);
                                             if (!isNaN(num) && num > Math.max(0, subtotalAmount)) {
-                                                finalValue = String(Math.max(0, Math.floor(subtotalAmount)));
+                                                finalValue = String(Math.max(0, subtotalAmount));
                                             }
                                             // If input was dirty, imperatively fix the displayed text
                                             if (finalValue !== v) {
@@ -1290,9 +1301,9 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                                         }}
                                         modifiers={textFieldModifiers}
                                     />
-                                    {parseInt(discountValue, 10) > 0 && (
+                                    {parseFloat(discountValue) > 0 && (
                                         <SwiftUIText size={12} color={subtextColor}>
-                                            {`Discount: Rp ${parseInt(discountValue, 10).toLocaleString('id-ID')}`}
+                                            {`Discount: Rp ${parseFloat(discountValue).toLocaleString('id-ID')}`}
                                         </SwiftUIText>
                                     )}
                                 </VStack>
@@ -1583,7 +1594,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                             <HStack modifiers={[frame({ maxWidth: Infinity }), frame({ height: 42 })]}>
                                 <Spacer />
                                 <SwiftUIText size={17} weight="semibold" color="#FFFFFF" lineLimit={1}>
-                                    {isSubmitting ? 'Saving...' : 'Submit Request'}
+                                    {isSubmitting ? (uploadProgress ? `Mengunggah (${uploadProgress.done}/${uploadProgress.total})...` : 'Menyimpan request...') : 'Submit Request'}
                                 </SwiftUIText>
                                 <Spacer />
                             </HStack>
@@ -1606,7 +1617,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                 isOpened={isOpened}
                 presentationDetents={[0.92]}
                 onIsOpenedChange={(opened) => {
-                    if (!opened) onClose();
+                    if (!opened && !submitInFlight.current) onClose();
                 }}
             >
                 {renderInnerContent()}

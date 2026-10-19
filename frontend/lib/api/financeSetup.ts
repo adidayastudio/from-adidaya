@@ -3767,6 +3767,7 @@ export function validateFinanceForm(
         title?: string;
         projectId?: string;
         projectCode?: string;
+        departmentId?: string;
         invoiceDate?: string;
         targetDate?: string;
         vendorName?: string;
@@ -3788,8 +3789,8 @@ export function validateFinanceForm(
     }
 
     // Project Code
-    if (rules['project'] && !formData.projectCode && !formData.projectId) {
-        errors.push('Project selection is required');
+    if ((rules['project'] || rules['department']) && !formData.projectCode && !formData.projectId && !formData.departmentId) {
+        errors.push('Project or Department selection is required');
     }
 
     // Vendor info

@@ -24,10 +24,9 @@ import { LiquidDatePicker } from '@/components/ui/LiquidDatePicker';
 import { Colors } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import { useFinance } from '@/context/FinanceContext';
-import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
+import * as DocumentPicker from 'expo-document-picker';
+import { isLocalFinanceAttachment, uploadFinanceAttachment } from '@/lib/uploadFinanceAttachment';
 import { 
-    uploadFinanceFileBase64, 
     fetchProjects,
     fetchBeneficiaryAccounts,
     saveBeneficiaryAccount,
@@ -195,6 +194,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
     }, [visible, slideAnim, fadeAnim]);
 
     const handleDismiss = () => {
+        if (submitInFlight.current) return;
         if (Platform.OS === 'web' && !isEmbedded) {
             Animated.parallel([
                 Animated.timing(fadeAnim, {
@@ -249,6 +249,8 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
     };
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const submitInFlight = useRef(false);
+    const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
     const [activeSelect, setActiveSelect] = useState<'target' | 'category' | 'subcategory' | 'stage' | 'unit' | null>(null);
 
     const resetCreateForm = () => {
@@ -281,7 +283,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         setActiveTab(tab);
 
         const project = fetchedProjects.find(p => p.id === req.project_id);
-        setProjectCode(project ? project.project_code : (req.project?.project_code || req.project || ''));
+        setProjectCode(project ? project.project_code : (req.department_id || req.department?.id) ? '' : (req.project?.project_code || (typeof req.project === 'string' ? req.project : '') || ''));
         const dept = fetchedDepts.find(d => d.id === req.department_id);
         setDepartmentId(dept ? dept.id : (req.department_id || req.department?.id || ''));
         setTitle(req.title || req.description || '');
@@ -306,9 +308,9 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         const mappedItems = (req.items || []).map((item: any, i: number) => ({
             id: item.id || String(i + 1),
             name: item.name || '',
-            qty: item.qty || 1,
+            qty: item.qty ?? item.quantity ?? 1,
             unit: item.unit || 'pcs',
-            price: item.unit_price || item.unitPrice || 0,
+            price: item.unit_price ?? item.unitPrice ?? 0,
             origin: item.origin || '',
             destination: item.destination || '',
             distance: item.distance || 0,
@@ -327,7 +329,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                     uri: '',
                     path: inv.invoice_url,
                     fileName: inv.invoice_name || 'Invoice',
-                    mimeType: 'image/jpeg',
+                    mimeType: undefined,
                     documentKind: 'invoice',
                 }));
             } else if (req.invoice_url) {
@@ -336,7 +338,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                     uri: '',
                     path: url,
                     fileName: `Invoice #${i + 1}`,
-                    mimeType: 'image/jpeg',
+                    mimeType: undefined,
                     documentKind: 'invoice',
                 }));
             }
@@ -348,7 +350,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                         uri: '',
                         path,
                         fileName: `Expense Payment Proof ${index + 1}`,
-                        mimeType: 'image/jpeg',
+                        mimeType: undefined,
                         documentKind: 'expense_proof',
                     })),
                 ];
@@ -506,32 +508,39 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         return activeItems.reduce((sum, item) => sum + (item.qty * item.price), 0);
     }, [activeItems]);
 
-    // Image Picker
-    const pickImage = async (documentKind: 'invoice' | 'expense_proof' = 'invoice') => {
-        let result = await ImagePicker.launchImageLibraryAsync({
-            mediaTypes: ['images'],
-            allowsEditing: false,
-            allowsMultipleSelection: true,
-            quality: 0.8,
-            base64: true,
-        });
-
-        if (!result.canceled && result.assets && result.assets.length > 0) {
-            if (activeTab === 'purchase') {
-                setPurchaseImages(prev => [...prev, ...result.assets]);
-            } else {
-                setReimburseImages(prev => [...prev, ...result.assets.map(asset => ({ ...asset, documentKind }))]);
-            }
+    const pickDocument = async (documentKind: 'invoice' | 'expense_proof' = 'invoice') => {
+        try {
+            const result = await DocumentPicker.getDocumentAsync({
+                type: ['image/*', 'application/pdf'],
+                multiple: true,
+                copyToCacheDirectory: true,
+            });
+            if (result.canceled) return;
+            const files = result.assets.map(asset => ({
+                uri: asset.uri, fileName: asset.name, mimeType: asset.mimeType, documentKind,
+            }));
+            if (activeTab === 'purchase') setPurchaseImages(prev => [...prev, ...files]);
+            else setReimburseImages(prev => [...prev, ...files]);
+        } catch (error: any) {
+            Alert.alert('Upload File', error?.message || 'Unable to select the file. Please try again.');
         }
     };
 
     const handleSubmit = async (asDraft = false) => {
-        if ((!projectCode && !departmentId) || !category || activeItems.some(i => !i.name)) {
+        if (submitInFlight.current) return;
+        const selectedProject = projects.find(p => p.project_code === projectCode);
+        const selectedDept = departments.find(d => d.id === departmentId);
+        if ((!selectedProject && !selectedDept) || !category || activeItems.some(i => !i.name.trim())) {
             Alert.alert('Informasi', 'Silakan pilih proyek atau departemen, kategori, dan isi nama item terlebih dahulu.');
             return;
         }
 
-        if (activeTab === 'reimburse' && activeItems.some(item => item.qty === 0 || item.price === 0)) {
+        if (activeItems.some(item => !Number.isFinite(item.qty) || !Number.isFinite(item.price)
+            || [item.qtyInput, item.priceInput].some(value => value !== undefined && value !== '' && !Number.isFinite(Number(value.replace(',', '.')))))) {
+            Alert.alert('Invalid Amount', 'Enter a valid quantity and price. Negative numbers and decimals are allowed.');
+            return;
+        }
+        if (activeTab === 'reimburse' && !asDraft && activeItems.some(item => item.qty === 0 || item.price === 0)) {
             Alert.alert('Actual Amount Required', 'Every reimbursement item must have an actual non-zero quantity and unit price.');
             return;
         }
@@ -546,36 +555,19 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             }
         }
 
+        submitInFlight.current = true;
         setIsSubmitting(true);
         try {
             const activeImages = activeTab === 'purchase' ? purchaseImages : reimburseImages;
-            let uploadedUrls: string[] = [];
-            
-            for (const img of activeImages) {
-                const isLocal = img.uri.startsWith('file://') || img.uri.startsWith('content://') || img.uri.startsWith('ph://');
-                if (!isLocal) {
-                    uploadedUrls.push(img.path || img.uri);
-                    continue;
-                }
-                
-                let base64 = img.base64;
-                if (!base64) {
-                    try {
-                        base64 = await FileSystem.readAsStringAsync(img.uri, {
-                            encoding: FileSystem.EncodingType.Base64,
-                        });
-                    } catch (readErr) {
-                        console.error("Error reading file base64:", readErr);
-                        throw new Error(`Failed to read file data for ${img.fileName || 'file'}`);
-                    }
-                }
-                if (base64) {
-                    const ext = img.uri.split('.').pop() || 'jpg';
-                    const mime = img.mimeType || 'image/jpeg';
-                    const url = await uploadFinanceFileBase64(base64, ext, mime, activeTab);
-                    uploadedUrls.push(url);
-                }
+            const total = activeImages.filter(isLocalFinanceAttachment).length;
+            setUploadProgress(total ? { done: 0, total } : null);
+            const uploadedUrls: string[] = [];
+            for (const file of activeImages) {
+                uploadedUrls.push(await uploadFinanceAttachment(file, activeTab, () => {
+                    setUploadProgress(previous => previous ? { ...previous, done: previous.done + 1 } : previous);
+                }));
             }
+            setUploadProgress(null);
 
             // Save Beneficiary Account if Save switch is on
             if (saveAccountToggle && bankName && accountNumber && accountName) {
@@ -589,8 +581,6 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                 }
             }
 
-            const selectedProject = projects.find(p => p.project_code === projectCode);
-            const selectedDept = departments.find(d => d.id === departmentId);
             const statusTag = editRequest?.statusTag;
 
             if (activeTab === 'purchase') {
@@ -621,10 +611,10 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                         unit_price: i.price,
                         total: i.qty * i.price
                     })),
-                    invoice_url: uploadedUrls[0] || undefined,
+                    invoice_url: uploadedUrls.join(',') || undefined,
                     invoices: uploadedUrls.map((url, index) => ({
                         invoice_url: url,
-                        invoice_name: `Invoice #${index + 1}`
+                        invoice_name: activeImages[index]?.fileName || `Invoice #${index + 1}`
                     })),
                     notes: notes || undefined,
                     statusTag,
@@ -713,6 +703,8 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         } catch (error: any) {
             Alert.alert('Error', error.message || 'Failed to submit request.');
         } finally {
+            submitInFlight.current = false;
+            setUploadProgress(null);
             setIsSubmitting(false);
         }
     };
@@ -809,7 +801,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         : (activeTab === 'purchase' ? 'Purchase Request' : 'Reimburse Request');
 
     const submitLabel = isSubmitting
-        ? 'Saving...'
+        ? (uploadProgress ? `Mengunggah file (${uploadProgress.done}/${uploadProgress.total})...` : 'Menyimpan request...')
         : isEditMode
             ? (isDraft ? 'Save Draft' : 'Save Changes')
             : (isDraft ? 'Save Draft' : (activeTab === 'purchase' ? 'Submit Request' : 'Submit Claim'));
@@ -1287,9 +1279,9 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                                     <TouchableOpacity
                                         key={option.kind}
                                         style={[s.listRow, { justifyContent: 'center', backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.03)', marginHorizontal: 12, marginTop: 12, borderRadius: 22, minHeight: 44 }]}
-                                        onPress={() => pickImage(option.kind)}
+                                        onPress={() => pickDocument(option.kind)}
                                     >
-                                        <PlatformIcon name="camera.fill" size={16} tintColor={subtextColor} />
+                                        <PlatformIcon name="doc.badge.plus" size={16} tintColor={subtextColor} />
                                         <Text style={{ color: textColor, fontSize: 15, fontWeight: '600', marginLeft: 8 }}>{option.label}</Text>
                                     </TouchableOpacity>
                                 ))}
@@ -1298,7 +1290,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                                     <>
                                         {activeImages.map((img, idx) => {
                                             const isImage = img.mimeType?.startsWith('image/') || 
-                                                            /\.(jpg|jpeg|png|heic|heif|webp|gif)$/i.test(img.uri);
+                                                            /\.(jpg|jpeg|png|heic|heif|webp|gif)$/i.test((img.path || img.uri).split(/[?#]/)[0]);
                                             return (
                                                 <React.Fragment key={idx}>
                                                     <View style={[s.rowSeparator, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.06)' }]} />
@@ -1392,11 +1384,10 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                                     onPress={() => handleSubmit(isDraft)}
                                     disabled={isSubmitting}
                                 >
-                                    {isSubmitting ? (
-                                        <ActivityIndicator color="#FFF" />
-                                    ) : (
-                                        <Text style={s.submitBtnText}>{submitLabel}</Text>
-                                    )}
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                        {isSubmitting && <ActivityIndicator color="#FFF" />}
+                                        <Text numberOfLines={1} adjustsFontSizeToFit style={s.submitBtnText}>{submitLabel}</Text>
+                                    </View>
                                 </TouchableOpacity>
                             </View>
                         </View>

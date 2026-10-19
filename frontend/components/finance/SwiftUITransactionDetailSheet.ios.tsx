@@ -1,3 +1,4 @@
+import { resolveFinanceUrl } from '@/lib/api/finance';
 import { attachmentKind, requestAttachments, splitReferenceNotes } from '@/lib/financeRequestPresentation';
 import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ActivityIndicator, Platform, Alert, Share, Image as RNImage, Modal, Pressable, Clipboard, Text as RNText, TouchableOpacity, Linking, Dimensions, ScrollView, ActionSheetIOS, UIManager } from 'react-native';
@@ -98,42 +99,6 @@ export const SwiftUITransactionDetailSheet: React.FC<SwiftUITransactionDetailShe
         const total = typeof request.amount === 'number' ? request.amount : (parseFloat(request.amount) || 0);
         return evaluateApprovalChain(docKey, request.department_id, total, approvalMatrix);
     }, [request, approvalMatrix]);
-
-    // Helpers
-    const resolveFinanceUrl = async (path: string): Promise<string> => {
-        if (!path) return '';
-
-        // If it's a local file path, return it directly
-        if (path.startsWith('file://') || path.startsWith('ph://')) {
-            return path;
-        }
-
-        // If it is already a full URL, return it directly. Skip splitting/resigning.
-        if (path.startsWith('http')) {
-            return path;
-        }
-
-        const cleanPath = path;
-        // Predict the bucket to avoid sequential checks
-        const isAttachment = cleanPath.includes('purchase/') || cleanPath.includes('reimbursement/') || path.includes('finance_attachments');
-        const primaryBucket = isAttachment ? 'finance_attachments' : 'finance-documents';
-        const secondaryBucket = isAttachment ? 'finance-documents' : 'finance_attachments';
-
-        try {
-            // Check both buckets in parallel to halve worst-case network latency
-            const [res1, res2] = await Promise.all([
-                supabase.storage.from(primaryBucket).createSignedUrl(cleanPath, 3600).catch(() => ({ data: null })),
-                supabase.storage.from(secondaryBucket).createSignedUrl(cleanPath, 3600).catch(() => ({ data: null }))
-            ]);
-            if (res1?.data?.signedUrl) return res1.data.signedUrl;
-            if (res2?.data?.signedUrl) return res2.data.signedUrl;
-        } catch (e) {
-            console.log("Error resolving finance URL in parallel:", e);
-        }
-
-        // Final fallback
-        return `https://fmgcvwximerhgjgctpsp.supabase.co/storage/v1/object/public/${primaryBucket}/${cleanPath}`;
-    };
 
     const invoiceCount = useMemo(() => requestAttachments(request).length, [request]);
 

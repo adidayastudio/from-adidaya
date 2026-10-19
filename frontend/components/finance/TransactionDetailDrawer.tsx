@@ -1,3 +1,5 @@
+import { FinanceAttachmentPreview } from './FinanceAttachmentPreview';
+import { resolveFinanceUrl } from '@/lib/api/finance';
 import { financeProofs } from '@/lib/financeAttachments';
 import React, { useRef, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Modal, ScrollView, Platform, Alert, Clipboard, Linking, Image, ActivityIndicator, Share, Animated, useWindowDimensions } from 'react-native';
@@ -112,26 +114,6 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
         const total = typeof request.amount === 'number' ? request.amount : (parseFloat(request.amount) || 0);
         return evaluateApprovalChain(docKey, request.department_id, total, approvalMatrix);
     }, [request, approvalMatrix]);
-
-    const resolveFinanceUrl = async (path: string): Promise<string> => {
-        if (!path) return '';
-        if (path.startsWith('http')) return path;
-
-        try {
-            // Run both buckets in parallel to halve the worst-case network latency
-            const [res1, res2] = await Promise.all([
-                supabase.storage.from('finance_attachments').createSignedUrl(path, 3600).catch(() => ({ data: null })),
-                supabase.storage.from('finance-documents').createSignedUrl(path, 3600).catch(() => ({ data: null }))
-            ]);
-            if (res1?.data?.signedUrl) return res1.data.signedUrl;
-            if (res2?.data?.signedUrl) return res2.data.signedUrl;
-        } catch (e) {
-            console.log("Error resolving finance storage URL in parallel:", e);
-        }
-
-        // Final fallback to public URL
-        return `https://fmgcvwximerhgjgctpsp.supabase.co/storage/v1/object/public/finance-documents/${path}`;
-    };
 
     const getInvoiceList = (req: any) => {
         if (!req) return [];
@@ -424,6 +406,19 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
             const extension = filename.split('.').pop()?.toLowerCase() || '';
             const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension);
 
+            if (Platform.OS === 'web') {
+                const response = await fetch(activeDocUrl);
+                if (!response.ok) throw new Error('File gagal diunduh dari server.');
+                const url = URL.createObjectURL(await response.blob());
+                const anchor = document.createElement('a');
+                anchor.href = url;
+                anchor.download = filename;
+                document.body.appendChild(anchor);
+                anchor.click();
+                anchor.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                return;
+            }
             const localUri = `${FileSystem.cacheDirectory}${filename}`;
 
             // Download file locally
@@ -920,11 +915,7 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
                         onPress={() => setActiveDocUrl(null)}
                     />
                     <View style={s.viewerContainer}>
-                        <Image
-                            source={{ uri: activeDocUrl }}
-                            style={s.viewerImage}
-                            resizeMode="contain"
-                        />
+                        <FinanceAttachmentPreview url={activeDocUrl} />
                     </View>
                     <TouchableOpacity
                         style={s.viewerCloseBtn}
