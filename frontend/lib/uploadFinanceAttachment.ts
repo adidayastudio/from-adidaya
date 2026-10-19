@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import { encode } from 'base64-arraybuffer';
-import { uploadFinanceFileBase64 } from './api/finance';
+import { uploadFinanceFile, uploadFinanceFileBase64 } from './api/finance';
 
 export interface UploadFile {
     uri: string;
@@ -10,15 +10,17 @@ export interface UploadFile {
     fileName?: string | null;
     mimeType?: string;
     base64?: string | null;
+    file?: File;
+    uploadedPath?: string;
 }
 
 export function isLocalFinanceAttachment(file: UploadFile): boolean {
-    return /^(blob:|data:|file:|content:|ph:)/i.test(file.uri);
+    return !file.uploadedPath && /^(blob:|data:|file:|content:|ph:)/i.test(file.uri);
 }
 
 export async function uploadFinanceAttachment(file: UploadFile, folder: string, onUploaded?: () => void): Promise<string> {
     // Existing storage paths and remote attachments are already persisted.
-    if (!isLocalFinanceAttachment(file)) return file.path || file.uri;
+    if (!isLocalFinanceAttachment(file)) return file.uploadedPath || file.path || file.uri;
     const mimeByExtension: Record<string, string> = {
         pdf: 'application/pdf', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png',
         heic: 'image/heic', heif: 'image/heif', webp: 'image/webp', gif: 'image/gif',
@@ -32,6 +34,11 @@ export async function uploadFinanceAttachment(file: UploadFile, folder: string, 
     const ext = extension && mimeByExtension[extension] ? extension
         : Object.keys(mimeByExtension).find(key => mimeByExtension[key] === mime) || 'bin';
     try {
+        if (Platform.OS === 'web' && file.file) {
+            const path = await uploadFinanceFile(file.file, ext, mime, folder);
+            onUploaded?.();
+            return path;
+        }
         let base64 = file.base64;
         if (!base64) {
             if (file.uri.startsWith('data:') && file.uri.includes(';base64,')) {

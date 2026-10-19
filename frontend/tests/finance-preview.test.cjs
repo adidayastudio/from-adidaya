@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 function preview(response) {
-    const context = { exports: {}, fetch: async () => response };
+    const context = { exports: {}, fetch: async () => response, require: () => ({ decodeFinanceImage: async blob => blob }) };
     vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/financeAttachmentPreview.ts', 'utf8'), {
         compilerOptions: { module: ts.ModuleKind.CommonJS }
     }).outputText, context);

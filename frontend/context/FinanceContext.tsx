@@ -159,10 +159,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         fetchGeneration.current++; setMePurchasing([]); setMeReimbursement([]); setTeamPurchasing([]); setTeamReimbursement([]); setConsolidations([]); setFundingSources([]); setPettyCashPools([]); setHasCloudConsolidation(false);
         return () => { fetchGeneration.current++; };
     }, [user?.id]);
-    const refreshData = useCallback(async () => {
+    const refreshData = useCallback(async (background = false) => {
         const run = ++fetchGeneration.current;
         if (!user) { setIsLoading(false); return; }
-        setIsLoading(true);
+        if (!background) setIsLoading(true);
         try {
             const results = await Promise.allSettled([
                 fetchPurchasingRequests(user.id, false, orgPrefix),
@@ -250,14 +250,14 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const addPurchasingRequest = async (payload: PurchasingRequest) => {
         if (!user) return null;
         const res = await createPurchasingRequest(user.id, payload);
-        await refreshData();
+        void refreshData(true);
         return res;
     };
 
     const addReimburseRequest = async (payload: ReimburseRequest) => {
         if (!user) return null;
         const res = await createReimburseRequest(user.id, payload);
-        await refreshData();
+        void refreshData(true);
         return res;
     };
 
@@ -269,6 +269,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const updateRequestStatus = async (id: string, type: 'purchasing' | 'reimbursement', status: string, statusTag: string, extraUpdates: any = {}) => {
         let reqNumber = id;
+        let confirmedUpdates: Record<string, any> = {};
         if (type === 'purchasing') {
             const req = purchasingRequests.find(r => r.id === id);
             if (req?.request_number) reqNumber = req.request_number;
@@ -300,11 +301,8 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     approval_status = status.toUpperCase();
             }
 
-            await updatePurchasingStatus(id, {
-                approval_status,
-                financial_status,
-                ...extraUpdates,
-            });
+            confirmedUpdates = { approval_status, financial_status, ...extraUpdates };
+            await updatePurchasingStatus(id, confirmedUpdates);
         } else {
             const req = reimbursementRequests.find(r => r.id === id);
             if (req?.request_number) reqNumber = req.request_number;
@@ -333,27 +331,33 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
                     dbStatus = statusTag.toUpperCase();
             }
 
-            await updateReimburseStatus(id, { status: dbStatus, ...extraUpdates });
+            confirmedUpdates = { status: dbStatus, ...extraUpdates };
+            await updateReimburseStatus(id, confirmedUpdates);
         }
 
-        // Automatic Lifecycle Synchronization
-        try {
-            const { syncFinanceActionOnDecision, syncFinanceTaskOnResubmit } = await import('@/lib/workflows/taskActionDispatcher');
-            if (statusTag === 'approved') {
-                await syncFinanceActionOnDecision(reqNumber, 'approved');
-            } else if (statusTag === 'revision') {
-                await syncFinanceActionOnDecision(reqNumber, 'revision', extraUpdates.revision_reason);
-            } else if (statusTag === 'rejected') {
-                await syncFinanceActionOnDecision(reqNumber, 'rejected', extraUpdates.rejection_reason);
-            } else if (statusTag === 'pending') {
-                // When resubmitted in Finance, auto-complete linked Revision Task
-                await syncFinanceTaskOnResubmit(reqNumber);
+        const apply = (rows: any[]) => rows.map(row => row.id === id ? { ...row, ...confirmedUpdates, status, statusTag } : row);
+        if (type === 'purchasing') { setMePurchasing(apply); setTeamPurchasing(apply); }
+        else { setMeReimbursement(apply); setTeamReimbursement(apply); }
+        void refreshData(true);
+        // Task synchronization is a side effect, not part of confirming the saved status.
+        void (async () => {
+            try {
+                const { syncFinanceActionOnDecision, syncFinanceTaskOnResubmit } = await import('@/lib/workflows/taskActionDispatcher');
+                if (statusTag === 'approved') {
+                    await syncFinanceActionOnDecision(reqNumber, 'approved');
+                } else if (statusTag === 'revision') {
+                    await syncFinanceActionOnDecision(reqNumber, 'revision', extraUpdates.revision_reason);
+                } else if (statusTag === 'rejected') {
+                    await syncFinanceActionOnDecision(reqNumber, 'rejected', extraUpdates.rejection_reason);
+                } else if (statusTag === 'pending') {
+                    // When resubmitted in Finance, auto-complete linked Revision Task
+                    await syncFinanceTaskOnResubmit(reqNumber);
+                }
+            } catch (syncErr) {
+                console.warn('Sync error on finance status update:', syncErr);
             }
-        } catch (syncErr) {
-            console.warn('Sync error on finance status update:', syncErr);
-        }
 
-        await refreshData();
+        })();
     };
 
     const deleteRequest = async (id: string, type: 'purchasing' | 'reimbursement') => {
@@ -369,18 +373,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (!user) return null;
         const res = await updatePurchasingRequestApi(user.id, id, payload);
         
-        // If resubmitted (not draft), auto-complete linked revision task
-        if (!payload.isDraft) {
-            try {
-                const { syncFinanceTaskOnResubmit } = await import('@/lib/workflows/taskActionDispatcher');
-                const reqNum = (payload as any).request_number || id;
-                await syncFinanceTaskOnResubmit(reqNum);
-            } catch (err) {
-                console.warn('Sync error on purchasing resubmit:', err);
+        void refreshData(true);
+        // Keep task synchronization out of the request save confirmation.
+        void (async () => {
+            if (!payload.isDraft) {
+                try {
+                    const { syncFinanceTaskOnResubmit } = await import('@/lib/workflows/taskActionDispatcher');
+                    const reqNum = (payload as any).request_number || id;
+                    await syncFinanceTaskOnResubmit(reqNum);
+                } catch (err) {
+                    console.warn('Sync error on purchasing resubmit:', err);
+                }
             }
-        }
 
-        await refreshData();
+        })();
         return res;
     };
 
@@ -388,18 +394,20 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (!user) return null;
         const res = await updateReimburseRequestApi(user.id, id, payload);
         
-        // If resubmitted (not draft), auto-complete linked revision task
-        if (!payload.isDraft) {
-            try {
-                const { syncFinanceTaskOnResubmit } = await import('@/lib/workflows/taskActionDispatcher');
-                const reqNum = (payload as any).request_number || id;
-                await syncFinanceTaskOnResubmit(reqNum);
-            } catch (err) {
-                console.warn('Sync error on reimbursement resubmit:', err);
+        void refreshData(true);
+        // Keep task synchronization out of the request save confirmation.
+        void (async () => {
+            if (!payload.isDraft) {
+                try {
+                    const { syncFinanceTaskOnResubmit } = await import('@/lib/workflows/taskActionDispatcher');
+                    const reqNum = (payload as any).request_number || id;
+                    await syncFinanceTaskOnResubmit(reqNum);
+                } catch (err) {
+                    console.warn('Sync error on reimbursement resubmit:', err);
+                }
             }
-        }
 
-        await refreshData();
+        })();
         return res;
     };
 

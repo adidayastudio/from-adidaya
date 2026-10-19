@@ -1022,32 +1022,24 @@ export async function topUpPettyCashApi(poolId: string, amount: number, descript
     return true;
 }
 
-export async function uploadFinanceFileBase64(base64Data: string, fileExt: string, contentType: string, folder: string = 'purchasing') {
+export async function uploadFinanceFile(file: Blob | ArrayBuffer, fileExt: string, contentType: string, folder = 'purchasing') {
     const fileName = `${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
     const filePath = `${folder}/${fileName}`;
-    
-    const { data, error } = await supabase.storage
-        .from('finance-documents')
-        .upload(filePath, decode(base64Data), {
-            contentType,
-            upsert: false
-        });
-        
+    const options = { contentType, upsert: false };
+    // Use the existing Adidaya bucket first instead of a failing bucket lookup on every upload.
+    const { error } = await supabase.storage.from('finance_attachments').upload(filePath, file, options);
     if (error) {
-        // Fallback to finance_attachments bucket if finance-documents bucket is not found in the environment
-        if (error.message?.includes('Bucket not found') || (error as any).status === '404' || (error as any).status === 404) {
-            const fallbackResult = await supabase.storage
-                .from('finance_attachments')
-                .upload(filePath, decode(base64Data), {
-                    contentType,
-                    upsert: false
-                });
-            if (fallbackResult.error) throw fallbackResult.error;
-            return filePath;
-        }
-        throw error;
+        if (error.message?.includes('Bucket not found') || Number((error as any).status) === 404) {
+            const fallback = await supabase.storage.from('finance-documents').upload(filePath, file, options);
+            if (fallback.error) throw fallback.error;
+        } else throw error;
     }
     return filePath;
+}
+
+export async function uploadFinanceFileBase64(base64Data: string, fileExt: string, contentType: string, folder = 'purchasing') {
+    const raw = base64Data.includes(';base64,') ? base64Data.slice(base64Data.indexOf(',') + 1) : base64Data;
+    return uploadFinanceFile(decode(raw), fileExt, contentType, folder);
 }
 
 export async function resolveFinanceUrl(path: string): Promise<string> {

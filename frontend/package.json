@@ -109,7 +109,8 @@
     "@tiptap/extension-strike": "3.11.0",
     "@tiptap/extension-text": "3.11.0",
     "@tiptap/extensions": "3.11.0",
-    "@tiptap/pm": "3.11.0"
+    "@tiptap/pm": "3.11.0",
+    "heic2any": "^0.0.4"
   },
   "devDependencies": {
     "@types/react": "~19.1.0",

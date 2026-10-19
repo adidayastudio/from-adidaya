@@ -1,3 +1,4 @@
+import { FinanceImageThumbnail } from './FinanceImageThumbnail';
 import { transactionCategoriesFor, transactionCategoryValue } from '@/lib/financeTransactionCategories';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
@@ -94,6 +95,8 @@ interface FinanceImage {
     mimeType?: string;
     base64?: string | null;
     documentKind?: 'invoice' | 'expense_proof';
+    file?: File;
+    uploadedPath?: string;
 }
 
 // Priority color mapping
@@ -525,7 +528,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             });
             if (result.canceled) return;
             const files = result.assets.map(asset => ({
-                uri: asset.uri, fileName: asset.name, mimeType: asset.mimeType, documentKind,
+                uri: asset.uri, fileName: asset.name, mimeType: asset.mimeType, file: asset.file, documentKind,
             }));
             if (activeTab === 'purchase') setPurchaseImages(prev => [...prev, ...files]);
             else setReimburseImages(prev => [...prev, ...files]);
@@ -580,9 +583,13 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             setUploadProgress(total ? { done: 0, total } : null);
             const uploadedUrls: string[] = [];
             for (const file of activeImages) {
-                uploadedUrls.push(await uploadFinanceAttachment(file, activeTab, () => {
+                const path = await uploadFinanceAttachment(file, activeTab, () => {
                     setUploadProgress(previous => previous ? { ...previous, done: previous.done + 1 } : previous);
-                }));
+                });
+                uploadedUrls.push(path);
+                const remember = (items: FinanceImage[]) => items.map(item => item === file ? { ...item, uploadedPath: path } : item);
+                if (activeTab === 'purchase') setPurchaseImages(remember);
+                else setReimburseImages(remember);
             }
             setUploadProgress(null);
 
@@ -1315,7 +1322,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                                                     <View style={[s.listRow, { paddingVertical: 8 }]}>
                                                         {isImage ? (
                                                             <View style={{ width: 80, height: 50, borderRadius: 6, overflow: 'hidden', backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7', borderWidth: 1, borderColor: isDark ? '#3A3A3C' : '#E5E5EA' }}>
-                                                                <Image source={{ uri: img.uri }} style={{ width: 80, height: 50 }} resizeMode="cover" />
+                                                                <FinanceImageThumbnail url={img.uri} name={img.fileName || img.path} mimeType={img.mimeType} file={img.file} />
                                                             </View>
                                                         ) : (
                                                             <View style={{ width: 50, height: 50, borderRadius: 6, backgroundColor: isDark ? '#2C2C2E' : '#F2F2F7', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: isDark ? '#3A3A3C' : '#E5E5EA' }}>
