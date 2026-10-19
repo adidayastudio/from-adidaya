@@ -60,6 +60,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     const isDark = resolvedTheme === 'dark', text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366';
     const [focusMode, setFocusMode] = useState(false);
     const [project, setProject] = useState(initialProject), [section, setSection] = useState('overview');
+    const [planningTitleAccessory, setPlanningTitleAccessory] = useState<React.ReactNode>(null);
     const [planningToolbar, setPlanningToolbar] = useState<React.ReactNode>(null);
     const [headerAction, setHeaderAction] = useState<HeaderToolbarAction | null>(null);
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['PLANNING', 'WORK']);
@@ -136,7 +137,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
                 <ProjectFocusNavigation section={section} isDark={isDark} onSelect={select} onOpenModule={path => proceed(() => router.push(path as any))} />
             </View>}
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16, ...DESKTOP_PANEL_HEADER, minHeight: 66 }}>
-                <Text style={{ ...DESKTOP_PANEL_TITLE, color: text, flex: 1 }}>{title}</Text>
+                <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}><Text style={{ ...DESKTOP_PANEL_TITLE, color: text }}>{title}</Text>{section === 'planning:rab' && planningTitleAccessory}</View>
                 {!focusMode && focusToggle(true)}
                 {headerAction && ['overview', 'work'].includes(section) && <HeaderToolbar isDark={isDark} textColor={text} actions={[headerAction]} />}
 
@@ -144,7 +145,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
             {section === 'planning:wbs' && planningToolbar && <View style={{ paddingHorizontal: 24, paddingVertical: 8, minHeight: 62 }}>{planningToolbar}</View>}
             {!!error && <Text accessibilityRole="alert" style={{ color: '#FF3B30', padding: 16 }}>{error}</Text>}
             {Screen ? <Screen key={`${project.id}-${section}`} projectId={project.id} isEmbedded onDirtyChange={setDirty} onSaved={refresh} />
-                : section.startsWith('planning:') ? <ProjectPlanningPanel onToolbarChange={setPlanningToolbar} key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
+                : section.startsWith('planning:') ? <ProjectPlanningPanel onTitleAccessoryChange={setPlanningTitleAccessory} onNavigatePlanning={value => select(`planning:${value}`)} onToolbarChange={setPlanningToolbar} key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
                 : renderContent(project, section, select, () => { setSettingsOpen(true); select('settings:general'); }, setHeaderAction)}
         </View>
     </View>;

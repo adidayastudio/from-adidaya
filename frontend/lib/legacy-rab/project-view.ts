@@ -31,6 +31,6 @@ export function legacyRABView(info: ProjectV3Info, tab: string) {
             ...Object.entries(divisions).map(([code, item], index) => ({ id: `rekap_${code}`, rowIdx: index + 8, no: `1.${index + 1}`, code, title: item.title, volume: 1, unit: 'ls', unitPrice: item.cost }))];
     }
     const subtotal = rows.reduce((sum, row) => sum + (row.isSection ? 0 : row.volume * row.unitPrice), 0);
-    return { tabs, subtotal, rows: rows.map(row => ({ ...row, wbs_code: row.code, quantity: row.volume, unit_price: row.unitPrice,
+    return { tabs, subtotal, rows: rows.map((row, index) => ({ ...row, rowIdx: index + 1, no: row.code, wbs_code: row.code, quantity: row.volume, unit_price: row.unitPrice,
         total_price: row.volume * row.unitPrice, weight: row.isSection ? 100 : subtotal > 0 ? row.volume * row.unitPrice / subtotal * 100 : 0 })) };
 }

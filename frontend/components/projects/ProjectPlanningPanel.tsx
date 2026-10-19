@@ -1,3 +1,10 @@
+import { currencyWords } from '@/lib/currencyWords';
+import { ProjectQuickEstimate } from './ProjectQuickEstimate';
+import ContextMenu from '@/components/ui/PlatformContextMenu';
+import { Ionicons } from '@expo/vector-icons';
+import { ProjectRABSheet } from './ProjectRABSheet';
+import { PlanningRevisionBar } from './PlanningRevisionBar';
+import { planningRevision } from '@/lib/projectPlanningRevisions';
 import { publishedWBSRows } from '@/lib/projectWBSWorkflow';
 import { ProjectStagesWork } from './ProjectStagesWork';
 import { ProjectVolumeCalculator } from './ProjectVolumeCalculator';
@@ -15,33 +22,45 @@ import { reportContentFields } from '@/lib/api/projectReports';
 
 export type PlanningSection = 'stages' | 'wbs' | 'volume' | 'rab' | 'schedule' | 'reports';
 const TABLES = { stages: 'project_stages', wbs: 'project_wbs_items', volume: 'project_volume_calcs', rab: 'project_rab_versions', schedule: 'project_schedule_versions', reports: 'project_reports' };
-export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, onToolbarChange }: { project: Project; section: PlanningSection; isDark: boolean; onDirtyChange?: (dirty: boolean) => void; onToolbarChange?: (toolbar: React.ReactNode) => void }) {
+export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, onToolbarChange, onNavigatePlanning, onTitleAccessoryChange }: { project: Project; section: PlanningSection; isDark: boolean; onDirtyChange?: (dirty: boolean) => void; onToolbarChange?: (toolbar: React.ReactNode) => void; onNavigatePlanning?: (section: string) => void; onTitleAccessoryChange?: (accessory: React.ReactNode) => void }) {
     const [legacyProject, setLegacyProject] = useState<any>(project);
     const [legacyWbs, setLegacyWbs] = useState<any[]>([]);
-    const [rabStage, setRabStage] = useState('DETAIL');
-    const [rabTab, setRabTab] = useState('all');
+    const [revisionBusy, setRevisionBusy] = useState(false);
+    const [rabVersion, setRabVersion] = useState(0);
+    const rabSnapshot = planningRevision(legacyProject.meta, 'rab').versions.find(item => item.version === rabVersion)?.snapshot;
+    const rabLocked = rabVersion > 0 || revisionBusy;
+    const displayedProject = useMemo(() => rabSnapshot ? { ...legacyProject, meta: rabSnapshot.meta } : legacyProject, [rabSnapshot, legacyProject]);
+    const quickDefaults = useMemo(() => ({ ...displayedProject, ...displayedProject.meta }), [displayedProject]);
+    const displayedWbs = rabSnapshot?.wbs || legacyWbs;
+    const rabStage = 'DETAIL';
+    const [discipline, setDiscipline] = useState('all'), [showFormula, setShowFormula] = useState(false), [quickOpen, setQuickOpen] = useState(false), [quickDirty, setQuickDirty] = useState(false);
+    const [rabTab, setRabTab] = useState('rekap_samil');
     const [includePPN, setIncludePPN] = useState(true);
     const [drafts, setDrafts] = useState<RABDrafts>({});
     const [saving, setSaving] = useState(false), [saveError, setSaveError] = useState(''), [saveMessage, setSaveMessage] = useState('');
-    const [activeCell, setActiveCell] = useState<{ code: string; field: string; address: string } | null>(null);
+    const [activeCell, setActiveCell] = useState<{ code: string; field: string; address: string; value?: string } | null>(null);
     const dirty = Object.keys(drafts).length > 0;
-    useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
+    const anyDirty = dirty || quickDirty;
+    useEffect(() => { onDirtyChange?.(anyDirty); }, [anyDirty, onDirtyChange]);
     useEffect(() => {
-        if (Platform.OS !== 'web' || !dirty) return;
+        if (Platform.OS !== 'web' || !anyDirty) return;
         const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
         window.addEventListener('beforeunload', guard);
         return () => window.removeEventListener('beforeunload', guard);
-    }, [dirty]);
-    const baseRows = useMemo(() => legacyRABView(legacyProjectInfo(legacyProject, legacyWbs, 'DETAIL'), 'all').rows, [legacyProject, legacyWbs]);
+    }, [anyDirty]);
+    const baseRows = useMemo(() => legacyRABView(legacyProjectInfo(displayedProject, displayedWbs, 'DETAIL'), 'all').rows, [displayedProject, displayedWbs]);
     const rabView = useMemo(() => {
-        const meta = mergeRABDrafts(legacyProject.meta || {}, drafts, baseRows);
-        return legacyRABView(legacyProjectInfo({ ...legacyProject, meta }, legacyWbs, rabStage), rabTab);
-    }, [legacyProject, legacyWbs, rabStage, rabTab, drafts, baseRows]);
+        const meta = mergeRABDrafts(displayedProject.meta || {}, drafts, baseRows);
+        return legacyRABView(legacyProjectInfo({ ...displayedProject, meta }, displayedWbs, rabStage), rabTab);
+    }, [displayedProject, displayedWbs, rabStage, rabTab, drafts, baseRows]);
+    const detailTotal = useMemo(() => legacyRABView(legacyProjectInfo({ ...displayedProject, meta: mergeRABDrafts(displayedProject.meta || {}, drafts, baseRows) }, displayedWbs, 'DETAIL'), 'all').subtotal, [displayedProject, drafts, baseRows, displayedWbs]);
     const edit = (code: string, field: string, value: string) => {
-        setDrafts(current => ({ ...current, [code]: { ...current[code], [field]: value } }));
+        if (rabLocked) return;
+        setDrafts(current => ({ ...current, [code]: { ...current[code], [field]: value, ...(field === 'unitPrice' ? { priceSource: 'Manual' } : {}) } }));
         setSaveError(''); setSaveMessage('');
     };
     const save = async () => {
+        if (rabLocked) return;
         setSaving(true); setSaveError(''); setSaveMessage('');
         try {
             const meta = await saveProjectRAB(project.id, legacyProject.meta || {}, drafts, baseRows);
@@ -72,7 +91,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
             const { data: current, error: projectError } = await supabase.from('projects').select('meta').eq('id', project.id).single();
             if (projectError) throw projectError;
             const wbs = ['rab', 'volume', 'schedule'].includes(section) ? publishedWBSRows(current?.meta, await read('project_wbs_items')) : [];
-            if (active) { setLegacyProject({ ...project, meta: current?.meta || {} }); setLegacyWbs(wbs); }
+            if (active) { setLegacyProject({ ...project, meta: current?.meta || {} }); setLegacyWbs(wbs); const state = planningRevision(current?.meta, 'rab'); setRabVersion(state.draft ? 0 : state.versions.slice(-1)[0]?.version || 0); }
             if (section === 'stages') { const tasks = await read('project_tasks'); if (active) setStageTasks(tasks); }
             const saved = savedPlanningRows(section, current?.meta || {}, wbs);
             if (active) setSavedRows(saved);
@@ -160,6 +179,8 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
         { title: 'Status', width: 150, value: row => row.status || (row.is_locked ? 'Locked' : 'Draft') },
         { title: 'Notes', width: 300, value: row => row.notes },
     ];
+    const stagePicker = useMemo(() => <ContextMenu title="RAB stage" dropdownMenuMode actions={[{ title: 'Quick Estimates', selected: quickOpen }, { title: 'Detail RAB', selected: !quickOpen }]} onPress={event => { const next = event.nativeEvent.index === 0; if (quickDirty) { setSaveError('Save or reset Quick Estimates before switching stages.'); return; } setQuickOpen(next); setRabTab(next ? 'all' : 'rekap_samil'); setActiveCell(null); }}><View style={{ flexDirection: 'row', alignItems: 'center', gap: 7, height: 34, paddingHorizontal: 14, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7' }}><Text style={{ color: text, fontSize: 12, fontWeight: '600' }}>{quickOpen ? 'Quick Estimates' : 'Detail RAB'}</Text><Ionicons name="chevron-down" size={12} color={secondary} /></View></ContextMenu>, [quickOpen, quickDirty, isDark, text, secondary]);
+    useEffect(() => { if (section !== 'rab') return; onTitleAccessoryChange?.(stagePicker); return () => onTitleAccessoryChange?.(null); }, [section, stagePicker, onTitleAccessoryChange]);
     if (section === 'volume') return <View style={{ flex: 1, minHeight: 0, paddingHorizontal: 20, paddingBottom: 16 }}>
         {loading && <ActivityIndicator color="#007AFF" />}
         {!!error && <View><Text accessibilityRole="alert" style={{ color: '#FF3B30', paddingVertical: 12 }}>{error}</Text><TouchableOpacity onPress={() => setRetry(value => value + 1)}><Text style={{ color: '#007AFF' }}>Retry</Text></TouchableOpacity></View>}
@@ -170,29 +191,24 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
         {loading && <ActivityIndicator color="#007AFF" />}
         {!!error && <View><Text accessibilityRole="alert" style={{ color: '#FF3B30', marginBottom: 16 }}>{error}</Text><TouchableOpacity onPress={() => setRetry(value => value + 1)} style={{ padding: 12 }}><Text style={{ color: '#0036F8' }}>Retry</Text></TouchableOpacity></View>}
         {section === 'stages' && !loading && !error && <ProjectStagesWork key={project.id} project={legacyProject} records={stageTasks} isDark={isDark} onDirtyChange={onDirtyChange} />}
-        {section === 'wbs' && !loading && !error && <ProjectWBSEditor onToolbarChange={onToolbarChange} key={project.id} project={legacyProject} items={rows} isDark={isDark} onDirtyChange={onDirtyChange} />}
+        {section === 'wbs' && !loading && !error && <ProjectWBSEditor onNavigatePlanning={onNavigatePlanning} onToolbarChange={onToolbarChange} key={project.id} project={legacyProject} items={rows} isDark={isDark} onDirtyChange={onDirtyChange} />}
         {!selected && section === 'rab' && !loading && !error && <>
-            <SegmentedControl segments={['BALLPARK', 'ESTIMATES', 'DETAIL'].map(id => ({ id, label: id }))} activeSegment={rabStage} onSegmentChange={setRabStage} />
-            <View style={{ marginVertical: 12 }}><SegmentedControl segments={[
-                { id: 'all', label: 'All Work' }, { id: 'rekap_samil', label: 'Summary' }, { id: 'detail_level2', label: 'Level 2 Detail' },
-                ...rabView.tabs.map(tab => ({ id: tab.id, label: tab.label })),
-            ]} activeSegment={rabTab} onSegmentChange={setRabTab} /></View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}><Switch value={includePPN} onValueChange={setIncludePPN} /><Text style={{ color: text }}>VAT 11%</Text></View>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-                <Text style={{ color: secondary, flex: 1 }}>{dirty ? 'Unsaved changes' : saveMessage || 'Click a cell to edit'}</Text>
-                <TouchableOpacity disabled={!dirty || saving} onPress={save} style={{ backgroundColor: '#159957', opacity: !dirty || saving ? 0.5 : 1, paddingHorizontal: 24, paddingVertical: 10, borderRadius: 999 }}><Text style={{ color: '#FFFFFF', fontWeight: '700' }}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity>
-            </View>
+            {!quickOpen ? <PlanningRevisionBar projectId={project.id} meta={legacyProject.meta} module="rab" compactAlerts leading={<><SegmentedControl compact segments={[{ id: 'summary', label: 'Summary' }, { id: 'detail', label: 'Detail' }]} activeSegment={rabTab === 'rekap_samil' ? 'summary' : 'detail'} onSegmentChange={value => { setRabTab(value === 'summary' ? 'rekap_samil' : discipline); setActiveCell(null); }} /></>} beforePublish={<><TouchableOpacity disabled={rabLocked || !dirty || saving} onPress={save} style={{ backgroundColor: '#007AFF', opacity: rabLocked || !dirty || saving ? 0.4 : 1, height: 34, paddingHorizontal: 18, borderRadius: 999, justifyContent: 'center' }}><Text style={{ color: '#FFFFFF', fontSize: 12, fontWeight: '600' }}>{saving ? 'Saving…' : 'Save'}</Text></TouchableOpacity></>} onBusyChange={setRevisionBusy} dirty={anyDirty} isDark={isDark} selected={rabVersion} onSelect={version => { setRabVersion(version); setActiveCell(null); }} onMetaChange={meta => setLegacyProject((current: any) => ({ ...current, meta }))} onOpenItem={id => { const row = legacyWbs.find(item => item.id === id); if (row) { setRabTab('all'); setDiscipline('all'); setActiveCell({ code: row.wbs_code, field: 'volume', address: row.wbs_code }); } }} /> : null}
+            {quickOpen && <ProjectQuickEstimate key={rabVersion} projectId={project.id} saved={displayedProject.meta?.quickEstimate} toolbarLeading={<SegmentedControl compact segments={[{ id: 'summary', label: 'Summary' }, { id: 'detail', label: 'Detail' }]} activeSegment={rabTab === 'rekap_samil' ? 'summary' : 'detail'} onSegmentChange={value => setRabTab(value === 'summary' ? 'rekap_samil' : 'all')} />} defaults={quickDefaults} wbs={displayedWbs} summary={rabTab === 'rekap_samil'} isDark={isDark} readOnly={rabLocked || saving} onMetaChange={meta => setLegacyProject((current: any) => ({ ...current, meta }))} onDirtyChange={setQuickDirty} />}
             {!!saveError && <Text accessibilityRole="alert" style={{ color: '#FF3B30', marginBottom: 12 }}>{saveError}</Text>}
-            <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: border, marginBottom: 8 }}>
+            {!quickOpen && <>
+            {showFormula && <View style={{ flexDirection: 'row', alignItems: 'center', borderWidth: 1, borderColor: border, marginBottom: 8 }}>
                 <Text style={{ color: '#159957', width: 80, textAlign: 'center', fontWeight: '700' }}>{activeCell?.address || '—'}</Text><Text style={{ color: secondary, padding: 10 }}>fx</Text>
-                <TextInput accessibilityLabel="Formula bar" editable={!!activeCell && !saving} value={activeCell ? drafts[activeCell.code]?.[activeCell.field] ?? String(rabView.rows.find(row => row.code === activeCell.code)?.[activeCell.field as 'title'] ?? '') : ''} onChangeText={value => { if (activeCell) edit(activeCell.code, activeCell.field, value); }} style={{ flex: 1, color: text, padding: 10 }} />
+                <TextInput accessibilityLabel="Formula bar" editable={!!activeCell && !saving && !rabLocked} value={activeCell ? drafts[activeCell.code]?.[activeCell.field] ?? activeCell.value ?? String(rabView.rows.find(row => row.code === activeCell.code)?.[activeCell.field as 'title'] ?? '') : ''} onChangeText={value => { if (activeCell) edit(activeCell.code, activeCell.field, value); }} style={{ flex: 1, color: text, padding: 10 }} />
+            </View>}
+            <ProjectRABSheet summary={rabTab === 'rekap_samil'} rows={rabTab === 'rekap_samil' ? rabView.rows.filter(row => !row.isSection) : rabView.rows} wbs={displayedWbs} meta={displayedProject.meta || {}} drafts={drafts} isDark={isDark} editable={!rabLocked && !saving && rabTab !== 'rekap_samil' && rabTab !== 'detail_level2' && rabStage === 'DETAIL'} onEdit={edit} onCellFocus={setActiveCell} formulaVisible={showFormula} onToggleFormula={() => setShowFormula(value => !value)} toolbarLeading={rabTab !== 'rekap_samil' ? <ContextMenu title="Discipline" dropdownMenuMode actions={[{ title: 'All disciplines', selected: discipline === 'all' }, ...rabView.tabs.map(tab => ({ title: tab.label, selected: tab.id === discipline }))]} onPress={event => { const value = event.nativeEvent.index ? rabView.tabs[event.nativeEvent.index - 1].id : 'all'; setDiscipline(value); setRabTab(value); setActiveCell(null); }}><View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7' }}><Text style={{ color: secondary, fontSize: 12 }}>{rabView.tabs.find(tab => tab.id === discipline)?.label || 'All disciplines'}</Text><Ionicons name="chevron-down" size={11} color={secondary} /></View></ContextMenu> : undefined} />
+            <View style={{ marginTop: 16, padding: 16, borderRadius: 14, backgroundColor: isDark ? '#16171C' : '#F2F2F7', gap: 10 }}>
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: 20 }}><Text style={{ color: secondary, fontSize: 12 }}>Subtotal {money(detailTotal)}</Text><View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}><Switch value={includePPN} onValueChange={setIncludePPN} /><Text style={{ color: secondary, fontSize: 12 }}>VAT 11%</Text></View><View style={{ flex: 1 }} /><Text style={{ color: text, fontSize: 16, fontWeight: '700' }}>Total {money(detailTotal * (includePPN ? 1.11 : 1))}</Text></View>
+                {!!displayedProject.meta?.quickEstimate && <Text style={{ color: secondary, fontSize: 12 }}>Quick Estimate {money(displayedProject.meta.quickEstimate.total)} · Detail before VAT {money(detailTotal)} · Difference {money(detailTotal - displayedProject.meta.quickEstimate.total)}</Text>}
+                <Text style={{ color: secondary, fontSize: 11 }}>EN · {currencyWords(detailTotal * (includePPN ? 1.11 : 1)).en}</Text><Text style={{ color: secondary, fontSize: 11 }}>ID · {currencyWords(detailTotal * (includePPN ? 1.11 : 1)).id}</Text>
+                {(dirty || !!saveMessage) && <Text style={{ color: secondary, fontSize: 11 }}>{dirty ? 'Unsaved' : saveMessage}</Text>}
             </View>
-            {table(rabView.rows, columns, undefined, !selected && rabTab !== 'rekap_samil' && rabTab !== 'detail_level2' && rabStage === 'DETAIL')}
-            {table([
-                { id: 'subtotal', label: 'SUBTOTAL', amount: rabView.subtotal },
-                ...(includePPN ? [{ id: 'ppn', label: 'VAT 11%', amount: rabView.subtotal * 0.11 }] : []),
-                { id: 'total', label: 'GRAND TOTAL', amount: rabView.subtotal * (includePPN ? 1.11 : 1) },
-            ], [{ title: 'Summary', width: 400, value: row => row.label }, { title: 'Total Amount (Rp)', width: 250, right: true, value: row => money(row.amount) }])}
+            </>}
         </>}
         {!selected && !['stages', 'wbs', 'volume'].includes(section) && <>
             {section !== 'rab' && !!savedRows.length && <>

@@ -34,7 +34,7 @@ export function publishedWBSRows(meta: any, databaseRows: any[]): any[] {
     const versions = readWBSWorkflow(meta).versions;
     if (!versions.length) return databaseRows;
     return versions[versions.length - 1].items.map(item => {
-        const live = databaseRows.find(row => row.id === item.id || row.wbs_code === item.wbs_code);
+        const live = databaseRows.find(row => row.id === item.id) || (!item.id ? databaseRows.find(row => row.wbs_code === item.wbs_code) : undefined);
         return live ? { ...item, quantity: live.quantity, unit: live.unit } : item;
     });
 }

@@ -1,3 +1,4 @@
+import { planningRevision } from '@/lib/projectPlanningRevisions';
 import { supabase } from '@/lib/supabase';
 import { calculateVolume, VolumeCalc } from '@/lib/projectVolume';
 
@@ -8,6 +9,7 @@ export async function saveProjectVolume(projectId: string, code: string, unit: s
     const total = Number(records.reduce((sum, row) => sum + row.calculated_volume, 0).toFixed(3));
     const { data: project, error: readError } = await supabase.from('projects').select('meta').eq('id', projectId).single();
     if (readError) throw readError;
+    if (!planningRevision(project?.meta, 'volume').draft) throw new Error('Volume is published. Add a revision before editing.');
     // Keep record IDs stable across retries; never delete all project calculations.
     if (records.length) {
         const { error } = await supabase.from('project_volume_calcs').upsert(records, { onConflict: 'id' });
@@ -23,7 +25,14 @@ export async function saveProjectVolume(projectId: string, code: string, unit: s
     const rowDetails = { ...meta.volumeRowDetails };
     removed.forEach(id => delete rowDetails[id]);
     rows.forEach(row => { if (row.details) rowDetails[row.id] = row.details; });
-    const next = { ...meta, ...(Object.keys(rowDetails).length || meta.volumeRowDetails ? { volumeRowDetails: rowDetails } : {}), estimateValues: { ...estimates, [code]: { ...entry, volume: total, unit, explicit: true } } };
+    const sourceItem = meta.wbsWorkflow?.versions?.slice(-1)[0]?.items?.find((item: any) => item.wbs_code === code);
+    const impacts = [...(meta.planningImpact?.items || [])];
+    if (sourceItem) {
+        const index = impacts.findIndex((item: any) => item.id === sourceItem.id);
+        if (index >= 0) impacts[index] = { ...impacts[index], rabReview: true };
+        else impacts.push({ id: sourceItem.id, code, title: sourceItem.title, kind: 'volume', volumeReview: false, rabReview: true });
+    }
+    const next = { ...meta, ...(sourceItem ? { planningImpact: { ...meta.planningImpact, items: impacts } } : {}), planningRevisions: { ...meta.planningRevisions, rab: { ...planningRevision(meta, 'rab'), draft: true } }, ...(Object.keys(rowDetails).length || meta.volumeRowDetails ? { volumeRowDetails: rowDetails } : {}), estimateValues: { ...estimates, [code]: { ...entry, volume: total, unit, explicit: true } } };
     let query = supabase.from('projects').update({ meta: next }).eq('id', projectId);
     query = project.meta === null ? query.is('meta', null) : query.filter('meta', 'eq', JSON.stringify(project.meta));
     const { error: metaError } = await query.select('id').single();

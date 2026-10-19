@@ -50,7 +50,7 @@ test('all-work view includes every discipline and totals only leaf rows', () => 
     assert.ok(view.rows.some(row => row.code === 'S.1.1'));
     assert.ok(view.rows.some(row => row.code === 'A.8'));
     assert.equal(view.subtotal, 174.51 * 118377 + 2 * 125);
-    assert.equal(view.rows.at(-1).rowIdx, view.rows.length + 6);
+    assert.equal(view.rows.at(-1).rowIdx, view.rows.length);
 });
 
 const { mergeRABDrafts } = load('lib/legacy-rab/editing.ts');
@@ -92,4 +92,13 @@ test('save never reports success if database update is denied', async () => {
     responses = [{ data: { meta: project.meta }, error: null }, { data: null, error: { message: 'permission denied' } }];
     const rows = legacyRABView(legacyProjectInfo(project, wbs, 'DETAIL'), 'all').rows;
     await assert.rejects(() => saveProjectRAB('ruby', project.meta, { 'S.1.1': { volume: '200' } }, rows), /permission denied/);
+});
+
+test('RAB uses WBS codes, starts at one and persists independent bilingual overrides and AHSP source',()=>{
+ const view=legacyRABView(legacyProjectInfo(project,wbs,'DETAIL'),'all');
+ assert.equal(view.rows[0].rowIdx,1);assert.equal(view.rows[0].no,view.rows[0].code);
+ const meta=mergeRABDrafts({}, {'S.1.1':{titleEn:'Survey',titleId:'Pengukuran baru',unitPrice:'125000',priceSource:'AHSP sample · 1.2.1'},S:{titleEn:'Structure',titleId:'Struktur'}},view.rows,true);
+ assert.equal(meta.estimateValues['S.1.1'].titleEn,'Survey');assert.equal(meta.estimateValues['S.1.1'].titleId,'Pengukuran baru');assert.equal(meta.estimateValues['S.1.1'].priceSource,'AHSP sample · 1.2.1');
+ assert.equal(meta.estimateValues.S.titleId,'Struktur');assert.equal(meta.estimateValues.S.explicit,undefined);
+ assert.throws(()=>mergeRABDrafts({}, {S:{volume:'10'}},view.rows,true),/cannot be edited/);
 });

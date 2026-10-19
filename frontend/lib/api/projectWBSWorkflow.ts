@@ -1,3 +1,4 @@
+import { applyWBSPlanningRevision } from '@/lib/projectPlanningRevisions';
 import { supabase } from '@/lib/supabase';
 import { nextWBSWorkflow, readWBSWorkflow } from '@/lib/projectWBSWorkflow';
 import { synchronizeWBSStructure } from './projectWBSStructure';
@@ -15,7 +16,7 @@ export async function persistWBSWorkflow(projectId: string, baseline: any, items
             if (readError) throw readError;
             existing.push(...(data || [])); if (!data || data.length < 500) break;
         }
-        const synchronized = await synchronizeWBSStructure(projectId, existing, items);
+        const synchronized = await synchronizeWBSStructure(projectId, existing, items, readWBSWorkflow(meta).versions.slice(-1)[0]?.items || existing);
         const drafts: Record<string, { title: string; title_en: string }> = {};
         for (const item of items) {
             const row = existing.find(row => row.id === item.id);
@@ -28,10 +29,12 @@ export async function persistWBSWorkflow(projectId: string, baseline: any, items
         const source = meta.estimateValues, remapped = { ...source };
         const latest = readWBSWorkflow(meta).versions.slice(-1)[0];
         const changes = items.map(item => ({ old: item.meta?.wbsSourceCode || latest?.items.find(row => row.id === item.id)?.wbs_code || item.wbs_code, next: item.wbs_code })).filter(change => change.old !== change.next);
+        (latest?.items || []).filter(row => !items.some(item => item.id === row.id)).forEach(row => delete remapped[row.wbs_code]);
         changes.forEach(change => delete remapped[change.old]);
         changes.forEach(change => { if (Object.prototype.hasOwnProperty.call(source, change.old)) remapped[change.next] = source[change.old]; });
         publishedMeta = { ...meta, estimateValues: remapped };
     }
+    if (submit) publishedMeta = applyWBSPlanningRevision(publishedMeta, readWBSWorkflow(meta).versions.slice(-1)[0]?.items || [], items, workflow.versions.slice(-1)[0].version);
     let query = supabase.from('projects').update({ meta: { ...publishedMeta, wbsWorkflow: workflow } }).eq('id', projectId);
     query = project.meta == null ? query.is('meta', null) : query.filter('meta', 'eq', JSON.stringify(project.meta));
     const { data: saved, error: saveError } = await query.select('meta').single();

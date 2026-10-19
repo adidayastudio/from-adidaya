@@ -9,3 +9,13 @@ test('exact-code records win over compatibility aliases and notes reload by stab
 test('zero quantity stays zero and incomplete or negative dimensions have no misleading total',()=>{const row={id:'r',name:'A',formula_type:'BOX',parameters:{length:2,width:3,height:4,count:0}};assert.equal(lib.volumeDraftTotal([row]),0);assert.equal(lib.volumeDraftTotal([{...row,parameters:{...row.parameters,height:NaN}}]),null);assert.equal(lib.volumeDraftTotal([{...row,parameters:{...row.parameters,width:-1}}]),null);});
 test('mixed dimensional formulas cannot be applied to one item unit',()=>{const row={id:'r',name:'A',formula_type:'AREA',parameters:{length:2,width:3,count:1}};assert.equal(lib.volumeUnitMismatch({rows:[row],unit:'m3'}),true);assert.equal(lib.volumeUnitMismatch({rows:[row],unit:'m²'}),false);assert.equal(lib.volumeUnitMismatch({rows:[{...row,formula_type:'MANUAL',parameters:{manualVolume:3,count:1}}],unit:'pcs'}),false);});
 test('top unit selection drives formulas and preserves quantity and notes',()=>{const draft=lib.loadVolumeDraft({code:'S.1.1',unit:'m1'},[],{});draft.rows[0].parameters.count=3;draft.rows[0].details={notes:'Keep'};const next=lib.setVolumeItemUnit(draft,'m2');assert.equal(next.unit,'m²');assert.equal(next.rows[0].formula_type,'AREA');assert.equal(next.rows[0].parameters.count,3);assert.equal(next.rows[0].details.notes,'Keep');assert.equal(next.dirty,true);assert.equal(draft.unit,'m');assert.equal(lib.setVolumeItemUnit(next,'m3').rows[0].formula_type,'BOX');const manual=lib.applyVolumeFormula(next,next.rows[0].id,'MANUAL');assert.equal(manual.unit,'m²');assert.equal(manual.rows[0].formula_type,'MANUAL');});
+
+test('volume status distinguishes untouched inputs, pending calculations and applied values including zero',()=>{
+ const blank=lib.loadVolumeDraft({code:'S.1',unit:'m2'},[],{});
+ assert.equal(lib.volumeDraftStatus(blank),'Not calculated');
+ assert.equal(lib.volumeDraftStatus({...blank,dirty:true}),'Not calculated');
+ const entered={...blank,dirty:true,rows:[{...blank.rows[0],parameters:{length:2,width:3,count:0}}]};
+ assert.equal(lib.volumeDraftStatus(entered),'Unsaved');
+ assert.equal(lib.volumeDraftStatus({...entered,calculated:true,dirty:false,applied:0}),'Saved');
+ assert.equal(lib.volumeDraftStatus({...entered,calculated:true}),'Unsaved');
+});

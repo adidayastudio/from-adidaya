@@ -44,3 +44,9 @@ export function setVolumeItemUnit(draft: VolumeDraft, unit: string): VolumeDraft
         return { ...row, formula_type, parameters: { count: row.parameters.count ?? 1, ...Object.fromEntries(VOLUME_FORMULAS[formula_type].fields.map(field => [field, row.parameters[field] ?? 0])) } };
     }) };
 }
+
+export function volumeDraftStatus(draft: VolumeDraft): 'Saved' | 'Unsaved' | 'Not calculated' {
+    if (draft.calculated) return draft.dirty ? 'Unsaved' : 'Saved';
+    const hasInput = draft.rows.some(row => (VOLUME_FORMULAS[row.formula_type]?.fields || []).some(field => Number.isFinite(row.parameters[field]) && row.parameters[field] !== 0));
+    return hasInput ? 'Unsaved' : 'Not calculated';
+}

@@ -49,3 +49,17 @@ test('calculation notes persist as project metadata and never become unsupported
  const record=calls.find(call=>call[0]==='upsert')[1][0];assert.equal(record.details,undefined);assert.equal(result.meta.volumeRowDetails['stable-id'].notes,'Drawing A-01');assert.equal(result.meta.other,'keep');
 });
 test('empty row descriptions are rejected before any database access',async()=>{calls=[];await assert.rejects(saveProjectVolume('p','S.1.1','m',[{...row,name:' '}],[]),/description/);assert.equal(calls.length,0);});
+test('published Volume rejects edits before mutating calculations',async()=>{
+ calls=[]; responses=[{data:{meta:{planningRevisions:{volume:{draft:false,versions:[{version:1}]}}}}}];
+ await assert.rejects(saveProjectVolume('p','S.1.1','m',[row],[]),/Add a revision/);
+ assert.equal(calls.filter(call=>call[0]==='upsert'||call[0]==='update').length,0);
+});
+test('saving a Volume revision retains published RAB and flags its stable item for review',async()=>{
+ const previous={version:1,snapshot:{meta:{estimateValues:{'S.1.1':{volume:1}}}}};
+ const meta={wbsWorkflow:{versions:[{version:1,items:[{id:'work-id',wbs_code:'S.1.1',title:'Work'}]}]},planningRevisions:{volume:{draft:true,versions:[]},rab:{draft:false,versions:[previous]}}};
+ calls=[];responses=[{data:{meta}},{error:null},{data:{id:'p'}},{data:[{id:'work-id'}]}];
+ const result=await saveProjectVolume('p','S.1.1','m',[row],[]);
+ assert.equal(result.meta.planningRevisions.rab.draft,true);
+ assert.equal(result.meta.planningRevisions.rab.versions[0].snapshot.meta.estimateValues['S.1.1'].volume,1);
+ assert.equal(result.meta.planningImpact.items[0].id,'work-id');assert.equal(result.meta.planningImpact.items[0].rabReview,true);
+});

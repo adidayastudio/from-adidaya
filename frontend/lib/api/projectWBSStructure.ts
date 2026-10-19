@@ -1,10 +1,15 @@
 import { supabase } from '@/lib/supabase';
 /** Synchronize structural edits only when publishing; drafts never touch live rows. */
-export async function synchronizeWBSStructure(projectId: string, existing: any[], items: any[]) {
-    const removed = existing.filter(row => !items.some(item => item.id === row.id)).sort((a, b) => Number(b.level ?? b.wbs_code.split('.').length - 1) - Number(a.level ?? a.wbs_code.split('.').length - 1));
+export async function synchronizeWBSStructure(projectId: string, existing: any[], items: any[], baseline: any[] = existing) {
+    const known = [...existing, ...baseline.filter(row => !existing.some(item => item.id === row.id))];
+    const removed = known.filter(row => !items.some(item => item.id === row.id)).sort((a, b) => Number(b.level ?? b.wbs_code.split('.').length - 1) - Number(a.level ?? a.wbs_code.split('.').length - 1));
     for (const row of removed) {
         const { error } = await supabase.from('project_wbs_items').delete().eq('project_id', projectId).eq('id', row.id);
         if (error) throw new Error(`WBS submission not finalized. Unable to remove ${row.wbs_code}: ${error.message}`);
+        if (!existing.some(current => current.id !== row.id && current.wbs_code === row.wbs_code)) {
+            const { error: cleanupError } = await supabase.from('project_volume_calcs').delete().eq('project_id', projectId).eq('wbs_code', row.wbs_code);
+            if (cleanupError) throw new Error(`Unable to clear removed item calculations. Retry Submit: ${cleanupError.message}`);
+        }
     }
     const kept = existing.filter(row => items.some(item => item.id === row.id));
     // Temporarily free changed codes so moving a subtree cannot collide with its old codes.
@@ -23,7 +28,7 @@ export async function synchronizeWBSStructure(projectId: string, existing: any[]
     const result: any[] = [];
     for (const row of kept) {
         const item = items.find(item => item.id === row.id);
-        const structure = { parent_id: item.parent_id || null, wbs_code: item.wbs_code, position: Number(item.position || 0), level: Number(item.level || 0), is_leaf: !items.some(child => child.parent_id === item.id) };
+        const structure = { parent_id: item.parent_id || null, wbs_code: item.wbs_code, position: Number(item.position || 0), level: Number(item.level || 0), is_leaf: !items.some(child => child.parent_id === item.id), ...(item.unit !== undefined && item.unit !== baseline.find(previous => previous.id === item.id)?.unit ? { unit: item.unit } : {}) };
         if (Object.entries(structure).some(([key, value]) => (key === 'parent_id' ? row[key] || null : row[key]) !== value)) {
             const { data, error } = await supabase.from('project_wbs_items').update(structure).eq('project_id', projectId).eq('id', row.id).select('id').single();
             if (error || !data) throw new Error(`WBS submission not finalized. ${error?.message || 'Unable to save hierarchy. Retry Submit.'}`);

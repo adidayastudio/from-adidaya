@@ -1,3 +1,4 @@
+import { planningRevision } from '@/lib/projectPlanningRevisions';
 import { supabase } from '@/lib/supabase';
 import { mergeRABDrafts, RABDrafts } from '@/lib/legacy-rab/editing';
 
@@ -5,6 +6,7 @@ export async function saveProjectRAB(projectId: string, baselineMeta: any, draft
     const { data: current, error } = await supabase.from('projects').select('meta').eq('id', projectId).single();
     if (error) throw error;
     const meta = current.meta || {};
+    if (!planningRevision(meta, 'rab').draft) throw new Error('RAB is published. Add a revision before editing.');
     if (JSON.stringify(meta.estimateValues || {}) !== JSON.stringify(baselineMeta.estimateValues || {})) {
         throw new Error('This RAB was changed by another user. Reload before saving; your edits have been kept.');
     }

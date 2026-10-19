@@ -2,6 +2,7 @@ const test = require('node:test'), assert = require('node:assert/strict');
 const fs = require('node:fs'), vm = require('node:vm'), ts = require('typescript');
 function load(file, mocks = {}) { const exports = {}; vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, { exports, require: name => { if (name in mocks) return mocks[name]; throw new Error(name); } }); return exports; }
 const core = load('lib/projectWBSWorkflow.ts');
+const revisions = load('lib/projectPlanningRevisions.ts', { './projectWBSWorkflow': core });
 const items = [{ id: 's', wbs_code: 'S', title: 'Structure' }, { id: 's1', parent_id: 's', wbs_code: 'S.1', title: 'Preparation' }];
 test('template -> saved draft -> save changes -> submit v1 -> revision draft -> submit v2 preserves v1', () => {
  let state = core.readWBSWorkflow({}); state = core.nextWBSWorkflow(state, items, false); assert.equal(state.versions.length, 0); assert.equal(state.draft.items[1].title, 'Preparation');
@@ -21,7 +22,7 @@ test('legacy submitted snapshot is preserved and invalid hierarchy cannot submit
 function api(responses) {
  const writes = [], sync = [];
  const query = { select() { return this; }, eq() { return this; }, is() { return this; }, filter() { return this; }, order() { return this; }, range() { return this; }, update(data) { writes.push(data); return this; }, single() { return Promise.resolve(responses.shift()); }, then(resolve, reject) { return Promise.resolve(responses.shift()).then(resolve, reject); } };
- const module = load('lib/api/projectWBSWorkflow.ts', { '@/lib/supabase': { supabase: { from: () => query } }, '@/lib/projectWBSWorkflow': core, './projectWBSStructure': { synchronizeWBSStructure: async (_, rows, items) => [...rows, ...items.filter(item => !rows.some(row => row.id === item.id))] }, './projectWBS': { saveProjectWBS: async (...args) => sync.push(args) } }); return { ...module, writes, sync };
+ const module = load('lib/api/projectWBSWorkflow.ts', { '@/lib/supabase': { supabase: { from: () => query } }, '@/lib/projectWBSWorkflow': core, '@/lib/projectPlanningRevisions': revisions, './projectWBSStructure': { synchronizeWBSStructure: async (_, rows, items) => [...rows, ...items.filter(item => !rows.some(row => row.id === item.id))] }, './projectWBS': { saveProjectWBS: async (...args) => sync.push(args) } }); return { ...module, writes, sync };
 }
 test('Save Draft writes only draft metadata and preserves unrelated fields', async () => {
  const state = core.nextWBSWorkflow(core.readWBSWorkflow({}), items, false);

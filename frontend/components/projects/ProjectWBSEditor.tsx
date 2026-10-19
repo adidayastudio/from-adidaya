@@ -1,3 +1,4 @@
+import { wbsPlanningImpact } from '@/lib/projectPlanningRevisions';
 import React, { useEffect, useState } from 'react';
 import { Alert, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { ProjectWorkTree } from './ProjectWorkTree';
@@ -14,11 +15,12 @@ import { actOnWBS, reorderWBS, addWBSDiscipline } from '@/lib/projectWBSActions'
 import { readWBSWorkflow } from '@/lib/projectWBSWorkflow';
 import { persistWBSWorkflow } from '@/lib/api/projectWBSWorkflow';
 
-type Props = { project: any; items: any[]; isDark: boolean; onDirtyChange?: (dirty: boolean) => void; onToolbarChange?: (toolbar: React.ReactNode) => void };
+type Props = { project: any; items: any[]; isDark: boolean; onDirtyChange?: (dirty: boolean) => void; onToolbarChange?: (toolbar: React.ReactNode) => void; onNavigatePlanning?: (section: string) => void };
 const clone = (items: any[]) => items.map(row => ({ ...row, ...splitWBSNames(row) }));
 // Keep the public component a function across Fast Refresh updates.
 export function ProjectWBSEditor(props: Props) { return <WBSWorkflowEditor {...props} />; }
-const WBSWorkflowEditor = React.memo(function WBSWorkflowEditor({ project, items, isDark, onDirtyChange, onToolbarChange }: Props) {
+const WBSWorkflowEditor = React.memo(function WBSWorkflowEditor({ project, items, isDark, onDirtyChange, onToolbarChange, onNavigatePlanning }: Props) {
+    const [publishedNotice, setPublishedNotice] = useState<string | null>(null);
     const [workflow, setWorkflow] = useState(() => readWBSWorkflow(project.meta));
     const [baseline, setBaseline] = useState(project.meta?.wbsWorkflow ?? null);
     const latest = workflow.versions[workflow.versions.length - 1];
@@ -42,9 +44,10 @@ const WBSWorkflowEditor = React.memo(function WBSWorkflowEditor({ project, items
     const persist = async (submit: boolean) => {
         if (locked || saving) return; setSaving(true);
         try {
+            const reviewCount = latest ? wbsPlanningImpact(latest.items, rows).length : 0;
             const next = await persistWBSWorkflow(project.id, baseline, rows, submit);
             clearHistory(); setWorkflow(next); setBaseline(next); setDirty(false); setRevisionActive(!submit); feedback.clear();
-            if (submit) { const published = next.versions[next.versions.length - 1]; setSelected(published.version); setRows(clone(published.items)); setToast(`WBS v.${published.version} submitted.`); }
+            if (submit) { if (latest) setPublishedNotice(reviewCount ? `${reviewCount} changed items need Volume and RAB review.` : 'WBS structure updated. Existing calculations and prices retained.'); const published = next.versions[next.versions.length - 1]; setSelected(published.version); setRows(clone(published.items)); setToast(`WBS v.${published.version} submitted.`); }
             else setToast(workflow.draft ? 'Draft changes saved.' : 'WBS saved as draft.');
         } catch (error: any) { feedback.notify('Error', error.message || 'Unable to save WBS.'); }
         finally { setSaving(false); }
@@ -64,6 +67,7 @@ const WBSWorkflowEditor = React.memo(function WBSWorkflowEditor({ project, items
     };
     const versionChoices = [...(workflow.draft || revisionActive || !latest ? [{ title: workflow.draft || revisionActive ? 'Draft' : 'Template', version: 0 }] : []), ...[...workflow.versions].reverse().map(version => ({ title: `WBS v.${version.version}`, version: version.version }))];
     return <View style={{ gap: 12, paddingBottom: 30 }}>
+        {!!publishedNotice && <View style={{ padding: 12, borderRadius: 12, backgroundColor: isDark ? '#102749' : '#E8F0FF', flexDirection: 'row', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}><Text style={{ color, fontSize: 12, flex: 1 }}>{publishedNotice}</Text><TouchableOpacity onPress={() => onNavigatePlanning?.('volume')}><Text style={{ color: '#007AFF', fontSize: 12 }}>Open Volume</Text></TouchableOpacity><TouchableOpacity onPress={() => onNavigatePlanning?.('rab')}><Text style={{ color: '#007AFF', fontSize: 12 }}>Open RAB</Text></TouchableOpacity></View>}
         {feedback.failed && <ProjectSaveFeedback {...feedback} />}
 
         <ProjectWorkTree toolbarLeading={<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
