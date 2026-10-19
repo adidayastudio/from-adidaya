@@ -2,14 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ActionSheetIOS, Alert, Clipboard, Dimensions, Image as RNImage, UIManager, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
+import { uploadFinanceAttachment } from '@/lib/uploadFinanceAttachment';
 import { openBrowserAsync, WebBrowserPresentationStyle } from 'expo-web-browser';
 import { BottomSheet, Button, DateTimePicker, Host, HStack, Picker, Section, Spacer, Switch, TextField, Text as SwiftUIText, VStack, ZStack } from '@expo/ui/swift-ui';
 import { background, cornerRadius, frame, ignoreSafeArea, padding, tint } from '@expo/ui/swift-ui/modifiers';
 import { useFinance } from '@/context/FinanceContext';
 import { useTheme } from '@/context/ThemeContext';
 import { getConsolidationRequestIssues, PurchasingConsolidationItem } from '@/lib/api/financeConsolidation';
-import { fetchBeneficiaryAccounts, resolveFinanceUrl, uploadFinanceFileBase64 } from '@/lib/api/finance';
+import { fetchBeneficiaryAccounts, resolveFinanceUrl } from '@/lib/api/finance';
 import { attachmentKind, readPurchasingNotes, requestAttachments, splitReferenceNotes } from '@/lib/financeRequestPresentation';
 import { evaluateApprovalChain, getFinanceApprovalMatrixSettings, getFinancePaymentTerms, getFinanceTaxRules } from '@/lib/api/financeSetup';
 import { UNIT_OPTIONS } from './constants';
@@ -251,15 +251,9 @@ export const SwiftUIConsolidationRequestDetailSheet: React.FC<Props> = ({ isOpen
                 Alert.alert('Invoice Required', 'Add an invoice before saving this Consolidation Request.');
                 return;
             }
-            const uploadedInvoices = await Promise.all(invoiceFiles.map(async file => {
-                if (!file.uri.startsWith('file://')) return file;
-                const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
-                const extension = file.name.split('.').pop() || 'pdf';
-                const normalizedExtension = extension.toLowerCase();
-                const contentType = file.mimeType
-                    || (normalizedExtension === 'pdf' ? 'application/pdf' : normalizedExtension === 'jpg' ? 'image/jpeg' : `image/${normalizedExtension}`);
-                return { ...file, uri: await uploadFinanceFileBase64(base64, extension, contentType, 'purchase') };
-            }));
+            const uploadedInvoices = await Promise.all(invoiceFiles.map(async file => ({
+                ...file, uri: await uploadFinanceAttachment(file, 'purchase'),
+            })));
             const values = {
                 items: items.map(item => ({
                     qty: Number(item.qty) || 0,

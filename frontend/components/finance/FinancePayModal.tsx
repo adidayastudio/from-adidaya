@@ -19,8 +19,7 @@ import { Colors } from '@/constants/theme';
 import { useTheme } from '@/context/ThemeContext';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as FileSystem from 'expo-file-system/legacy';
-import { uploadFinanceFileBase64 } from '@/lib/api/finance';
+import { uploadFinanceAttachment } from '@/lib/uploadFinanceAttachment';
 import { PlatformIcon } from '@/components/ui/PlatformIcon';
 import { GlassView } from '@/components/ui/GlassView';
 import { LiquidDatePicker } from '../ui/LiquidDatePicker';
@@ -351,25 +350,9 @@ export function FinancePayModal({
 
         setSubmitting(true);
         try {
-            let uploadedUrls: string[] = [];
-            for (const img of proofs) {
-                const isLocalFile = img.uri.startsWith('file://') || img.uri.startsWith('content://') || img.uri.startsWith('ph://');
-                if (!isLocalFile) {
-                    uploadedUrls.push(img.uri);
-                    continue;
-                }
-
-                const base64 = await FileSystem.readAsStringAsync(img.uri, {
-                    encoding: FileSystem.EncodingType.Base64,
-                });
-                const ext = img.uri.split('.').pop() || 'jpg';
-                const url = await uploadFinanceFileBase64(
-                    base64,
-                    ext,
-                    img.mimeType || 'image/jpeg',
-                    'payment-proof'
-                );
-                uploadedUrls.push(url);
+            const uploadedUrls: string[] = [];
+            for (const file of proofs) {
+                uploadedUrls.push(await uploadFinanceAttachment(file, 'payment-proof'));
             }
 
             await onConfirm({

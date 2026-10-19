@@ -2,13 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Alert } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
-import * as FileSystem from 'expo-file-system/legacy';
+import { uploadFinanceAttachment } from '@/lib/uploadFinanceAttachment';
 import { BottomSheet, Button, DateTimePicker, Form, Host, HStack, Picker, Section, Spacer, TextField, Text as SwiftUIText, VStack } from '@expo/ui/swift-ui';
 import { background, frame, ignoreSafeArea, padding } from '@expo/ui/swift-ui/modifiers';
 import { useTheme } from '@/context/ThemeContext';
 import { useFinance } from '@/context/FinanceContext';
 import { PurchasingConsolidationItem } from '@/lib/api/financeConsolidation';
-import { uploadFinanceFileBase64 } from '@/lib/api/finance';
 
 interface Props {
     visible: boolean;
@@ -92,12 +91,9 @@ export const ConsolidationPaymentModal: React.FC<Props> = ({ visible, onClose, c
         }
         setSubmitting(true);
         try {
-            const proofUrls = await Promise.all(proofs.map(async file => {
-                if (!file.uri.startsWith('file://')) return file.uri;
-                const extension = file.name.split('.').pop() || 'jpg';
-                const base64 = await FileSystem.readAsStringAsync(file.uri, { encoding: FileSystem.EncodingType.Base64 });
-                return uploadFinanceFileBase64(base64, extension, file.mimeType || 'application/octet-stream', 'purchase');
-            }));
+            const proofUrls = await Promise.all(proofs.map(file =>
+                uploadFinanceAttachment(file, 'payment-proof')
+            ));
             await payConsolidationBatch(consolidation.id, requests.map(request => request.id), {
                 source_of_fund_id: activeSource.id,
                 payment_date: paymentDate.toISOString().split('T')[0],
