@@ -5,13 +5,13 @@ const nextConfig: NextConfig = {
   async redirects() {
     const legacyOrigin = 'https://from-adidaya-git-backend-adiday-b1d39d-adidaya-studios-projects.vercel.app';
     return [
+      { source: '/legacy', destination: `${legacyOrigin}/dashboard`, permanent: false },
       { source: '/legacy/finance/:path*', destination: `${legacyOrigin}/flow/finance/:path*`, permanent: false },
       { source: '/legacy/projects/:path*', destination: `${legacyOrigin}/project/:path*`, permanent: false },
     ];
   },
   async rewrites() {
     return { beforeFiles: [
-      { source: '/legacy', destination: '/legacy-index.html' },
       { source: '/', destination: '/forma-index.html' },
       { source: '/:path((?!api(?:/|$)|_next(?:/|$)|.*\\.).*)', destination: '/forma-index.html' },
     ] };
