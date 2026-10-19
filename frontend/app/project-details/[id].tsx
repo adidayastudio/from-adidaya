@@ -1,3 +1,5 @@
+import { ProjectPlanningNavigation } from '@/components/projects/ProjectPlanningNavigation';
+import { ProjectPlanningPanel } from '@/components/projects/ProjectPlanningPanel';
 import { ProjectWorkspace } from '@/components/projects/ProjectWorkspace';
 import { FormaBlue } from '@/constants/theme';
 import { ProjectWorkspaceInspector } from '@/components/projects/ProjectWorkspaceInspector';
@@ -397,6 +399,7 @@ export function ProjectDetailContent({
             const normalized: ProjectDocItem[] = rawDocs.map((d: any, idx: number) => {
                 const dateVal = d.date || d.uploadedAt || '2026-06-12';
                 return {
+                    ...d,
                     id: d.id || `pdoc-${idx}`,
                     name: d.name || 'Document.pdf',
                     size: d.size || '1.5 MB',
@@ -734,13 +737,17 @@ export function ProjectDetailContent({
                         onOpenSetupModule={onOpenSetupModule}
                     />
                 );
+            case 'planning':
+                return <ProjectPlanningNavigation project={project} isDark={isDark} />;
+            case 'reports':
+                return <ProjectPlanningPanel project={project} section="reports" isDark={isDark} />;
             case 'work':
             case 'tracking':
             case 'progress':
                 return (
                     <TrackingTab
                         inlineDetails={contentOnly}
-                        taskListOnly={contentOnly && activeTab === 'work'}
+                        taskListOnly={activeTab === 'work'}
                         project={project}
                         isDark={isDark}
                         onRefresh={loadProject}
@@ -1137,13 +1144,29 @@ export function ProjectDetailContent({
                             segments={[
                                 { id: 'overview', label: 'Overview', icon: 'doc.plaintext' },
                                 { id: 'work', label: 'Work', icon: 'location.viewfinder' },
-                                { id: 'activity', label: 'Activity', icon: 'bolt.horizontal' },
-                                { id: 'docs', label: 'Docs', icon: 'folder' },
+                                { id: 'docs', label: 'Documents', icon: 'folder' },
                             ]}
                             activeSegment={activeTab}
                             onSegmentChange={(tab) => { setActiveTab(tab); onTabChange?.(tab); }}
                             style={styles.topSegmentedControl}
                         />
+                        <ContextMenu
+                            dropdownMenuMode
+                            actions={[
+                                { title: 'Planning', systemIcon: 'calendar', selected: activeTab === 'planning' },
+                                { title: 'Control', systemIcon: 'chart.bar', selected: activeTab === 'tracking' },
+                                { title: 'Reports', systemIcon: 'doc.text', selected: activeTab === 'reports' },
+                                { title: 'Activity', systemIcon: 'bolt.horizontal', selected: activeTab === 'activity' },
+                            ]}
+                            onPress={(event) => {
+                                const next = ['planning', 'tracking', 'reports', 'activity'][event.nativeEvent.index];
+                                if (next) { setActiveTab(next); onTabChange?.(next); }
+                            }}
+                        >
+                            <TouchableOpacity accessibilityRole="button" accessibilityLabel="More project areas" style={{ padding: 12 }}>
+                                <Text style={{ color: textColor, textAlign: 'center' }}>{({ planning: 'Planning', tracking: 'Control', reports: 'Reports', activity: 'Activity' } as Record<string, string>)[activeTab] || 'More'} ···</Text>
+                            </TouchableOpacity>
+                        </ContextMenu>
                     </View>
                 )}
 

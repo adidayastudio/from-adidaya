@@ -44,3 +44,7 @@
 ## When Unclear
 - Infer from nearby existing patterns first.
 - Ask only if a missing decision would materially change the implementation.
+
+## Repository Mapping
+- Folder lokal `newfromadidaya` menggunakan repository GitHub `https://github.com/adidayastudio/from-adidaya.git` (dikonfirmasi user).
+- Saat diminta commit/push, gunakan repository tersebut; jangan menyimpulkan repository tidak ada hanya karena remote lokal belum diatur.

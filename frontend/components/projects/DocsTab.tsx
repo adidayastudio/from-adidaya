@@ -1,14 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import { DocumentFolderTree } from './DocumentFolderTree';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
     View,
     Text,
     StyleSheet,
     TouchableOpacity,
     Pressable,
-    TextInput,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
     Share,
     Alert,
     LayoutAnimation,
@@ -21,15 +18,12 @@ import Animated, {
     useSharedValue,
     useAnimatedStyle,
     withSpring,
-    FadeInDown,
 } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { GlassView } from '@/components/ui/GlassView';
-import { PlatformIcon } from '@/components/ui/PlatformIcon';
 import { Project, saveProjectMeta } from '@/lib/api/projects';
-import { DocPagePreview, SwiftUIDocInfoSheet, DocInfoItem } from '@/components/chat/SwiftUIDocInfoSheet';
+import { SwiftUIDocInfoSheet, DocInfoItem } from '@/components/chat/SwiftUIDocInfoSheet';
 import { FormaUniversalFileViewer } from '@/components/chat/FormaUniversalFileViewer';
 import { FilePreviewItem } from '@/lib/filePreviewStrategy';
 
@@ -61,6 +55,13 @@ export interface ProjectDocItem {
     isSelf?: boolean;
     isSaved?: boolean;
     folder?: string;
+    url?: string;
+    subworkCode?: string;
+    subwork_code?: string;
+    stageCode?: string;
+    stage_code?: string;
+    folderCode?: string;
+    folder_code?: string;
 }
 
 export const formatDocCardDate = (dateStr?: string, timeStr?: string): string => {
@@ -188,17 +189,6 @@ export const DEFAULT_PROJECT_MOCK_DOCS: ProjectDocItem[] = [
     },
 ];
 
-const truncateMiddleFileName = (name: string, maxLen = 32) => {
-    if (!name || name.length <= maxLen) return name;
-    const dotIdx = name.lastIndexOf('.');
-    const ext = dotIdx !== -1 ? name.slice(dotIdx) : '';
-    const base = dotIdx !== -1 ? name.slice(0, dotIdx) : name;
-    const available = maxLen - ext.length - 3;
-    if (available <= 4) return name.slice(0, maxLen - 3) + '...';
-    const half = Math.floor(available / 2);
-    return `${base.slice(0, half)}...${base.slice(-half)}${ext}`;
-};
-
 export const BouncyToolbarButton = ({
     onPress,
     children,
@@ -260,7 +250,6 @@ export function DocsTab({
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#636366';
     const formaBlue = '#007AFF';
-    const bubbleOtherBg = isDark ? 'rgba(255, 255, 255, 0.07)' : 'rgba(255, 255, 255, 0.88)';
 
     // Internal states fallback if not controlled by parent
     const [localDocsList, setLocalDocsList] = useState<ProjectDocItem[]>([]);
@@ -290,6 +279,7 @@ export function DocsTab({
         if (project.meta?.documents && Array.isArray(project.meta.documents) && project.meta.documents.length > 0) {
             const rawDocs = project.meta.documents;
             const normalized: ProjectDocItem[] = rawDocs.map((d: any, idx: number) => ({
+                ...d,
                 id: d.id || `pdoc-${idx}`,
                 name: d.name || 'Document.pdf',
                 size: d.size || '1.5 MB',
@@ -304,7 +294,7 @@ export function DocsTab({
         } else {
             setDocsList([]);
         }
-    }, [project.meta?.documents]);
+    }, [project.meta?.documents, setDocsList]);
 
     const saveDocsToDb = async (updated: ProjectDocItem[]) => {
         setDocsList(updated);
@@ -315,65 +305,6 @@ export function DocsTab({
             console.error('Error saving project docs:', e);
         }
     };
-
-    // Sort Actions Menu
-    const docSortActions: ContextMenuAction[] = useMemo(() => [
-        { title: 'Newest to Oldest', systemIcon: 'calendar', selected: docSortMode === 'date-desc' },
-        { title: 'Oldest to Newest', systemIcon: 'calendar.badge.clock', selected: docSortMode === 'date-asc' },
-        { title: 'Name (A to Z)', systemIcon: 'textformat.abc', selected: docSortMode === 'name-asc' },
-        { title: 'Name (Z to A)', systemIcon: 'textformat.abc', selected: docSortMode === 'name-desc' },
-        { title: 'Largest to Smallest', systemIcon: 'arrow.down.circle', selected: docSortMode === 'size-desc' },
-        { title: 'Smallest to Largest', systemIcon: 'arrow.up.circle', selected: docSortMode === 'size-asc' },
-    ], [docSortMode]);
-
-    // Filter Actions Menu
-    const docFilterActions: ContextMenuAction[] = useMemo(() => {
-        const hasPdf = docsList.some(d => d.name.toLowerCase().endsWith('.pdf'));
-        const hasSheet = docsList.some(d => d.name.toLowerCase().endsWith('.xlsx') || d.name.toLowerCase().endsWith('.xls') || d.name.toLowerCase().endsWith('.csv'));
-        const hasCad = docsList.some(d => d.name.toLowerCase().endsWith('.dwg') || d.name.toLowerCase().endsWith('.cad'));
-
-        const actions: ContextMenuAction[] = [
-            { title: 'All Documents', systemIcon: 'doc.on.doc', selected: docFilterType === 'all' },
-            { title: 'Bookmarked', systemIcon: 'bookmark', selected: docFilterType === 'saved' },
-        ];
-        if (hasPdf) {
-            actions.push({ title: 'PDF Files', systemIcon: 'doc.text', selected: docFilterType === 'pdf' });
-        }
-        if (hasSheet) {
-            actions.push({ title: 'Spreadsheets', systemIcon: 'tablecells', selected: docFilterType === 'spreadsheet' });
-        }
-        if (hasCad) {
-            actions.push({ title: 'CAD Drawings', systemIcon: 'square.stack.3d.up', selected: docFilterType === 'cad' });
-        }
-        if (docFilterType !== 'all') {
-            actions.push({
-                title: 'Reset Filter',
-                systemIcon: 'arrow.counterclockwise',
-                destructive: true,
-            });
-        }
-        return actions;
-    }, [docsList, docFilterType]);
-
-    const handleDocSortAction = useCallback((actionTitle: string) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        if (actionTitle === 'Newest to Oldest') setDocSortMode('date-desc');
-        else if (actionTitle === 'Oldest to Newest') setDocSortMode('date-asc');
-        else if (actionTitle === 'Name (A to Z)') setDocSortMode('name-asc');
-        else if (actionTitle === 'Name (Z to A)') setDocSortMode('name-desc');
-        else if (actionTitle === 'Largest to Smallest') setDocSortMode('size-desc');
-        else if (actionTitle === 'Smallest to Largest') setDocSortMode('size-asc');
-        else if (actionTitle === 'Reset Sort' || actionTitle.includes('Reset')) setDocSortMode('date-desc');
-    }, []);
-
-    const handleDocFilterAction = useCallback((actionTitle: string) => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-        if (actionTitle === 'All Documents' || actionTitle === 'Reset Filter' || actionTitle.includes('Reset')) setDocFilterType('all');
-        else if (actionTitle === 'Bookmarked Documents' || actionTitle === 'Saved Documents' || actionTitle === 'Saved' || actionTitle === 'Bookmarked') setDocFilterType('saved');
-        else if (actionTitle === 'PDF Files') setDocFilterType('pdf');
-        else if (actionTitle === 'Spreadsheets') setDocFilterType('spreadsheet');
-        else if (actionTitle === 'CAD Drawings') setDocFilterType('cad');
-    }, []);
 
     // Filter and Sort Computation
     const filteredDocs = useMemo(() => {
@@ -414,23 +345,7 @@ export function DocsTab({
         return list;
     }, [docsList, searchQuery, docSortMode, docFilterType, savedDocIds]);
 
-    const getDocSectionTitle = useCallback((doc: ProjectDocItem): string => {
-        return getDocSectionLabel(doc.date, doc.dateLabel);
-    }, []);
 
-    const groupedDocSections = useMemo(() => {
-        const groups: { title: string; data: ProjectDocItem[] }[] = [];
-        filteredDocs.forEach((doc) => {
-            const title = getDocSectionTitle(doc);
-            const existing = groups.find((g) => g.title === title);
-            if (existing) {
-                existing.data.push(doc);
-            } else {
-                groups.push({ title, data: [doc] });
-            }
-        });
-        return groups;
-    }, [filteredDocs, getDocSectionTitle]);
 
     // Item Context Menu
     const getDocCardContextMenuActions = useCallback((doc: ProjectDocItem): ContextMenuAction[] => {
@@ -543,213 +458,16 @@ export function DocsTab({
         });
     };
 
-    // Multi-Select Delete Action Menu
-    const multiSelectDocDeleteActions: ContextMenuAction[] = useMemo(() => {
-        const selectedDocs = docsList.filter((d) => selectedDocIds.includes(d.id));
-        const allSelf = selectedDocs.length > 0 && selectedDocs.every((d) => d.isSelf || d.uploadedBy === 'You');
-
-        const actions: ContextMenuAction[] = [
-            {
-                title: `Delete for Me (${selectedDocIds.length})`,
-                systemIcon: 'person.crop.circle.badge.minus',
-                destructive: true,
-            },
-        ];
-
-        if (allSelf) {
-            actions.push({
-                title: `Delete for Everyone (${selectedDocIds.length})`,
-                systemIcon: 'trash.fill',
-                destructive: true,
-            });
-        }
-
-        return actions;
-    }, [docsList, selectedDocIds]);
-
-    const handleBatchDelete = () => {
-        const updated = docsList.filter(d => !selectedDocIds.includes(d.id));
-        saveDocsToDb(updated);
-        setSelectedDocIds([]);
-        setIsDocSelectMode(false);
-    };
-
-    const handleBatchBookmark = () => {
-        const allSaved = selectedDocIds.every(id => savedDocIds.includes(id));
-        if (allSaved) {
-            setSavedDocIds(prev => prev.filter(id => !selectedDocIds.includes(id)));
-        } else {
-            setSavedDocIds(prev => Array.from(new Set([...prev, ...selectedDocIds])));
-        }
-        setSelectedDocIds([]);
-        setIsDocSelectMode(false);
-    };
-
     return (
         <View style={styles.container}>
-            {/* 1. Main Document List Area */}
             <View style={styles.filterSection}>
-                {filteredDocs.length === 0 ? (
-                    <View style={styles.emptyStateCard}>
-                        <View style={[styles.emptyStateIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.03)' }]}>
-                            <PlatformIcon name="doc.text" size={32} tintColor={subtextColor} />
-                        </View>
-                        <Text style={[styles.emptyStateTitle, { color: textColor }]}>No Documents Shared</Text>
-                        <Text style={[styles.emptyStateSubtitle, { color: subtextColor }]}>
-                            PDFs, sheets, and documents sent in this project will appear here.
-                        </Text>
-                    </View>
-                ) : (!searchQuery.trim() && docFilterType === 'all' && (docSortMode === 'date-desc' || docSortMode === 'date-asc')) ? (
-                    /* Grouped by Date Sections with Subtle Header + Count */
-                    groupedDocSections.map((section) => (
-                        <View key={section.title} style={{ marginBottom: 14 }}>
-                            <Text style={{ fontSize: 13, fontWeight: '600', color: subtextColor, marginBottom: 8, marginTop: 4, paddingHorizontal: 4 }}>
-                                {section.title} ({section.data.length})
-                            </Text>
-                            <View style={{ gap: 10 }}>
-                                {section.data.map((doc) => {
-                                    const isSaved = savedDocIds.includes(doc.id);
-                                    const isSelected = selectedDocIds.includes(doc.id);
-                                    return (
-                                        <View key={doc.id}>
-                                            <ContextMenu
-                                                actions={getDocCardContextMenuActions(doc)}
-                                                previewBackgroundColor="transparent"
-                                                disabled={isDocSelectMode}
-                                                style={{ borderRadius: 20 }}
-                                                onPress={(e) => handleDocActionPress(doc, e.nativeEvent.name)}
-                                            >
-                                                <TouchableOpacity
-                                                    activeOpacity={isDocSelectMode ? 0.85 : 0.75}
-                                                    onPress={() => {
-                                                        if (isDocSelectMode) {
-                                                            handleToggleSelectDoc(doc.id);
-                                                        } else {
-                                                            openFilePreview(doc);
-                                                        }
-                                                    }}
-                                                >
-                                                    <GlassView
-                                                        intensity={isDark ? 25 : 60}
-                                                        tint={isDark ? 'dark' : 'light'}
-                                                        style={[
-                                                            styles.filterCard,
-                                                            { backgroundColor: bubbleOtherBg, borderRadius: 20 },
-                                                            isDocSelectMode && isSelected && {
-                                                                backgroundColor: isDark ? 'rgba(0, 122, 255, 0.16)' : 'rgba(0, 122, 255, 0.08)',
-                                                            }
-                                                        ]}
-                                                    >
-                                                        {isDocSelectMode && (
-                                                            <View style={{ marginRight: 10 }}>
-                                                                <Ionicons
-                                                                    name={isSelected ? "checkmark-circle" : "ellipse-outline"}
-                                                                    size={22}
-                                                                    color={isSelected ? formaBlue : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
-                                                                />
-                                                            </View>
-                                                        )}
-                                                        <DocPagePreview fileName={doc.name} isDark={isDark} />
-                                                        <View style={{ flex: 1, marginRight: 8 }}>
-                                                            <Text
-                                                                style={[styles.filterCardTitle, { color: textColor }]}
-                                                                numberOfLines={1}
-                                                                ellipsizeMode="middle"
-                                                            >
-                                                                {doc.name}
-                                                            </Text>
-                                                            <Text style={[styles.filterCardSubtitle, { color: subtextColor }]}>
-                                                                {doc.size} • {formatDocCardDate(doc.date, doc.time)}
-                                                            </Text>
-                                                        </View>
-                                                        {isSaved && !isDocSelectMode && (
-                                                            <View style={{ paddingRight: 4 }}>
-                                                                <PlatformIcon name="bookmark.fill" size={15} tintColor="#FFCC00" />
-                                                            </View>
-                                                        )}
-                                                    </GlassView>
-                                                </TouchableOpacity>
-                                            </ContextMenu>
-                                        </View>
-                                    );
-                                })}
-                            </View>
-                        </View>
-                    ))
-                ) : (
-                    /* Flat Clean List when Searching, Filtering, or Sorting by Name/Size */
-                    <View style={{ gap: 10 }}>
-                        <Text style={{ fontSize: 13, fontWeight: '600', color: subtextColor, marginBottom: 4, paddingHorizontal: 4 }}>
-                            {docFilterType !== 'all' ? (docFilterType === 'saved' ? 'Bookmarked' : docFilterType.toUpperCase()) : 'Results'} ({filteredDocs.length})
-                        </Text>
-                        {filteredDocs.map((doc) => {
-                            const isSaved = savedDocIds.includes(doc.id);
-                            const isSelected = selectedDocIds.includes(doc.id);
-                            return (
-                                <View key={doc.id}>
-                                    <ContextMenu
-                                        actions={getDocCardContextMenuActions(doc)}
-                                        previewBackgroundColor="transparent"
-                                        style={{ borderRadius: 20 }}
-                                        disabled={isDocSelectMode}
-                                        onPress={(e) => handleDocActionPress(doc, e.nativeEvent.name)}
-                                    >
-                                        <TouchableOpacity
-                                            activeOpacity={isDocSelectMode ? 0.85 : 0.75}
-                                            onPress={() => {
-                                                if (isDocSelectMode) {
-                                                    handleToggleSelectDoc(doc.id);
-                                                } else {
-                                                    openFilePreview(doc);
-                                                }
-                                            }}
-                                        >
-                                            <GlassView
-                                                intensity={isDark ? 25 : 60}
-                                                tint={isDark ? 'dark' : 'light'}
-                                                style={[
-                                                    styles.filterCard,
-                                                    { backgroundColor: bubbleOtherBg, borderRadius: 20 },
-                                                    isDocSelectMode && isSelected && {
-                                                        backgroundColor: isDark ? 'rgba(0, 122, 255, 0.16)' : 'rgba(0, 122, 255, 0.08)',
-                                                    }
-                                                ]}
-                                            >
-                                                {isDocSelectMode && (
-                                                    <View style={{ marginRight: 10 }}>
-                                                        <Ionicons
-                                                            name={isSelected ? "checkmark-circle" : "ellipse-outline"}
-                                                            size={22}
-                                                            color={isSelected ? formaBlue : (isDark ? 'rgba(255,255,255,0.4)' : 'rgba(0,0,0,0.3)')}
-                                                        />
-                                                    </View>
-                                                )}
-                                                <DocPagePreview fileName={doc.name} isDark={isDark} />
-                                                <View style={{ flex: 1, marginRight: 8 }}>
-                                                    <Text
-                                                        style={[styles.filterCardTitle, { color: textColor }]}
-                                                        numberOfLines={2}
-                                                        ellipsizeMode="middle"
-                                                    >
-                                                        {doc.name}
-                                                    </Text>
-                                                    <Text style={[styles.filterCardSubtitle, { color: subtextColor }]}>
-                                                        {doc.size} • {formatDocCardDate(doc.date, doc.time)}
-                                                    </Text>
-                                                </View>
-                                                {isSaved && !isDocSelectMode && (
-                                                    <View style={{ paddingRight: 4 }}>
-                                                        <PlatformIcon name="bookmark.fill" size={15} tintColor="#FFCC00" />
-                                                    </View>
-                                                )}
-                                            </GlassView>
-                                        </TouchableOpacity>
-                                    </ContextMenu>
-                                </View>
-                            );
-                        })}
-                    </View>
-                )}
+                <DocumentFolderTree documents={filteredDocs} isDark={isDark} renderDocument={doc => <ContextMenu actions={getDocCardContextMenuActions(doc)} disabled={isDocSelectMode} onPress={event => handleDocActionPress(doc, event.nativeEvent.name)}>
+                    <TouchableOpacity onPress={() => isDocSelectMode ? handleToggleSelectDoc(doc.id) : openFilePreview(doc)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 }}>
+                        <Ionicons name={isDocSelectMode ? selectedDocIds.includes(doc.id) ? 'checkmark-circle' : 'ellipse-outline' : 'document-text-outline'} size={22} color={formaBlue} />
+                        <View style={{ flex: 1 }}><Text style={{ color: textColor, fontWeight: '500' }}>{doc.name}</Text><Text style={{ color: subtextColor, fontSize: 12, marginTop: 4 }}>{doc.size} · {formatDocCardDate(doc.date, doc.time)}</Text></View>
+                        {savedDocIds.includes(doc.id) && <Ionicons name="bookmark" size={16} color="#FFCC00" />}
+                    </TouchableOpacity>
+                </ContextMenu>} />
             </View>
 
             {/* Spacer for floating bottom search / multi-select toolbars */}

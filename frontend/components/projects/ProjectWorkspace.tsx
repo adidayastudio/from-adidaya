@@ -25,7 +25,7 @@ const GROUPS = [
     { title: '', items: [{ id: 'overview', title: 'Overview', icon: 'home-outline' }] },
     { title: 'PLANNING', items: [
         { id: 'settings:general', title: 'Project Information', icon: 'information-circle-outline' },
-        { id: 'planning:stages', title: 'Stages & Tasks', icon: 'layers-outline' },
+        { id: 'planning:stages', title: 'Stages & Work', icon: 'layers-outline' },
         { id: 'planning:wbs', title: 'WBS', icon: 'grid-outline' },
         { id: 'planning:volume', title: 'Volume', icon: 'calculator-outline' },
         { id: 'planning:rab', title: 'RAB', icon: 'cash-outline' },
@@ -33,10 +33,14 @@ const GROUPS = [
     ] },
     { title: 'WORK', items: [
         { id: 'work', title: 'Tasks & Deliverables', icon: 'checkbox-outline' },
-        { id: 'tracking', title: 'Tracking', icon: 'stats-chart-outline' },
+        
+    ] },
+    { title: '', items: [
+        { id: 'docs', title: 'Documents', icon: 'folder-outline' },
+        { id: 'tracking', title: 'Control', icon: 'stats-chart-outline' },
+        { id: 'planning:reports', title: 'Reports', icon: 'document-text-outline' },
         { id: 'activity', title: 'Activity', icon: 'pulse-outline' },
     ] },
-    { title: 'DOCUMENTS', items: [{ id: 'docs', title: 'Docs', icon: 'folder-outline' }, { id: 'planning:reports', title: 'Reports', icon: 'document-text-outline' }] },
 ];
 const SETTING_NAMES: Record<string, string> = { general: 'General', team: 'Team & Access', stages: 'Stages & Deliverables', wbs: 'WBS Preferences', control: 'Progress & Quality', cost: 'Cost & Budgeting', time: 'Time & Schedule', prices: 'Price Libraries', reports: 'Report Preferences', management: 'Project Management' };
 
@@ -47,7 +51,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     const { activeTenant } = useTenantContext(), { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark', text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366';
     const [project, setProject] = useState(initialProject), [section, setSection] = useState('overview');
-    const [expandedGroups, setExpandedGroups] = useState<string[]>([]);
+    const [expandedGroups, setExpandedGroups] = useState<string[]>(['PLANNING', 'WORK']);
     const [dirty, setDirty] = useState(false), [settingsOpen, setSettingsOpen] = useState(false), [error, setError] = useState('');
     useEffect(() => { setProject(initialProject); }, [initialProject]);
     const proceed = (action: () => void) => {
@@ -104,7 +108,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
             </View>
             {!!error && <Text accessibilityRole="alert" style={{ color: '#FF3B30', padding: 16 }}>{error}</Text>}
             {Screen ? <Screen key={`${project.id}-${section}`} projectId={project.id} isEmbedded onDirtyChange={setDirty} onSaved={refresh} />
-                : section.startsWith('planning:') ? <ProjectPlanningPanel key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} />
+                : section.startsWith('planning:') ? <ProjectPlanningPanel key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
                 : renderContent(project, section, select, () => { setSettingsOpen(true); select('settings:general'); })}
         </View>
     </View>;
