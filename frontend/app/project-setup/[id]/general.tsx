@@ -1,3 +1,9 @@
+import { ProjectInformationSections } from '@/components/projects/setup/ProjectInformationSections';
+import { ProjectInformationDetails, projectInformationDetails, validateProjectInformation } from '@/lib/projectInformation';
+import { fetchDefaultWorkspaceId, fetchProjectTypes } from '@/lib/api/templates';
+import { scopeOptions, resolveProjectScope } from '@/lib/projectScope';
+import { LiquidCard } from '@/components/ui/LiquidCard';
+import Animated, { FadeInDown, FadeOutDown } from 'react-native-reanimated';
 import { ProjectSaveFeedback, useProjectSaveFeedback } from '@/components/projects/setup/ProjectSaveFeedback';
 import React, { useState, useEffect, useMemo } from 'react';
 import {
@@ -24,20 +30,17 @@ import { BouncyGlassButton } from '@/components/ui/BouncyGlassButton';
 import { ProjectLeadSelectSheet } from '@/components/projects/setup/ProjectLeadSelectSheet';
 import ContextMenu, { ContextMenuAction } from '@/components/ui/PlatformContextMenu';
 import * as Haptics from 'expo-haptics';
-import { supabase } from '@/lib/supabase';
+import { supabase, APP_MODE } from '@/lib/supabase';
 import { Project, getProjectById, updateProjectApi, getProjects } from '@/lib/api/projects';
 import {
     getProjectGeneralSettings,
     getProjectNumberingSettings,
     getProjectTypes,
     getProjectStatuses,
-    getProjectTrackingSettings,
     ProjectGeneralSettings,
     ProjectNumberingSettings,
     ProjectTypeItem,
     ProjectStatusItem,
-    ProjectTrackingSettings,
-    TrackingMethod,
 } from '@/lib/api/projectSetup';
 import DateTimePicker from '@react-native-community/datetimepicker';
 
@@ -93,11 +96,11 @@ export default function ProjectSetupGeneralScreen({
     const [numberingSettings, setNumberingSettings] = useState<ProjectNumberingSettings | null>(null);
     const [projectTypes, setProjectTypes] = useState<ProjectTypeItem[]>([]);
     const [projectStatuses, setProjectStatuses] = useState<ProjectStatusItem[]>([]);
-    const [trackingSettings, setTrackingSettings] = useState<ProjectTrackingSettings | null>(null);
     const [tenantMembers, setTenantMembers] = useState<any[]>([]);
     const [existingProjects, setExistingProjects] = useState<Project[]>([]);
 
     // Form fields
+    const [information, setInformation] = useState<ProjectInformationDetails | null>(null);
     const [projectName, setProjectName] = useState('');
     const [projectNumber, setProjectNumber] = useState('');
     const [projectCode, setProjectCode] = useState('');
@@ -106,7 +109,6 @@ export default function ProjectSetupGeneralScreen({
     const [startDate, setStartDate] = useState<Date>(new Date());
     const [targetDate, setTargetDate] = useState<Date | null>(null);
     const [selectedLeadId, setSelectedLeadId] = useState<string>('');
-    const [trackingMethod, setTrackingMethod] = useState<TrackingMethod>('manual');
 
     // Project Lead Selector Modal
     const [showLeadModal, setShowLeadModal] = useState(false);
@@ -126,24 +128,22 @@ export default function ProjectSetupGeneralScreen({
                 numData,
                 typesData,
                 statusesData,
-                trackData,
                 allProjects,
             ] = await Promise.all([
                 getProjectById(projectId),
                 getProjectGeneralSettings(),
                 getProjectNumberingSettings(),
-                getProjectTypes(),
+                APP_MODE === 'adidaya' ? fetchDefaultWorkspaceId().then(workspaceId => workspaceId ? fetchProjectTypes(workspaceId).then(scopeOptions) : []) : getProjectTypes(),
                 getProjectStatuses(),
-                getProjectTrackingSettings(),
                 getProjects(activeTenant?.id),
             ]);
 
             setProject(projData);
+            if (APP_MODE === 'adidaya' && projData) setInformation(projectInformationDetails(projData));
             setGeneralSettings(genData);
             setNumberingSettings(numData);
             setProjectTypes(typesData.filter((t) => t.isActive));
             setProjectStatuses(statusesData.filter((s) => s.isActive));
-            setTrackingSettings(trackData);
             setExistingProjects(allProjects.filter((p) => p.id !== projectId));
 
             // Fetch tenant members with separate profiles lookup for reliability
@@ -228,7 +228,9 @@ export default function ProjectSetupGeneralScreen({
                 setProjectCode(projData.code || 'PRJ');
                 setSelectedStatus((projData.status || 'planning').toLowerCase());
 
-                if (projData.meta?.projectType) {
+                if (APP_MODE === 'adidaya') {
+                    setSelectedType(resolveProjectScope(projData.meta || {}, typesData)?.name || '');
+                } else if (projData.meta?.projectType) {
                     const rawType = String(projData.meta.projectType).trim();
                     const matchedType = typesData.find(
                         (t) =>
@@ -241,14 +243,14 @@ export default function ProjectSetupGeneralScreen({
                     setSelectedType(typesData[0].name);
                 }
 
-                if (projData.meta?.startDate) {
-                    setStartDate(new Date(projData.meta.startDate));
+                if (projData.startDate || projData.meta?.startDate) {
+                    setStartDate(new Date(projData.startDate || projData.meta.startDate));
                 } else {
                     setStartDate(new Date());
                 }
 
-                if (projData.meta?.targetDate) {
-                    setTargetDate(new Date(projData.meta.targetDate));
+                if (projData.targetDate || projData.meta?.targetDate) {
+                    setTargetDate(new Date(projData.targetDate || projData.meta.targetDate));
                 }
 
                 // Match and pre-populate project lead ONLY if explicitly set on project
@@ -280,13 +282,7 @@ export default function ProjectSetupGeneralScreen({
                     setSelectedLeadId('');
                 }
 
-                if (projData.meta?.trackingMethod) {
-                    setTrackingMethod(projData.meta.trackingMethod);
-                } else if (projData.meta?.progressTracking) {
-                    setTrackingMethod(projData.meta.progressTracking);
-                } else if (trackData?.defaultMethod && trackData.defaultMethod !== 'none') {
-                    setTrackingMethod(trackData.defaultMethod);
-                }
+
             }
         } catch (error) {
             console.error('Error loading project setup general data:', error);
@@ -361,7 +357,7 @@ export default function ProjectSetupGeneralScreen({
 
     const formSnapshot = JSON.stringify({ projectName, projectNumber, projectCode, selectedType, selectedStatus,
         startDate: startDate?.toISOString(), targetDate: targetDate?.toISOString(),
-        selectedLeadId, lead: selectedLead?.id || null, trackingMethod });
+        selectedLeadId, lead: selectedLead?.id || null, information });
     const [savedSnapshot, setSavedSnapshot] = useState('');
     useEffect(() => {
         if (!isLoading) setSavedSnapshot(formSnapshot);
@@ -373,6 +369,9 @@ export default function ProjectSetupGeneralScreen({
         Haptics.selectionAsync();
         setSaveError('');
         feedback.clear();
+
+        try { if (information) validateProjectInformation(information); }
+        catch (error) { showSaveError('Validation Error', error instanceof Error ? error.message : 'Invalid project information.'); return; }
 
         if (!projectName.trim()) {
             showSaveError('Validation Error', 'Project name is required.');
@@ -404,7 +403,7 @@ export default function ProjectSetupGeneralScreen({
         }
 
         if (generalSettings?.requireTargetDate && !generalSettings?.allowNoTargetDate && !targetDate) {
-            showSaveError('Validation Error', 'A Target Date is required for this project.');
+            showSaveError('Validation Error', 'A End Date is required for this project.');
             return;
         }
 
@@ -445,13 +444,21 @@ export default function ProjectSetupGeneralScreen({
 
             const updatedMeta = {
                 ...(project?.meta || {}),
-                projectType: selectedType,
+                ...(information ? {
+                    ...(information.currentStage ? { currentStage: information.currentStage } : {}),
+                    category: information.category, disciplines: information.disciplines,
+                    landArea: information.landArea, buildingArea: information.buildingArea,
+                    floors: information.floors, rabClass: information.rabClass,
+                    buildingMassCount: information.buildingMassCount, buildingMasses: information.buildingMasses,
+                    clientName: information.clientName, clientContact: information.clientContact,
+                } : {}),
+                ...(APP_MODE === 'adidaya'
+                    ? (projectTypes.find(type => type.name === selectedType) ? { projectType: selectedType, type: projectTypes.find(type => type.name === selectedType)!.id } : {})
+                    : { projectType: selectedType }),
                 startDate: startDate ? startDate.toISOString() : null,
                 targetDate: targetDate ? targetDate.toISOString() : null,
                 projectLeadId: effectiveLeadId,
                 projectLead: effectiveLeadName,
-                trackingMethod: trackingMethod,
-                progressTracking: trackingMethod,
                 members: updatedMembers,
             };
 
@@ -463,6 +470,7 @@ export default function ProjectSetupGeneralScreen({
                 code: projectCode.trim(),
                 status: selectedStatus.toLowerCase(),
                 meta: updatedMeta,
+                ...(information ? { ...(information.currentStage ? { currentStage: information.currentStage } : {}), locationDetails: information.location, buildingMassCount: information.buildingMassCount, buildingMasses: information.buildingMasses } : {}),
             });
 
             if (!savedProject) throw new Error('Project update did not return a saved project.');
@@ -487,26 +495,13 @@ export default function ProjectSetupGeneralScreen({
         );
     }
 
-    const TRACKING_OPTIONS: { id: TrackingMethod; label: string; desc: string }[] = [
-        { id: 'manual', label: 'Manual', desc: 'Enter project progress percentage directly.' },
-        { id: 'tasks', label: 'From Tasks', desc: 'Calculate progress automatically from completed tasks.' },
-        { id: 'milestones', label: 'From Milestones', desc: 'Calculate progress automatically from milestones.' },
-        { id: 'none', label: 'No Progress', desc: 'Do not calculate or show percentage progress.' },
-    ];
-
-    const availableTrackingOptions = TRACKING_OPTIONS.filter((opt) => {
-        if (opt.id === 'none') return true;
-        if (!trackingSettings?.enabledMethods) return true;
-        return trackingSettings.enabledMethods.includes(opt.id);
-    });
-
     return (
         <View style={[s.container, { backgroundColor: bgColor }]}>
             {!isEmbedded && (
                 <Stack.Screen
                     options={{
                         headerShown: true,
-                        title: 'General',
+                        title: 'Project Information',
                         headerLargeTitle: false,
                         headerTransparent: Platform.OS === 'ios',
                         headerShadowVisible: false,
@@ -541,49 +536,13 @@ export default function ProjectSetupGeneralScreen({
                 />
             )}
 
-            {isEmbedded && (
-                <View style={{
-                    flexDirection: 'row',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    paddingHorizontal: 20,
-                    paddingTop: 16,
-                    paddingBottom: 12,
-                    borderBottomWidth: StyleSheet.hairlineWidth,
-                    borderBottomColor: dividerColor,
-                    backgroundColor: isDark ? '#121214' : '#FFFFFF',
-                }}>
-                    <View>
-                        <Text style={{ fontSize: 17, fontWeight: '700', color: textColor }}>General Settings</Text>
-                        <Text style={{ fontSize: 12, color: subtextColor }}>Project identity, lead, timeline & tracking</Text>
-                    </View>
-                    <TouchableOpacity
-                        onPress={handleSave}
-                        disabled={isSaving || !hasChanges}
-                        style={{
-                            paddingHorizontal: 16,
-                            paddingVertical: 7,
-                            borderRadius: 16,
-                            backgroundColor: formaBlue,
-                        }}
-                    >
-                        {isSaving ? (
-                            <ActivityIndicator size="small" color="#FFF" />
-                        ) : (
-                            <Text style={{ color: '#FFFFFF', fontSize: 13, fontWeight: '700' }}>{hasChanges ? 'Save Changes' : 'Saved'}</Text>
-                        )}
-                    </TouchableOpacity>
-                </View>
-            )}
-
             <ProjectSaveFeedback message={feedback.message} failed={feedback.failed} />
-            {hasChanges && <Text style={{ color: subtextColor, paddingHorizontal: 24, paddingVertical: 6, fontSize: 12 }}>Unsaved changes</Text>}
             {!!saveError && <Text accessibilityRole="alert" style={{ color: '#FF3B30', paddingHorizontal: 24, paddingVertical: 12 }}>{saveError}</Text>}
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{
                     paddingTop: isEmbedded ? 16 : (Platform.OS === 'ios' ? insets.top + 60 : 24),
-                    paddingBottom: insets.bottom + 40,
+                    paddingBottom: insets.bottom + (isEmbedded ? 120 : 40),
                     paddingHorizontal: 16,
                     gap: 22,
                 }}
@@ -672,7 +631,7 @@ export default function ProjectSetupGeneralScreen({
                                             <Text style={[s.disclosureValue, { color: selectedType ? textColor : subtextColor }]}>
                                                 {selectedType || 'Select Type'}
                                             </Text>
-                                            <PlatformIcon name="chevron.up.chevron.down" size={13} tintColor={subtextColor} />
+                                            <PlatformIcon name="chevron.down" size={13} tintColor={subtextColor} />
                                         </View>
                                     </View>
                                 </ContextMenu>
@@ -699,12 +658,17 @@ export default function ProjectSetupGeneralScreen({
                                     <Text style={[s.disclosureValue, { color: textColor, textTransform: 'capitalize' }]}>
                                         {selectedStatus || 'Planning'}
                                     </Text>
-                                    <PlatformIcon name="chevron.up.chevron.down" size={13} tintColor={subtextColor} />
+                                    <PlatformIcon name="chevron.down" size={13} tintColor={subtextColor} />
                                 </View>
                             </View>
                         </ContextMenu>
                     </GlassView>
                 </View>
+
+                {APP_MODE === 'adidaya' && information && <>
+                    <ProjectInformationSections position="stages" value={information} onChange={setInformation} scopeId={projectTypes.find(type => type.name === selectedType)?.id} currentStage={information.currentStage} isDark={isDark} />
+                    <ProjectInformationSections value={information} onChange={setInformation} isDark={isDark} />
+                </>}
 
                 {/* 2. Timeline Section */}
                 <View style={s.sectionBlock}>
@@ -721,7 +685,7 @@ export default function ProjectSetupGeneralScreen({
                             <Text style={[s.settingTitle, { color: textColor }]}>
                                 Start Date {generalSettings?.requireStartDate && '*'}
                             </Text>
-                            {Platform.OS === 'web' ? React.createElement('input' as any, { type: 'date', value: startDate ? new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : '', onChange: (event: any) => event.target.value && setStartDate(new Date(event.target.value + 'T12:00:00')), style: { colorScheme: isDark ? 'dark' : 'light', background: 'transparent', color: textColor, border: 0, font: 'inherit', maxWidth: 170 } }) : (<DateTimePicker
+                            {Platform.OS === 'web' ? React.createElement('input' as any, { type: 'date', value: startDate ? new Date(startDate.getTime() - startDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : '', onChange: (event: any) => event.target.value && setStartDate(new Date(event.target.value + 'T12:00:00')), style: { colorScheme: isDark ? 'dark' : 'light', background: 'transparent', color: textColor, border: 0, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize: 17, fontWeight: 400, maxWidth: 170 } }) : (<DateTimePicker
                                 value={startDate}
                                 mode="date"
                                 display="compact"
@@ -736,10 +700,10 @@ export default function ProjectSetupGeneralScreen({
 
                         <View style={[s.divider, { backgroundColor: dividerColor }]} />
 
-                        {/* Target Date: Optional */}
+                        {/* End Date: Optional */}
                         <View style={s.row}>
                             <Text style={[s.settingTitle, { color: textColor }]}>
-                                Target Date {generalSettings?.requireTargetDate && !generalSettings?.allowNoTargetDate && '*'}
+                                End Date {generalSettings?.requireTargetDate && !generalSettings?.allowNoTargetDate && '*'}
                             </Text>
                             {targetDate ? (
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
@@ -750,7 +714,7 @@ export default function ProjectSetupGeneralScreen({
                                     >
                                         <Ionicons name="close-circle" size={18} color={subtextColor} />
                                     </TouchableOpacity>
-                                    {Platform.OS === 'web' ? React.createElement('input' as any, { type: 'date', value: targetDate ? new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : '', onChange: (event: any) => setTargetDate(event.target.value ? new Date(event.target.value + 'T12:00:00') : null), style: { colorScheme: isDark ? 'dark' : 'light', background: 'transparent', color: textColor, border: 0, font: 'inherit', maxWidth: 170 } }) : (<DateTimePicker
+                                    {Platform.OS === 'web' ? React.createElement('input' as any, { type: 'date', value: targetDate ? new Date(targetDate.getTime() - targetDate.getTimezoneOffset() * 60000).toISOString().slice(0, 10) : '', onChange: (event: any) => setTargetDate(event.target.value ? new Date(event.target.value + 'T12:00:00') : null), style: { colorScheme: isDark ? 'dark' : 'light', background: 'transparent', color: textColor, border: 0, fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif', fontSize: 17, fontWeight: 400, maxWidth: 170 } }) : (<DateTimePicker
                                         value={targetDate}
                                         mode="date"
                                         display="compact"
@@ -831,56 +795,24 @@ export default function ProjectSetupGeneralScreen({
                                 <Text style={{ color: formaBlue, fontSize: 15, fontWeight: '500' }}>
                                     {selectedLead ? 'Change' : 'Select'}
                                 </Text>
-                                <PlatformIcon name="chevron.right" size={14} tintColor={formaBlue} />
+                                <PlatformIcon name="chevron.down" size={14} tintColor={formaBlue} />
                             </View>
                         </TouchableOpacity>
                     </GlassView>
                 </View>
 
-                {/* 4. Progress Tracking Section */}
-                <View style={s.sectionBlock}>
-                    <Text style={[s.sectionHeaderLabel, { color: subtextColor }]}>
-                        Progress Tracking
-                    </Text>
-
-                    <GlassView
-                        intensity={isDark ? 10 : 25}
-                        style={[s.card, { backgroundColor: cardBgColor }]}
-                    >
-                        {availableTrackingOptions.map((opt, idx) => {
-                            const isSelected = trackingMethod === opt.id;
-                            const isLast = idx === availableTrackingOptions.length - 1;
-                            return (
-                                <React.Fragment key={opt.id}>
-                                    <TouchableOpacity
-                                        style={s.row}
-                                        onPress={() => {
-                                            Haptics.selectionAsync();
-                                            setTrackingMethod(opt.id);
-                                        }}
-                                        activeOpacity={0.7}
-                                    >
-                                        <View style={s.textCol}>
-                                            <Text style={[s.settingTitle, { color: isSelected ? formaBlue : textColor }]}>
-                                                {opt.label}
-                                            </Text>
-                                            <Text style={[s.settingSubtitle, { color: subtextColor }]}>
-                                                {opt.desc}
-                                            </Text>
-                                        </View>
-                                        <Ionicons
-                                            name={isSelected ? 'checkmark-circle' : 'ellipse-outline'}
-                                            size={22}
-                                            color={isSelected ? formaBlue : (isDark ? '#48484A' : '#C7C7CC')}
-                                        />
-                                    </TouchableOpacity>
-                                    {!isLast && <View style={[s.divider, { backgroundColor: dividerColor }]} />}
-                                </React.Fragment>
-                            );
-                        })}
-                    </GlassView>
-                </View>
             </ScrollView>
+
+            {isEmbedded && hasChanges && <Animated.View entering={FadeInDown.springify().damping(15)} exiting={FadeOutDown.springify().damping(15)} style={{ position: 'absolute', left: 20, right: 20, bottom: Math.max(insets.bottom, 16), borderRadius: 24, overflow: 'hidden', zIndex: 9999 }}>
+                <LiquidCard variant="clear" contentStyle={{ paddingHorizontal: 16, paddingVertical: 10 }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
+                        <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8 }}><View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: '#FF3B30' }} /><Text style={{ color: textColor, fontSize: 16, fontWeight: '600' }}>Unsaved Changes</Text></View>
+                        <TouchableOpacity accessibilityRole="button" accessibilityLabel="Save project information" onPress={handleSave} disabled={isSaving} style={{ backgroundColor: formaBlue, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 999, opacity: isSaving ? 0.6 : 1 }}>
+                            {isSaving ? <ActivityIndicator color="#FFFFFF" /> : <Text style={{ color: '#FFFFFF', fontSize: 15, fontWeight: '600' }}>Save</Text>}
+                        </TouchableOpacity>
+                    </View>
+                </LiquidCard>
+            </Animated.View>}
 
             {/* Native SwiftUI Bottom Sheet for Project Lead */}
             <ProjectLeadSelectSheet

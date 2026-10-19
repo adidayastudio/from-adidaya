@@ -1,7 +1,8 @@
+import { ProjectSidebarContext } from '@/context/ProjectSidebarContext';
 import { useAdidayaNotifications } from '@/hooks/useAdidayaNotifications';
 import { HeaderToolbar, HeaderToolbarAction } from '@/components/ui/HeaderToolbar';
 import { DESKTOP_SIDEBAR_WIDTH, DESKTOP_COLLAPSED_SIDEBAR_WIDTH } from '@/constants/desktopLayout';
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { View, Text, StyleSheet, Pressable, ScrollView, Platform, useWindowDimensions } from 'react-native';
 import { Slot, useRouter, usePathname } from 'expo-router';
 import { Feather, Ionicons } from '@expo/vector-icons';
@@ -58,6 +59,13 @@ export default function ResponsiveWebLayout() {
 
   const { unreadCount } = useAdidayaNotifications();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const collapsedRef = useRef(isCollapsed);
+  collapsedRef.current = isCollapsed;
+  const collapseForProject = useCallback(() => {
+    const previous = collapsedRef.current;
+    setIsCollapsed(true);
+    return () => setIsCollapsed(previous);
+  }, []);
   useEffect(() => {
     const style = document.createElement('style');
     style.textContent = `
@@ -251,6 +259,7 @@ export default function ResponsiveWebLayout() {
   };
 
   return (
+    <ProjectSidebarContext.Provider value={collapseForProject}>
     <View style={[styles.shell, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}>
       {/* ════════════════════════════════════════════════════════════════════════
           TIER 3: FULL DESKTOP (width >= 1100) -> Floating macOS Finder Sidebar
@@ -706,6 +715,7 @@ export default function ResponsiveWebLayout() {
         )}
       </View>
     </View>
+    </ProjectSidebarContext.Provider>
   );
 }
 

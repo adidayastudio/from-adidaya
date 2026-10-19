@@ -388,9 +388,9 @@ export default function ProjectScreen() {
             <ProjectWorkspace key={focusedProject.id} initialProject={focusedProject}
                 onClose={() => { setFocusedProject(null); setActiveProjectTab('overview'); setProjectDetailSetupValue(null); }}
                 onRefresh={() => loadProjects(false)}
-                renderContent={(selected, tab, onSelect, openSettings) => <ProjectDetailContent key={`${selected.id}-${tab}`} projectId={selected.id}
+                renderContent={(selected, tab, onSelect, openSettings, setHeaderAction) => <ProjectDetailContent key={`${selected.id}-${tab}`} projectId={selected.id}
                     initialProject={selected} contentOnly isEmbedded isFocusedWorkspace isPreviewMode={false}
-                    activeTabProp={tab} onTabChange={onSelect} onOpenSetupModule={openSettings} />}
+                    activeTabProp={tab} onTabChange={onSelect} onOpenSetupModule={openSettings} onHeaderActionChange={setHeaderAction} />}
             />
         </>;
     }

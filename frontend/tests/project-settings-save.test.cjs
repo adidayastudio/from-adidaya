@@ -15,6 +15,7 @@ function load(updateError = null, noRows = false) {
         } }) }) }),
     }) };
     const context = { exports: {}, console, require: name => {
+        if (name === '../projectInformation') { const mapped = { exports: {} }; vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/projectInformation.ts', 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, mapped); return mapped.exports; }
         if (name === '../supabase') return { supabase: db, APP_MODE: 'adidaya' };
         if (name === './tasks') return { WBS_TEMPLATES: [] };
         if (name === 'base64-arraybuffer') return {};
@@ -55,4 +56,22 @@ test('a zero-row update is not reported as a successful save', async () => {
     const x = load(null, true);
     await assert.rejects(x.api.updateProjectApi('project-1', { meta: { changed: true } }), /not updated/);
     assert.equal(x.cache.size, 0);
+});
+test('legacy information fields persist to location, building columns and metadata then reload', async () => {
+    const { api, writes } = load();
+    const location = { address: 'Stored Address', province: 'Banten', city: 'Kota Serang', latitude: '-6.12', longitude: '106.15', mapsLink: 'https://maps.example/project' };
+    const masses = [{ code: 'A', name: 'Main Building', buildingArea: '2085', floors: '3' }, { code: 'B', name: 'Site Work', buildingArea: '', floors: '', isSiteWork: true }];
+    await api.updateProjectApi('project-1', { locationDetails: location, buildingMassCount: 1, buildingMasses: masses, meta: { category: 'RES', disciplines: ['Architecture', 'MEP'], landArea: '1170', buildingArea: '2085', floors: '3', rabClass: 'A', clientName: 'Novi', clientContact: 'Contact' } });
+    assert.equal(writes[0].location.address, 'Stored Address');
+    assert.equal(writes[0].building_mass_count, 1); assert.equal(writes[0].building_masses[1].isSiteWork, true);
+    assert.equal(writes[0].meta.existing, true); assert.equal(writes[0].meta.clientName, 'Novi');
+    const saved = await api.getProjectById('project-1');
+    assert.equal(saved.locationDetails.longitude, '106.15'); assert.equal(saved.buildingMasses[0].buildingArea, '2085');
+    assert.equal(saved.meta.rabClass, 'A');
+});
+test('current stage survives save and reload when stored through the metadata compatibility path', async () => {
+    const { api, writes } = load();
+    await api.updateProjectApi('project-1', { currentStage: '02-SD' });
+    assert.equal(writes[0].meta.currentStage, '02-SD');
+    assert.equal((await api.getProjectById('project-1')).currentStage, '02-SD');
 });

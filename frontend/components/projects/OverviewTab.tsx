@@ -1,3 +1,5 @@
+import { resolveProjectScope, scopeOptions } from '@/lib/projectScope';
+import { APP_MODE } from '@/lib/supabase';
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { GlassView } from '@/components/ui/GlassView';
@@ -20,6 +22,7 @@ interface OverviewTabProps {
     onRefresh?: () => void;
     onProgressChange?: (progress: number) => void;
     isPreview?: boolean;
+    showLinkedModules?: boolean;
     onOpenSetupModule?: (moduleId: string) => void;
 }
 
@@ -93,7 +96,7 @@ function getRoleRank(role?: string): number {
     return 2;
 }
 
-export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTab, onRefresh, isPreview = false, onOpenSetupModule }: OverviewTabProps) {
+export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTab, onRefresh, isPreview = false, showLinkedModules = true, onOpenSetupModule }: OverviewTabProps) {
     const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
     const subtextColor = isDark ? '#8E8E93' : '#636366';
     const cardBgColor = isDark ? '#1C1C1E' : '#FFFFFF';
@@ -209,7 +212,7 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
     const projectNumber = project.number || '-';
     const projectCode = project.code || '-';
     const rawProjectType = project.meta?.projectType || project.meta?.typology || project.meta?.type;
-    const projectTypeName = resolveProjectTypeName(rawProjectType, projectTypes);
+    const projectTypeName = APP_MODE === 'adidaya' ? resolveProjectScope(project.meta || {}, scopeOptions(projectTypes))?.name || '—' : resolveProjectTypeName(rawProjectType, projectTypes);
 
     const statusText = project.status ? (project.status.charAt(0).toUpperCase() + project.status.slice(1)) : 'Planning';
     const trackingDisplay = progressState.trackingDisplay;
@@ -597,7 +600,7 @@ export function OverviewTab({ project, isDark, isPinned, setIsPinned, onSelectTa
             </View>
 
             {/* 6. Linked Modules Section (Hidden in Preview Mode) */}
-            {!isPreview && (
+            {!isPreview && showLinkedModules && (
                 <View style={styles.sectionBlock}>
                     <View style={styles.sectionHeaderRow}>
                         <Text style={[styles.sectionTitleText, { color: textColor }]}>Linked Modules</Text>

@@ -1,3 +1,4 @@
+import { parseProjectLocation } from '../projectInformation';
 import { supabase, supabaseForma, supabaseAdidaya, APP_MODE } from "../supabase";
 import { WBS_TEMPLATES } from "./tasks";
 import { decode } from "base64-arraybuffer";
@@ -11,6 +12,10 @@ export interface Project {
     number: string;
     code: string;
     location: string;
+    currentStage?: string;
+    locationDetails?: Record<string, any>;
+    buildingMassCount?: number;
+    buildingMasses?: any[];
     phase: string;
     status?: string;
     progress: number;
@@ -190,7 +195,13 @@ export async function getProjects(workspaceOrTenantId?: string) {
             title,
             number: toString(getField(p, ['project_number', 'number', 'code_number', 'no'])),
             code: toString(getField(p, ['code', 'project_code', 'short_name'])),
+            currentStage: p.stage ?? p.current_stage ?? p.meta?.currentStage ?? p.meta?.stage,
             location: formatProjectLocation(rawLoc, title),
+            locationDetails: parseProjectLocation(p.location),
+            buildingMassCount: p.building_mass_count ?? p.meta?.buildingMassCount,
+            buildingMasses: p.building_masses ?? p.meta?.buildingMasses,
+            startDate: p.start_date ?? p.meta?.startDate,
+            targetDate: p.end_date ?? p.target_date ?? p.meta?.targetDate,
             phase: formattedPhase,
             status: p.status || 'planning',
             progress: (p.meta?.progress !== undefined) ? Number(p.meta.progress) : ((localMeta.progress !== undefined) ? Number(localMeta.progress) : (Number(getField(p, ['progress', 'percentage', 'completion', 'completion_percentage', 'progress_percentage'])) || 0)),
@@ -265,6 +276,12 @@ export async function getProjectById(id: string) {
         number: toString(getField(data, ['project_number', 'number', 'code_number', 'no'])),
         code: toString(getField(data, ['code', 'project_code', 'short_name'])),
         location: formatProjectLocation(rawLoc, title),
+        currentStage: data.stage ?? data.current_stage ?? data.meta?.currentStage ?? data.meta?.stage,
+        locationDetails: parseProjectLocation(data.location),
+        buildingMassCount: data.building_mass_count ?? data.meta?.buildingMassCount,
+        buildingMasses: data.building_masses ?? data.meta?.buildingMasses,
+        startDate: data.start_date ?? data.meta?.startDate,
+        targetDate: data.end_date ?? data.target_date ?? data.meta?.targetDate,
         phase: formattedPhase,
         status: data.status || 'planning',
         progress: (data.meta?.progress !== undefined) ? Number(data.meta.progress) : ((localMeta.progress !== undefined) ? Number(localMeta.progress) : (Number(getField(data, ['progress', 'percentage', 'completion', 'completion_percentage', 'progress_percentage'])) || 0)),
@@ -695,6 +712,9 @@ export async function updateProjectApi(
     if (updates.startDate !== undefined) payload.start_date = updates.startDate;
     if (updates.targetDate !== undefined) payload[APP_MODE === 'adidaya' ? 'end_date' : 'target_date'] = updates.targetDate;
     if (updates.status !== undefined) payload.status = updates.status.toLowerCase();
+    if (updates.locationDetails !== undefined) payload.location = { ...parseProjectLocation(current.location), ...updates.locationDetails };
+    if (updates.buildingMassCount !== undefined) payload.building_mass_count = updates.buildingMassCount;
+    if (updates.buildingMasses !== undefined) payload.building_masses = updates.buildingMasses;
     if (updates.isArchived !== undefined) {
         payload.status = updates.isArchived ? 'archived' : 'active';
     }
@@ -721,6 +741,11 @@ export async function updateProjectApi(
         payload.meta = { ...(current.meta || {}), ...updates.meta };
     }
     if (APP_MODE === 'adidaya') {
+        if (updates.currentStage !== undefined) {
+            if ('stage' in current) payload.stage = updates.currentStage;
+            else if ('current_stage' in current) payload.current_stage = updates.currentStage;
+            payload.meta = { ...(current.meta || {}), ...(payload.meta || {}), currentStage: updates.currentStage };
+        }
         if (updates.isPinned !== undefined || updates.progress !== undefined) {
             payload.meta = { ...(current.meta || {}), ...(payload.meta || {}),
                 ...(updates.isPinned !== undefined ? { isPinned: updates.isPinned, isFavorite: updates.isPinned } : {}),

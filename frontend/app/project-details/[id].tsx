@@ -230,6 +230,7 @@ export function ProjectDetailContent({
     isPreviewMode,
     onOpenSetupModule,
     contentOnly = false,
+    onHeaderActionChange,
 }: {
     projectId?: string;
     initialProject?: Project;
@@ -242,6 +243,7 @@ export function ProjectDetailContent({
     isPreviewMode?: boolean;
     onOpenSetupModule?: (moduleId: string) => void;
     contentOnly?: boolean;
+    onHeaderActionChange?: (action: HeaderToolbarAction | null) => void;
 }) {
     const { width: viewportWidth } = useWindowDimensions();
     const isPreview = isPreviewMode !== undefined ? isPreviewMode : (isEmbedded && !isFocusedWorkspace);
@@ -710,6 +712,25 @@ export function ProjectDetailContent({
         await loadProject();
     };
 
+    useEffect(() => {
+        if (!onHeaderActionChange) return;
+        if (!project?.id || isPreview || !['overview', 'work'].includes(activeTab)) { onHeaderActionChange(null); return; }
+        onHeaderActionChange({
+            id: 'add', icon: 'add', image: 'plus', title: 'Add', tintColor: FormaBlue[700],
+            menuActions: [
+                { title: 'Add Action', systemIcon: 'bolt.fill' },
+                { title: 'Add Task', systemIcon: 'checklist' },
+                { title: 'Add Milestone', systemIcon: 'flag' },
+            ],
+            onMenuPress: event => {
+                if (event.nativeEvent.name === 'Add Action') setIsAddActionVisible(true);
+                else if (event.nativeEvent.name === 'Add Task') setIsAddTaskVisible(true);
+                else if (event.nativeEvent.name === 'Add Milestone') setShowAddMilestoneModal(true);
+            },
+        });
+        return () => onHeaderActionChange(null);
+    }, [project?.id, isPreview, activeTab, onHeaderActionChange]);
+
     const handleTaskSaved = async (newTask: Task) => {
         setIsAddTaskVisible(false);
         await loadProject();
@@ -726,6 +747,7 @@ export function ProjectDetailContent({
             case 'overview':
                 return (
                     <OverviewTab
+                        showLinkedModules={!contentOnly}
                         project={project}
                         isDark={isDark}
                         isPinned={isPinned}
@@ -1233,7 +1255,7 @@ export function ProjectDetailContent({
             </Modal>
 
             {/* Floating Action Button (Overview/Work Tab): Add Milestone, Add Task, Add Action, Manual Progress */}
-            {project && !isPreview && (activeTab === 'overview' || activeTab === 'work') && (
+            {project && !isPreview && !onHeaderActionChange && (activeTab === 'overview' || activeTab === 'work') && (
                 <View
                     style={[
                         styles.floatingFabContainer,
@@ -2516,9 +2538,9 @@ export default function ProjectDetailScreen() {
     return <>
         <Stack.Screen options={{ headerShown: false }} />
         {project ? <ProjectWorkspace key={project.id} initialProject={project} onClose={() => router.back()}
-            renderContent={(selected, tab, onSelect, openSettings) => <ProjectDetailContent key={`${selected.id}-${tab}`} projectId={selected.id}
+            renderContent={(selected, tab, onSelect, openSettings, setHeaderAction) => <ProjectDetailContent key={`${selected.id}-${tab}`} projectId={selected.id}
                 initialProject={selected} contentOnly isEmbedded isFocusedWorkspace isPreviewMode={false}
-                activeTabProp={tab} onTabChange={onSelect} onOpenSetupModule={openSettings} />}
+                activeTabProp={tab} onTabChange={onSelect} onOpenSetupModule={openSettings} onHeaderActionChange={setHeaderAction} />}
         /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#007AFF" /></View>}
     </>;
 }
