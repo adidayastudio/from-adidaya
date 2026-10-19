@@ -747,8 +747,8 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
             return;
         }
 
-        if (isReimburse && validItems.some(item => item.qty <= 0 || item.price <= 0)) {
-            Alert.alert('Actual Amount Required', 'Every reimbursement item must have an actual quantity and unit price greater than zero.');
+        if (isReimburse && validItems.some(item => item.qty === 0 || item.price === 0)) {
+            Alert.alert('Actual Amount Required', 'Every reimbursement item must have an actual non-zero quantity and unit price.');
             return;
         }
 
@@ -1126,11 +1126,12 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                                         <TextField
                                             key={`item-qty-${item.id}-${itemHydrationKey}`}
                                             placeholder="Quantity"
-                                            defaultValue={item.qty > 0 ? String(item.qty) : ''}
-                                            keyboardType="decimal-pad"
+                                            defaultValue={item.qty !== 0 ? String(item.qty) : ''}
+                                            keyboardType="numbers-and-punctuation"
                                             onChangeText={(v) => {
-                                                const clean = v.replace(/[^0-9.]/g, '');
-                                                handleUpdateItem(item.id, { qty: parseFloat(clean) || 0 });
+                                                if (/^-?\d*(?:[.,]\d*)?$/.test(v)) {
+                                                    handleUpdateItem(item.id, { qty: Number(v.replace(',', '.')) || 0 });
+                                                }
                                             }}
                                             modifiers={textFieldModifiers}
                                         />
@@ -1151,11 +1152,12 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                                     <TextField
                                         key={`item-price-${item.id}-${itemHydrationKey}`}
                                         placeholder="Unit Price (Rp)"
-                                        defaultValue={item.price > 0 ? String(item.price) : ''}
-                                        keyboardType="numeric"
+                                        defaultValue={item.price !== 0 ? String(item.price) : ''}
+                                        keyboardType="numbers-and-punctuation"
                                         onChangeText={(v) => {
-                                            const clean = v.replace(/[^0-9]/g, '');
-                                            handleUpdateItem(item.id, { price: parseInt(clean, 10) || 0 });
+                                            if (/^-?\d*(?:[.,]\d*)?$/.test(v)) {
+                                                handleUpdateItem(item.id, { price: Number(v.replace(',', '.')) || 0 });
+                                            }
                                         }}
                                         modifiers={textFieldModifiers}
                                     />
