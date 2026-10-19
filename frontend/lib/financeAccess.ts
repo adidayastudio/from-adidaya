@@ -1,3 +1,4 @@
+import { isFinanceSuperadmin } from '@/lib/financeRoles';
 import { supabase } from '@/lib/supabase';
 import { canAccessFinanceTeam } from '@/lib/auth-utils';
 // Read the same authoritative role code as Adidaya, never a local approval matrix or user metadata.
@@ -18,4 +19,20 @@ export async function assertFinanceMutation(type: 'purchasing' | 'reimbursement'
     if (!updates || Object.keys(updates).some(key => !allowed.includes(key))) throw new Error('This finance action requires an authorized role.');
     const target = String(updates[statusColumn] || '').toUpperCase();
     if (!['DRAFT', 'SUBMITTED', 'PENDING'].includes(target)) throw new Error('Approval and payment require an authorized finance role.');
+}
+
+export async function assertSuperadminFinanceEdit() {
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) throw new Error('Sign in to edit this transaction.');
+    let { data, error } = await supabase.from('adidaya_organization_members').select('role,status').eq('user_id', user.id).maybeSingle();
+    if (error && !['PGRST205', '42P01'].includes(error.code)) throw error;
+    if (!data || error) {
+        const legacy = await supabase.from('user_roles').select('role').eq('user_id', user.id).maybeSingle();
+        if (legacy.error) throw legacy.error;
+        data = legacy.data as any;
+    }
+    if (data?.status && String(data.status).toLowerCase() !== 'active') throw new Error('Your organization membership is inactive.');
+    if (!isFinanceSuperadmin(data?.role)) {
+        throw new Error('Only Superadmin can edit transaction records.');
+    }
 }

@@ -25,6 +25,7 @@ function submit(overrides = {}) {
     const errors = [], saves = [], closed = [];
     const items = [{ id: '1', name: 'Tx 15 mm', qty: 1, price: 10.5, unit: 'pcs' }];
     const env = {
+        invoiceNumber: '', adminEditor: { enabled: false, save: async () => ({}) },
         submitInFlight: { current: false }, projects: [{ id: 'p', project_code: 'PRG' }], departments: [], projectCode: 'PRG', departmentId: '',
         category: 'MATERIAL', subcategory: '', activeItems: items, purchaseItems: items, activeTab: 'purchase', purchaseImages: [], reimburseImages: [],
         showFormError: (title, message) => errors.push(message), saveAccountToggle: false, bankName: '', accountNumber: '', accountName: '',

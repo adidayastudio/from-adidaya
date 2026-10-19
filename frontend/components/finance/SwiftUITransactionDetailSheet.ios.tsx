@@ -1,3 +1,5 @@
+import { isFinanceSuperadmin } from '@/lib/financeRoles';
+import { useUserContext } from '@/context/UserProvider';
 import { normalizeFinanceAttachments, resolveFinanceAttachments } from '@/lib/financeAttachments';
 import { resolveFinanceUrl } from '@/lib/api/finance';
 import { attachmentKind, requestAttachments, splitReferenceNotes } from '@/lib/financeRequestPresentation';
@@ -65,6 +67,7 @@ export const SwiftUITransactionDetailSheet: React.FC<SwiftUITransactionDetailShe
     actions = [],
     onAction
 }) => {
+    const { profile } = useUserContext();
     const { resolvedTheme } = useTheme();
     const { activeTenant } = useTenantContext();
     const isDark = resolvedTheme === 'dark';
@@ -867,6 +870,8 @@ export const SwiftUITransactionDetailSheet: React.FC<SwiftUITransactionDetailShe
                                         )}
                                     </VStack>
                                 </Section>
+
+                                {isFinanceSuperadmin(activeTenant?.role || profile?.role) && onAction && <Section><Button onPress={() => onAction('admin_edit', request)}><SwiftUIText size={13} color="#159957">Edit Transaction</SwiftUIText></Button></Section>}
 
                                 {approvalChain.length > 0 && (
                                     <Section title="Approval Workflow">

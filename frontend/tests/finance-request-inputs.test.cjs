@@ -5,7 +5,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 function load(file, mocks = {}, globals = {}) {
     const context = { exports: {}, console, Date, Map, Set, Number, URL, setTimeout, clearTimeout, ...globals,
-        require: name => { if (!(name in mocks)) throw Error(`Unexpected import ${name}`); return mocks[name]; } };
+        require: name => { if (name === '../financePayments') return load('lib/financePayments.ts', { './financeAttachments': load('lib/financeAttachments.ts', {}) }); if (!(name in mocks)) throw Error(`Unexpected import ${name}`); return mocks[name]; } };
     vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), {
         compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }
     }).outputText, context);

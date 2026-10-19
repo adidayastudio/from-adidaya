@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
 function load(file, mocks = {}) {
-    const context = { exports: {}, console, require: name => { if (!(name in mocks)) throw Error(name); return mocks[name]; } };
+    const context = { exports: {}, console, require: name => { if (name === '../financePayments') return load('lib/financePayments.ts', { './financeAttachments': load('lib/financeAttachments.ts', {}) }); if (!(name in mocks)) throw Error(name); return mocks[name]; } };
     vm.runInNewContext(ts.transpileModule(fs.readFileSync(file, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, context);
     return context.exports;
 }

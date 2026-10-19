@@ -1,3 +1,5 @@
+import { isFinanceSuperadmin } from '@/lib/financeRoles';
+import { useTenantContext } from '@/context/TenantContext';
 import { DESKTOP_LIST_PANE, DESKTOP_PANEL_HEADER, DESKTOP_PANEL_TITLE_ROW, DESKTOP_PANEL_TITLE, DESKTOP_PANEL_ACTION } from '@/constants/desktopLayout';
 import { AddRequestsToConsolidationModal } from '@/components/finance/AddRequestsToConsolidationModal';
 import { BouncyFinanceCard } from '@/components/finance/BouncyFinanceCard';
@@ -311,6 +313,7 @@ export default function FinanceScreen() {
         payRequest,
     } = useFinance();
     const { profile, user, isAuthenticated } = useUserContext();
+    const { tenantRole } = useTenantContext();
     const [activeSegment, setActiveSegment] = useState('overview');
     const isManager = useMemo(() => {
         if (!profile?.role) return false;
@@ -1178,7 +1181,7 @@ export default function FinanceScreen() {
         }
 
         // 4. Approved actions
-        else if (s_status === 'approved') {
+        else if (['approved', 'partially paid', 'partially_paid', 'paying'].includes(s_status)) {
             if (canManageTeam) {
                 actionsArr.push({ id: 'edit', label: 'Edit', color: '#007AFF', type: 'secondary', icon: 'pencil' });
                 actionsArr.push({ id: 'revision', label: 'Revise', color: '#FF9500', type: 'secondary', icon: 'arrow.uturn.backward' });
@@ -1196,8 +1199,9 @@ export default function FinanceScreen() {
     };
 
     const openFinanceAction = (actionId: string, item: any, moduleType: 'purchasing' | 'reimbursement') => {
-        if (actionId === 'edit') {
-            setEditRequest({ ...item, moduleType });
+        if (actionId === 'edit' || actionId === 'admin_edit') {
+            if (actionId === 'admin_edit' && !isFinanceSuperadmin(tenantRole || profile?.role)) return;
+            setEditRequest({ ...item, moduleType, adminEdit: actionId === 'admin_edit' });
             setCreateRequestType(moduleType === 'purchasing' ? 'purchase' : 'reimburse');
             setCreateRequestLocked(true);
             setShowCreateRequest(true);

@@ -1,3 +1,5 @@
+import { useAdminTransactionEdit } from '@/hooks/useAdminTransactionEdit';
+import { AdminTransactionFields } from './AdminTransactionFields';
 import { FinanceImageThumbnail } from './FinanceImageThumbnail';
 import { transactionCategoriesFor, transactionCategoryValue } from '@/lib/financeTransactionCategories';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -140,6 +142,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
     const [projectCode, setProjectCode] = useState('');
     const [departmentId, setDepartmentId] = useState('');
     const [title, setTitle] = useState('');
+    const [invoiceNumber, setInvoiceNumber] = useState('');
     const [category, setCategory] = useState('');
     const [subcategory, setSubcategory] = useState('');
     const [invoiceDate, setInvoiceDate] = useState(new Date().toISOString().split('T')[0]);
@@ -268,6 +271,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         setCategory('');
         setSubcategory('');
         setTitle('');
+        setInvoiceNumber('');
         setVendorName('');
         setBankName('');
         setAccountNumber('');
@@ -297,6 +301,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         const dept = fetchedDepts.find(d => d.id === req.department_id);
         setDepartmentId(dept ? dept.id : (req.department_id || req.department?.id || ''));
         setTitle(req.title || req.description || '');
+        setInvoiceNumber(req.invoice_number || '');
 
         setNotes(req.notes || '');
         setInvoiceDate(req.date || new Date().toISOString().split('T')[0]);
@@ -429,6 +434,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         setCategory('');
         setSubcategory('');
         setTitle('');
+        setInvoiceNumber('');
     };
 
     // Recalculate trip item prices if subcategory changes (e.g. switching between Motorcycle and Car)
@@ -518,6 +524,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
     const totalAmount = useMemo(() => {
         return activeItems.reduce((sum, item) => sum + (item.qty * item.price), 0);
     }, [activeItems]);
+    const adminEditor = useAdminTransactionEdit(editRequest, visible, totalAmount);
 
     const pickDocument = async (documentKind: 'invoice' | 'expense_proof' = 'invoice') => {
         try {
@@ -560,11 +567,11 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             showFormError('Invalid Amount', 'Enter a valid quantity and price. Negative numbers and decimals are allowed.');
             return;
         }
-        if (activeTab === 'reimburse' && !asDraft && activeItems.some(item => item.qty === 0 || item.price === 0)) {
+        if (activeTab === 'reimburse' && !asDraft && !adminEditor.enabled && activeItems.some(item => item.qty === 0 || item.price === 0)) {
             showFormError('Actual Amount Required', 'Every reimbursement item must have an actual non-zero quantity and unit price.');
             return;
         }
-        if (activeTab === 'reimburse' && !asDraft) {
+        if (activeTab === 'reimburse' && !asDraft && !adminEditor.enabled) {
             if (!reimburseImages.some(file => file.documentKind === 'invoice') || !reimburseImages.some(file => file.documentKind === 'expense_proof')) {
                 showFormError('Documents Required', 'Attach one invoice and one expense payment proof.');
                 return;
@@ -578,6 +585,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         submitInFlight.current = true;
         setIsSubmitting(true);
         try {
+            const adminFields = await adminEditor.save();
             const activeImages = activeTab === 'purchase' ? purchaseImages : reimburseImages;
             const total = activeImages.filter(isLocalFinanceAttachment).length;
             setUploadProgress(total ? { done: 0, total } : null);
@@ -608,8 +616,10 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             const statusTag = editRequest?.statusTag;
 
             if (activeTab === 'purchase') {
-                const autoTitle = purchaseItems.map(i => i.name.trim()).filter(Boolean).join(', ') || 'Purchase Request';
+                const autoTitle = (adminEditor.enabled && title.trim()) || purchaseItems.map(i => i.name.trim()).filter(Boolean).join(', ') || 'Purchase Request';
                 const purchasePayload = {
+                    ...adminFields,
+                    invoice_number: adminEditor.enabled ? invoiceNumber : undefined,
                     title: autoTitle,
                     project_id: selectedProject?.id || null,
                     department_id: selectedDept?.id || null,
@@ -652,10 +662,12 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                 }
             } else {
                 const reimbursementNames = reimburseItems.map(item => item.name.trim()).filter(Boolean);
-                const reimbursementTitle = reimbursementNames.length <= 1
+                const reimbursementTitle = (adminEditor.enabled && title.trim()) || (reimbursementNames.length <= 1
                     ? (reimbursementNames[0] || 'Reimbursement Request')
-                    : `${reimbursementNames[0]}, ${reimbursementNames[1]}${reimbursementNames.length > 2 ? ` +${reimbursementNames.length - 2}` : ''}`;
+                    : `${reimbursementNames[0]}, ${reimbursementNames[1]}${reimbursementNames.length > 2 ? ` +${reimbursementNames.length - 2}` : ''}`);
                 const reimbursePayload = {
+                    ...adminFields,
+                    invoice_number: adminEditor.enabled ? invoiceNumber : undefined,
                     title: reimbursementTitle,
                     project_id: selectedProject?.id || null,
                     department_id: selectedDept?.id || null,
@@ -820,7 +832,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
         );
     };
 
-    const sheetTitle = isEditMode
+    const sheetTitle = adminEditor.enabled ? 'Edit Transaction' : isEditMode
         ? (activeTab === 'purchase' ? 'Edit Purchase Request' : 'Edit Reimburse Request')
         : (activeTab === 'purchase' ? 'Purchase Request' : 'Reimburse Request');
 
@@ -830,7 +842,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             ? (isDraft ? 'Save Draft' : 'Save Changes')
             : (isDraft ? 'Save Draft' : (activeTab === 'purchase' ? 'Submit Request' : 'Submit Claim'));
 
-    const canSaveAsDraft = !isEditMode || ['draft', 'revision', 'rejected'].includes(editRequest?.statusTag);
+    const canSaveAsDraft = !adminEditor.enabled && (!isEditMode || ['draft', 'revision', 'rejected'].includes(editRequest?.statusTag));
     const scrollBg = isDark ? '#1C1C1E' : '#F2F2F7';
 
     const renderInnerContent = () => (
@@ -870,6 +882,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
 
                         <ScrollView contentContainerStyle={[s.scrollContent, { paddingBottom: 24 }]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                             
+                            {adminEditor.enabled && <View style={[s.section, { backgroundColor: cardBg, borderColor: cardBorder, padding: 16, marginBottom: 16 }]}><Text style={{ color: textColor, marginBottom: 8 }}>Transaction Title</Text><TextInput accessibilityLabel="Transaction Title" value={title} onChangeText={setTitle} editable={!isSubmitting} style={{ color: textColor, paddingVertical: 8 }} placeholder="Transaction Title" placeholderTextColor={subtextColor} /><Text style={{ color: textColor, marginTop: 12, marginBottom: 8 }}>Invoice Number</Text><TextInput accessibilityLabel="Invoice Number" value={invoiceNumber} onChangeText={setInvoiceNumber} editable={!isSubmitting} style={{ color: textColor, paddingVertical: 8 }} placeholder="Invoice Number" placeholderTextColor={subtextColor} /></View>}
                             {/* Section 1: General Information */}
                             <Text style={s.sectionTitleHeader}>General Information</Text>
                             <View style={[s.section, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>
@@ -1361,6 +1374,7 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                                 )}
                             </View>
 
+                            <AdminTransactionFields editor={adminEditor} disabled={isSubmitting} />
                             {/* Section 5: Additional Notes */}
                             <Text style={s.sectionTitleHeader}>Additional Notes</Text>
                             <View style={[s.section, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' }]}>

@@ -1,4 +1,5 @@
-import { assertFinanceMutation } from '@/lib/financeAccess';
+import { financePaymentRecords, validateFinancePayments } from '../financePayments';
+import { assertFinanceMutation, assertSuperadminFinanceEdit } from '@/lib/financeAccess';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { fetchOrganizationDepartments, getFinanceCategories, getFinanceDocumentRules } from './financeSetup';
 import { formatPurchasingReference, formatPurchasingShortReference, readPurchasingNotes, writePurchasingNotes } from '../financeRequestPresentation';
@@ -385,7 +386,7 @@ export async function fetchPurchasingRequests(userId: string, isTeam: boolean, o
         if (isPaid) {
             derivedStatus = 'Paid';
             derivedStatusTag = 'paid';
-        } else if (req.financial_status === 'PARTIALLY_PAID') {
+        } else if (req.financial_status === 'PARTIALLY_PAID' || (Number(req.paid_amount) > 0 && Number(req.paid_amount) < Number(req.approved_amount ?? req.amount))) {
             derivedStatus = 'Partially Paid'; derivedStatusTag = 'paying';
         } else if (req.approval_status === 'REJECTED' && req.revision_reason) {
             derivedStatus = 'Need Revision';
@@ -455,6 +456,7 @@ export async function fetchProjects() {
 
 export async function createPurchasingRequest(userId: string, payload: PurchasingRequest & { category?: string; vendor_name?: string; status?: string; statusTag?: string }) {
     const { items, invoices, category, vendor_name, status, statusTag, ...rest } = payload as any;
+    if (rest.payment_records !== undefined) throw new Error('Record payments through Pay or Superadmin Edit Transaction.');
 
     validateRequestTarget(rest);
     const isDraft = (status || rest.approval_status || '').toUpperCase() === 'DRAFT';
@@ -550,14 +552,52 @@ function resolveEditReimburseStatus(statusTag?: string, isDraft?: boolean, curre
     return currentStatus || 'PENDING';
 }
 
+async function readFinanceEditNotes(type: 'purchasing' | 'reimbursement', id: string) {
+    const { data, error } = await supabase.from(type === 'purchasing' ? 'purchasing_requests' : 'reimbursement_requests').select('notes').eq('id', id).single();
+    if (error) throw error;
+    return data?.notes || '';
+}
+
+async function readAdminEditState(type: 'purchasing' | 'reimbursement', id: string) {
+    await assertSuperadminFinanceEdit();
+    const columns = type === 'purchasing' ? 'approval_status,financial_status,notes' : 'status,notes';
+    const { data, error } = await supabase.from(type === 'purchasing' ? 'purchasing_requests' : 'reimbursement_requests')
+        .select(columns).eq('id', id).single();
+    if (error) throw error;
+    if (!data) throw new Error('Transaction not found.');
+    const { notes, ...workflow } = data as any;
+    return { workflow, notes };
+}
+
+function applyAdminPaymentRecords(updateData: Record<string, any>, state: any, rest: any, type: 'purchasing' | 'reimbursement') {
+    if (rest.payment_records === undefined) return;
+    if (!Array.isArray(rest.payment_records)) throw new Error('Invalid payment records.');
+    const records = rest.payment_records;
+    const summary = validateFinancePayments(records, Number(updateData.amount));
+    const approval = String(state.workflow.approval_status || state.workflow.status).toUpperCase();
+    if (records.length && !['APPROVED', 'PAID', 'PARTIALLY_PAID', 'PAYING'].includes(approval)) throw new Error('Approve this transaction before recording payments.');
+    if (['APPROVED', 'PAID', 'PARTIALLY_PAID', 'PAYING'].includes(approval)) updateData.approved_amount = Number(updateData.amount);
+    updateData.payment_proof_url = [...new Set(records.flatMap((record: any) => record.proofs.map((proof: any) => proof.path)))].join(',') || null;
+    updateData.payment_date = records.map((record: any) => record.date).sort().pop() || null;
+    if (type === 'purchasing') {
+        updateData.paid_amount = summary.paid;
+        updateData.financial_status = summary.status === 'PAID' ? 'PAID' : 'UNPAID';
+    } else {
+        updateData.status = summary.status === 'PAID' ? 'PAID' : summary.paid || ['PAID', 'PARTIALLY_PAID', 'PAYING'].includes(approval) ? 'APPROVED' : state.workflow.status;
+    }
+}
+
 export async function updatePurchasingRequest(
     userId: string,
     id: string,
     payload: PurchasingRequest & { category?: string; vendor_name?: string; status?: string; statusTag?: string; isDraft?: boolean }
 ) {
-    const { items, invoices, category, vendor_name, status, statusTag, isDraft, ...rest } = payload as any;
+    const { items, invoices, category, vendor_name, status, statusTag, isDraft, adminEdit, ...rest } = payload as any;
+    if (!adminEdit && rest.payment_records !== undefined) throw new Error('Only Superadmin can correct payment records.');
+    const adminState = adminEdit ? await readAdminEditState('purchasing', id) : null;
 
     if ('project_id' in rest && 'department_id' in rest) validateRequestTarget(rest);
+    const existingNotes = adminState?.notes ?? await readFinanceEditNotes('purchasing', id);
     const approval_status = resolveEditApprovalStatus(statusTag, isDraft ?? (status?.toUpperCase() === 'DRAFT'), rest.approval_status);
     const finalDescription = (rest.title?.trim() || rest.description?.trim() || getRequestTitle(rest.description, items).trim() || 'Purchase Request');
 
@@ -573,12 +613,24 @@ export async function updatePurchasingRequest(
         purchase_stage: rest.purchase_stage,
         approval_status,
         invoice_url: rest.invoice_url,
-        notes: writePurchasingNotes(rest.notes, rest),
+        notes: writePurchasingNotes(rest.notes, { ...readPurchasingNotes(existingNotes).commercial, ...rest }),
         beneficiary_bank: rest.beneficiary_bank,
         beneficiary_number: rest.beneficiary_number,
         beneficiary_name: rest.beneficiary_name,
         priority: rest.priority,
     };
+
+    if (adminState) {
+        for (const field of ['vendor', 'subcategory', 'beneficiary_bank', 'beneficiary_number', 'beneficiary_name', 'invoice_url', 'notes']) {
+            if (field in updateData && updateData[field] === undefined) updateData[field] = null;
+        }
+        Object.assign(updateData, adminState.workflow, {
+            payment_proof_url: rest.payment_proof_url,
+            payment_date: rest.payment_date,
+        });
+    }
+
+    if (adminState) applyAdminPaymentRecords(updateData, adminState, rest, 'purchasing');
 
     Object.keys(updateData).forEach(key => {
         if (updateData[key] === undefined) delete updateData[key];
@@ -629,28 +681,33 @@ export async function updateReimburseRequest(
     id: string,
     payload: ReimburseRequest & { details?: TripDetails; statusTag?: string; isDraft?: boolean }
 ) {
-    const { items, details, expense_proof_url, statusTag, isDraft, ...rest } = payload as any;
+    const { items, details, expense_proof_url, statusTag, isDraft, adminEdit, ...rest } = payload as any;
+    if (!adminEdit && rest.payment_records !== undefined) throw new Error('Only Superadmin can correct payment records.');
+    const adminState = adminEdit ? await readAdminEditState('reimbursement', id) : null;
 
     if ('project_id' in rest && 'department_id' in rest) validateRequestTarget(rest);
+    const existingNotes = adminState?.notes ?? await readFinanceEditNotes('reimbursement', id);
     const dbStatus = resolveEditReimburseStatus(statusTag, isDraft ?? (rest.status?.toUpperCase() === 'DRAFT'), rest.status);
     const amount = reimbursementActualTotal(items, rest);
     const reimbursementTitle = getReimbursementTitle(items);
-    if (dbStatus !== 'DRAFT') {
+    if (!adminEdit && dbStatus !== 'DRAFT') {
         validateReimbursementSubmission({ ...rest, expense_proof_url, amount }, items);
     }
+    const metadata = { ...(adminState ? parseReimbursementMetadataFromNotes(adminState.notes) : {}),
+        ...Object.fromEntries(Object.entries(rest).filter(([, value]) => value !== undefined)) };
     const notes = writePurchasingNotes(encodeReimbursementNotes(rest.notes, details, {
         expense_proof_url,
-        invoice_number: rest.invoice_number,
-        vendor: rest.vendor,
-        subtotal_amount: rest.subtotal_amount,
-        discount_type: rest.discount_type,
-        discount_value: rest.discount_value,
-        discount_amount: rest.discount_amount,
-        tax_name: rest.tax_name,
-        tax_type: rest.tax_type,
-        tax_rate: rest.tax_rate,
-        tax_amount: rest.tax_amount,
-    }), rest);
+        invoice_number: metadata.invoice_number,
+        vendor: metadata.vendor,
+        subtotal_amount: metadata.subtotal_amount,
+        discount_type: metadata.discount_type,
+        discount_value: metadata.discount_value,
+        discount_amount: metadata.discount_amount,
+        tax_name: metadata.tax_name,
+        tax_type: metadata.tax_type,
+        tax_rate: metadata.tax_rate,
+        tax_amount: metadata.tax_amount,
+    }), { ...readPurchasingNotes(existingNotes).commercial, ...rest });
 
     const updateData: Record<string, any> = {
         project_id: rest.project_id !== undefined ? (rest.project_id || null) : undefined,
@@ -668,6 +725,18 @@ export async function updateReimburseRequest(
         priority: rest.priority,
         target_date: rest.target_date ?? null,
     };
+
+    if (adminState) {
+        for (const field of ['vendor', 'subcategory', 'beneficiary_bank', 'beneficiary_number', 'beneficiary_name', 'invoice_url', 'notes']) {
+            if (field in updateData && updateData[field] === undefined) updateData[field] = null;
+        }
+        Object.assign(updateData, adminState.workflow, {
+            payment_proof_url: rest.payment_proof_url,
+            payment_date: rest.payment_date,
+        });
+    }
+
+    if (adminState) applyAdminPaymentRecords(updateData, adminState, rest, 'reimbursement');
 
     Object.keys(updateData).forEach(key => {
         if (updateData[key] === undefined) delete updateData[key];
@@ -713,16 +782,21 @@ export async function payFinanceRequest(userId: string, id: string, type: 'purch
         const approval = String(type === 'purchasing' ? request.approval_status : request.status).toUpperCase();
         if (!['APPROVED', 'PARTIALLY_PAID', 'PAYING'].includes(approval)) throw new Error('Approve the request before payment.');
         const total = Number(request.approved_amount ?? request.amount);
-        const paid = type === 'purchasing' ? Number(request.paid_amount || 0) : 0;
+        const storedNotes = readPurchasingNotes(request.notes || '');
+        const existingPayments = financePaymentRecords({ ...request, ...storedNotes.commercial });
+        const paid = type === 'purchasing' ? Number(request.paid_amount || 0) : existingPayments.reduce((sum, payment) => sum + payment.amount, 0);
         const amount = Number(payload.amount);
-        if (!Number.isFinite(amount) || amount <= 0 || amount > total - paid) throw new Error('Payment amount exceeds the outstanding amount.');
-        if (type === 'reimbursement' && amount !== total) throw new Error('Reimbursement must be paid in full.');
+        if (!Number.isFinite(amount) || amount <= 0 || Math.round(amount * 100) > Math.round((total - paid) * 100)) throw new Error('Payment amount exceeds the outstanding amount.');
+        if (type === 'reimbursement' && Math.round(amount * 100) !== Math.round((total - paid) * 100)) throw new Error('Reimbursement must be paid in full.');
         if (!payload.source_of_fund_id || !payload.payment_date || !payload.payment_proof_url) throw new Error('Funding source, payment date and proof are required.');
         const { data: source, error: sourceError } = await supabase.from('funding_sources').select('id').eq('id', payload.source_of_fund_id).single();
         if (sourceError || !source) throw new Error('Funding source not found.');
-        const finalPaid = paid + amount;
+        const finalPaid = Math.round((paid + amount) * 100) / 100;
         const proofs = [...new Set([request.payment_proof_url, payload.payment_proof_url].filter(Boolean).flatMap(value => String(value).split(',').map(path => path.trim()).filter(Boolean)))].join(',');
-        const updates: any = { ...(type === 'purchasing' ? { paid_amount: finalPaid } : {}), source_of_fund_id: payload.source_of_fund_id, payment_date: payload.payment_date, payment_proof_url: proofs, [type === 'purchasing' ? 'financial_status' : 'status']: finalPaid >= total ? 'PAID' : 'PARTIALLY_PAID' };
+        const updates: any = { ...(type === 'purchasing' ? { paid_amount: finalPaid } : {}), source_of_fund_id: payload.source_of_fund_id, payment_date: payload.payment_date, payment_proof_url: proofs, [type === 'purchasing' ? 'financial_status' : 'status']: finalPaid >= total ? 'PAID' : (type === 'purchasing' ? 'UNPAID' : 'PARTIALLY_PAID') };
+        const paymentRecords = [...existingPayments, { id: `payment-${Date.now()}-${Math.random().toString(36).slice(2)}`, amount, date: payload.payment_date,
+            proofs: payload.payment_proof_url.split(',').filter(Boolean).map((path, index) => ({ path, name: `Payment Proof ${index + 1}` })), source_of_fund_id: payload.source_of_fund_id }];
+        updates.notes = writePurchasingNotes(storedNotes.notes, { ...storedNotes.commercial, payment_records: paymentRecords });
         // Preserve legacy Adidaya payment behavior: update the payment request, not an invented balance/ledger transaction.
         let update = supabase.from(table).update(updates).eq('id', id);
         if (type === 'purchasing') update = request.paid_amount == null ? update.is('paid_amount', null) : update.eq('paid_amount', request.paid_amount);
@@ -804,7 +878,9 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
         const profile = profileMap.get(req.user_id) || null;
         const itemsList = req.items || [];
         const rawStatus = (req.status || '').toUpperCase();
-        const workflowStatus = rawStatus === 'PARTIALLY_PAID' ? 'Partially Paid' : rawStatus === 'CONSOLIDATED' ? 'Consolidated'
+        const recordedPayments = readPurchasingNotes(req.notes || '').commercial.payment_records;
+        const recordedPaid = Array.isArray(recordedPayments) ? recordedPayments.reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0) : 0;
+        const workflowStatus = (recordedPaid > 0 && recordedPaid < Number(req.approved_amount ?? req.amount)) || rawStatus === 'PARTIALLY_PAID' ? 'Partially Paid' : rawStatus === 'CONSOLIDATED' ? 'Consolidated'
             : rawStatus === 'PAYING' ? 'Paying'
                 : null;
         const tripDetails = parseTripDetailsFromNotes(req.notes);
@@ -821,6 +897,7 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
             ...req,
             ...stored.commercial,
             ...reimbursementMetadata,
+            paid_amount: Array.isArray(stored.commercial.payment_records) ? stored.commercial.payment_records.reduce((sum: number, payment: any) => sum + Number(payment.amount || 0), 0) : (rawStatus === 'PAID' ? Number(req.approved_amount ?? req.amount) : 0),
             invoice_url: req.invoice_url,
             expense_proof_url: reimbursementMetadata.expense_proof_url || legacyDocuments.slice(1).join(',') || undefined,
             notes: stored.notes || (cleanNotes || undefined),
@@ -845,7 +922,7 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
                     ))
                 )
             )),
-            statusTag: workflowStatus ? (rawStatus === 'PARTIALLY_PAID' ? 'paying' : rawStatus.toLowerCase()) : (rawStatus === 'PAID' ? 'paid' : (
+            statusTag: workflowStatus ? (workflowStatus === 'Partially Paid' ? 'paying' : rawStatus.toLowerCase()) : (rawStatus === 'PAID' ? 'paid' : (
                 rawStatus === 'APPROVED' ? 'approved' : (
                 rawStatus === 'REJECTED' && req.revision_reason ? 'revision' : (
                 rawStatus === 'REJECTED' ? 'rejected' : (
@@ -864,6 +941,7 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
 
 export async function createReimburseRequest(userId: string, payload: ReimburseRequest & { details?: TripDetails; statusTag?: string }) {
     const { items, details, expense_proof_url, statusTag, ...rest } = payload as any;
+    if (rest.payment_records !== undefined) throw new Error('Record payments through Pay or Superadmin Edit Transaction.');
 
     validateRequestTarget(rest);
     const isDraft = (rest.status || '').toUpperCase() === 'DRAFT';

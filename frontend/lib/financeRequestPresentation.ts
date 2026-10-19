@@ -80,7 +80,7 @@ export function formatPurchasingShortReference(request: any, rule: DocumentLevel
 
 // Match the existing finance trip-metadata storage pattern; user-visible notes stay plain.
 const COMMERCIAL_MARKER = '<!--FINANCE_PURCHASE:';
-export const commercialFields = ['department_id', 'department_name', 'department_code', 'discount_type', 'discount_value', 'discount_amount', 'subtotal_amount', 'tax_rule_id', 'tax_name', 'tax_rate', 'tax_amount', 'tax_type', 'payment_term_id', 'payment_term_name', 'payment_term_days', 'invoice_number', 'invoice_date'] as const;
+export const commercialFields = ['department_id', 'department_name', 'department_code', 'discount_type', 'discount_value', 'discount_amount', 'subtotal_amount', 'tax_rule_id', 'tax_name', 'tax_rate', 'tax_amount', 'tax_type', 'payment_term_id', 'payment_term_name', 'payment_term_days', 'invoice_number', 'invoice_date', 'payment_records'] as const;
 export function readPurchasingNotes(raw = '') {
     const start = raw.lastIndexOf(COMMERCIAL_MARKER);
     if (start < 0 || !raw.endsWith('-->')) return { notes: raw, commercial: {} as Record<string, any> };

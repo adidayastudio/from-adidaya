@@ -28,4 +28,13 @@ config.resolver.blockList = [
   /.*[\/\\]\.__.*/,
 ];
 
+// Use the existing web adapter without rewriting component paths: wrappers
+// may re-export a .ios file, so redirecting that path creates self imports.
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  if (platform === 'web' && ['@expo/ui/swift-ui', '@expo/ui/swift-ui/modifiers'].includes(moduleName)) {
+    return { type: 'sourceFile', filePath: path.join(__dirname, 'lib/swiftui.web.ts') };
+  }
+  return context.resolveRequest(context, moduleName, platform);
+};
+
 module.exports = config;

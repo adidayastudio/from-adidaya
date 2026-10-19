@@ -1,3 +1,5 @@
+import { useAdminTransactionEdit } from '@/hooks/useAdminTransactionEdit';
+import { AdminTransactionFields } from './AdminTransactionFields';
 import { transactionCategoriesFor, transactionCategoryValue } from '@/lib/financeTransactionCategories';
 import { attachmentKind, requestAttachments, splitReferenceNotes } from '@/lib/financeRequestPresentation';
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -353,6 +355,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
     const grandTotal = useMemo(() => {
         return taxBreakdown.total;
     }, [taxBreakdown]);
+    const adminEditor = useAdminTransactionEdit(editRequest, isOpened, grandTotal);
 
     // Filtered Saved Accounts
     const filteredAccounts = useMemo(() => {
@@ -757,12 +760,12 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
             Alert.alert('Invalid Amount', 'Enter a valid quantity and price. Negative numbers and decimals are allowed.');
             return;
         }
-        if (isReimburse && !asDraft && validItems.some(item => item.qty === 0 || item.price === 0)) {
+        if (isReimburse && !asDraft && !adminEditor.enabled && validItems.some(item => item.qty === 0 || item.price === 0)) {
             Alert.alert('Actual Amount Required', 'Every reimbursement item must have an actual non-zero quantity and unit price.');
             return;
         }
 
-        if (isReimburse && !asDraft) {
+        if (isReimburse && !asDraft && !adminEditor.enabled) {
             if (invoiceDocuments.length === 0) {
                 Alert.alert('Invoice Required', 'At least one invoice document is required for reimbursement.');
                 return;
@@ -799,6 +802,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
         submitInFlight.current = true;
         setIsSubmitting(true);
         try {
+            const adminFields = await adminEditor.save();
             const filesToUpload = [
                 ...((isReimburse || invoiceAvailable) ? invoiceDocuments : []),
                 ...(isReimburse ? expenseProofDocuments : []),
@@ -871,6 +875,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
 
             if (isReimburse) {
                 const reimbursePayload = {
+                    ...adminFields,
                     title: reimbursementTitle,
                     department_id: selectedTarget.type === 'department' ? selectedTarget.department.id : null,
                     department_name: selectedTarget.type === 'department' ? selectedTarget.department.name : undefined,
@@ -946,6 +951,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
             });
 
             const purchasePayload = {
+                    ...adminFields,
                 title: reqDescription,
                 department_id: selectedTarget.type === 'department' ? selectedTarget.department.id : null,
                 department_name: selectedTarget.type === 'department' ? selectedTarget.department.name : undefined,
@@ -1023,7 +1029,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
             <HStack alignment="center" modifiers={[padding({ top: isEmbedded ? 16 : 20, leading: 20, trailing: 20, bottom: 8 })]}>
                 <VStack alignment="leading" spacing={2}>
                     <SwiftUIText size={20} weight="bold" color={textColor}>
-                        {isEditMode
+                        {adminEditor.enabled ? 'Edit Transaction' : isEditMode
                             ? `Edit ${isReimburse ? 'Reimbursement' : 'Purchase'} Request`
                             : `${isReimburse ? 'Reimbursement' : 'Purchase'} Request`}
                     </SwiftUIText>
@@ -1567,7 +1573,8 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                         </Section>}
 
                         {/* 8. Additional Notes */}
-                        <Section title="Additional Notes">
+                        <AdminTransactionFields editor={adminEditor} disabled={isSubmitting} />
+                            <Section title="Additional Notes">
                             <TextField
                                 placeholder="Add notes or specifications…"
                                 defaultValue={notes}
@@ -1583,18 +1590,18 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                         padding({ leading: 20, trailing: 20, top: 12, bottom: 34 }),
                         frame({ maxWidth: Infinity })
                     ]}>
-                        <Button variant="glass" color="gray" disabled={isSubmitting} onPress={() => handleSaveOrSubmit(true)}>
+                        {!adminEditor.enabled && <Button variant="glass" color="gray" disabled={isSubmitting} onPress={() => handleSaveOrSubmit(true)}>
                             <HStack modifiers={[frame({ maxWidth: Infinity }), frame({ height: 42 })]}>
                                 <Spacer />
                                 <SwiftUIText size={17} weight="semibold" color={textColor} lineLimit={1}>Save Draft</SwiftUIText>
                                 <Spacer />
                             </HStack>
-                        </Button>
+                        </Button>}
                         <Button variant="glassProminent" color="#159957" disabled={isSubmitting} onPress={() => handleSaveOrSubmit(false)}>
                             <HStack modifiers={[frame({ maxWidth: Infinity }), frame({ height: 42 })]}>
                                 <Spacer />
                                 <SwiftUIText size={17} weight="semibold" color="#FFFFFF" lineLimit={1}>
-                                    {isSubmitting ? (uploadProgress ? `Uploading (${uploadProgress.done}/${uploadProgress.total})...` : 'Saving request...') : 'Submit Request'}
+                                    {isSubmitting ? (uploadProgress ? `Uploading (${uploadProgress.done}/${uploadProgress.total})...` : 'Saving request...') : (isEditMode ? 'Save Changes' : 'Submit Request')}
                                 </SwiftUIText>
                                 <Spacer />
                             </HStack>

@@ -1,3 +1,5 @@
+import { isFinanceSuperadmin } from '@/lib/financeRoles';
+import { useUserContext } from '@/context/UserProvider';
 import { FinanceAttachmentPreview } from './FinanceAttachmentPreview';
 import { resolveFinanceUrl } from '@/lib/api/finance';
 import { financeProofs, resolveFinanceAttachments } from '@/lib/financeAttachments';
@@ -40,6 +42,7 @@ interface TransactionDetailDrawerProps {
 }
 
 export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = ({ visible, onClose, request, actions = [], onAction, isEmbedded = false }) => {
+    const { profile } = useUserContext();
     const { width } = useWindowDimensions();
     const isDesktop = Platform.OS === 'web' && width >= 768;
     const { resolvedTheme } = useTheme();
@@ -824,6 +827,8 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
                                 </Text>
                             )}
                         </View>
+
+                        {isFinanceSuperadmin(activeTenant?.role || profile?.role) && onAction && <TouchableOpacity accessibilityLabel="Edit Transaction" onPress={() => onAction('admin_edit', request)} style={{ alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 12, paddingVertical: 8 }}><Ionicons name="create-outline" size={15} color="#159957" /><Text style={{ color: '#159957', fontSize: 13, fontWeight: '600' }}>Edit Transaction</Text></TouchableOpacity>}
 
                         <View style={{ height: 24 }} />
 

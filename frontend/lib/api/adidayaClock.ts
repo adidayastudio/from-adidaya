@@ -150,7 +150,6 @@ async function legacyClockAction(userId: string, type: "IN" | "OUT", metadata?: 
                     check_in_location_type: metadata?.detectedLocationType,
                     check_in_remote_mode: metadata?.remoteMode,
                     check_in_location_status: metadata?.locationStatus,
-                    check_in_notes: metadata?.overrideReason,
                     check_in_photo_url: metadata?.photoUrl || null
                 }, { onConflict: "user_id, date" });
                 if (recordError) throw recordError;
@@ -180,7 +179,7 @@ async function legacyClockAction(userId: string, type: "IN" | "OUT", metadata?: 
 
         // Fetch current record to preserve check-in data
         const { data: currentRecord, error: currentRecordError } = await supabase.from("attendance_records")
-            .select("check_in_photo_url, check_in_latitude, check_in_longitude, check_in_location_code, check_in_location_type, check_in_remote_mode, check_in_location_status, check_in_notes")
+            .select("check_in_photo_url, check_in_latitude, check_in_longitude, check_in_location_code, check_in_location_type, check_in_remote_mode, check_in_location_status")
             .eq("user_id", userId)
             .eq("date", dateStr)
             .maybeSingle();
@@ -261,7 +260,6 @@ async function legacyClockAction(userId: string, type: "IN" | "OUT", metadata?: 
                 check_in_location_type: currentRecord?.check_in_location_type,
                 check_in_remote_mode: currentRecord?.check_in_remote_mode,
                 check_in_location_status: currentRecord?.check_in_location_status,
-                check_in_notes: currentRecord?.check_in_notes,
             };
 
             if (metadata?.photoUrl) {
@@ -332,7 +330,7 @@ export async function writeAdidayaClock(userId: string, type: 'IN' | 'OUT', meta
                 return { success: true, warning: 'Absensi tersimpan, tetapi sinkronisasi ringkasan belum lengkap. Tidak perlu mengulang clock.' };
             }
         } catch { /* Keep the outcome unconfirmed when the verification read fails. */ }
-        return { error: 'Attendance could not be fully saved. Status penyimpanan belum dapat dikonfirmasi. Periksa status absensi sebelum mencoba lagi. ' + (e instanceof Error ? e.message : '') };
+        return { error: 'Attendance could not be fully saved. Status penyimpanan belum dapat dikonfirmasi. Periksa status absensi sebelum mencoba lagi. ' + (e && typeof e === 'object' && 'message' in e ? String(e.message) : e instanceof Error ? e.message : '') };
     }
     finally { inFlight.delete(userId); }
 }

@@ -1,3 +1,4 @@
+import { financePaymentRecords } from '../financePayments';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../supabase';
 import {
@@ -315,7 +316,7 @@ export async function fetchPurchasingConsolidations(
             .map((request: any) => {
                 const requestAmount = Number(request.amount || 0);
                 const isFullyPaid = request.financial_status === 'PAID' || request.status === 'Paid';
-                const installmentTotal = auditLogs
+                const installmentTotal = Array.isArray(request.payment_records) ? financePaymentRecords(request).reduce((sum, payment) => sum + payment.amount, 0) : auditLogs
                     .filter(a => a.entity_id === request.id && a.action === 'payment_processed')
                     .reduce((sum, audit) => sum + Number(audit.details?.amount || 0), 0);
                 const paymentHistory = auditLogs
@@ -1008,7 +1009,7 @@ export async function payConsolidationRequestsBatch(
         if (!request) throw new Error(`Request ${requestId} not found.`);
         const requestAmount = Number(payload.request_amounts?.[requestId] ?? request.amount ?? 0);
         const isFullyPaid = request.financial_status === 'PAID' || request.status === 'Paid';
-        const previouslyPaid = isFullyPaid ? requestAmount : auditLogs
+        const previouslyPaid = isFullyPaid ? requestAmount : Array.isArray(request.payment_records) ? financePaymentRecords(request).reduce((sum, payment) => sum + payment.amount, 0) : auditLogs
             .filter(audit => audit.entity_id === requestId && audit.action === 'payment_processed')
             .reduce((sum, audit) => sum + Number(audit.details?.amount || 0), 0);
         return { requestId, requestAmount, previouslyPaid: Math.min(requestAmount, previouslyPaid) };
@@ -1030,6 +1031,10 @@ export async function payConsolidationRequestsBatch(
     // 3. Apply the installment to each selected request in order.
     for (const allocation of allocations) {
         const isFullyPaid = allocation.cumulativePaid >= allocation.requestAmount;
+        const original: any = requestMap.get(allocation.requestId);
+        const prior = financePaymentRecords({ ...original, _payment_history: auditLogs.filter(audit => audit.entity_id === allocation.requestId && audit.action === 'payment_processed') });
+        const records = [...prior, { id: `payment-${Date.now()}-${allocation.requestId}`, amount: allocation.amount, date: payload.payment_date,
+            proofs: (payload.payment_proof_url || '').split(',').filter(Boolean).map((path, index) => ({ path, name: `Payment Proof ${index + 1}` })), source_of_fund_id: payload.source_of_fund_id }];
         await updatePurchasingStatus(allocation.requestId, {
             approval_status: 'APPROVED',
             // The database constraint only accepts UNPAID/PAID. Installment state
@@ -1037,7 +1042,9 @@ export async function payConsolidationRequestsBatch(
             financial_status: isFullyPaid ? 'PAID' : 'UNPAID',
             source_of_fund_id: payload.source_of_fund_id,
             payment_date: payload.payment_date,
-            payment_proof_url: payload.payment_proof_url,
+            payment_proof_url: records.flatMap(record => record.proofs.map(proof => proof.path)).join(','),
+            paid_amount: allocation.cumulativePaid,
+            notes: writePurchasingNotes(original.notes, { ...original, payment_records: records }),
         });
 
         await logFinanceAudit(
@@ -1086,7 +1093,7 @@ export async function payConsolidationRequestsBatch(
         const requestAmount = Number(payload.request_amounts?.[id] ?? request.amount ?? 0);
         if (allocationMap.has(id)) return Number(allocationMap.get(id)) >= requestAmount;
         if (request.financial_status === 'PAID' || request.status === 'Paid') return true;
-        const previouslyPaid = auditLogs
+        const previouslyPaid = Array.isArray(request.payment_records) ? financePaymentRecords(request).reduce((sum, payment) => sum + payment.amount, 0) : auditLogs
             .filter(audit => audit.entity_id === id && audit.action === 'payment_processed')
             .reduce((sum, audit) => sum + Number(audit.details?.amount || 0), 0);
         return previouslyPaid >= requestAmount;

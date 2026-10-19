@@ -376,7 +376,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         void refreshData(true);
         // Keep task synchronization out of the request save confirmation.
         void (async () => {
-            if (!payload.isDraft) {
+            if (!payload.isDraft && !(payload as any).adminEdit) {
                 try {
                     const { syncFinanceTaskOnResubmit } = await import('@/lib/workflows/taskActionDispatcher');
                     const reqNum = (payload as any).request_number || id;
@@ -397,7 +397,7 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
         void refreshData(true);
         // Keep task synchronization out of the request save confirmation.
         void (async () => {
-            if (!payload.isDraft) {
+            if (!payload.isDraft && !(payload as any).adminEdit) {
                 try {
                     const { syncFinanceTaskOnResubmit } = await import('@/lib/workflows/taskActionDispatcher');
                     const reqNum = (payload as any).request_number || id;
