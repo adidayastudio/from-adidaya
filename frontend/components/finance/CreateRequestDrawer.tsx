@@ -79,6 +79,8 @@ interface RequestItem {
     qty: number;
     unit: string;
     price: number;
+    qtyInput?: string;
+    priceInput?: string;
     origin?: string;
     destination?: string;
     distance?: number;
@@ -529,8 +531,8 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             return;
         }
 
-        if (activeTab === 'reimburse' && activeItems.some(item => item.qty <= 0 || item.price <= 0)) {
-            Alert.alert('Actual Amount Required', 'Every reimbursement item must have an actual quantity and unit price greater than zero.');
+        if (activeTab === 'reimburse' && activeItems.some(item => item.qty === 0 || item.price === 0)) {
+            Alert.alert('Actual Amount Required', 'Every reimbursement item must have an actual non-zero quantity and unit price.');
             return;
         }
         if (activeTab === 'reimburse' && !asDraft) {
@@ -1063,9 +1065,13 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                                                     style={[s.inputRow, { width: 100, textAlign: 'right', paddingRight: 16, color: textColor }]}
                                                     placeholder="1"
                                                     placeholderTextColor={subtextColor}
-                                                    keyboardType="numeric"
-                                                    value={item.qty.toString()}
-                                                    onChangeText={(v) => handleUpdateItem(item.id, 'qty', parseInt(v) || 0)}
+                                                    keyboardType="numbers-and-punctuation"
+                                                    value={item.qtyInput ?? item.qty.toString()}
+                                                    onChangeText={(v) => {
+                                                        if (/^-?\d*(?:[.,]\d*)?$/.test(v)) {
+                                                            handleUpdateItemFields(item.id, { qtyInput: v, qty: Number(v.replace(',', '.')) || 0 });
+                                                        }
+                                                    }}
                                                 />
                                             </View>
 
@@ -1091,15 +1097,19 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
 
                                             <View style={[s.listRow, { paddingRight: 0 }]}>
                                                 <Text style={[s.listRowLabel, { color: textColor }]}>Unit Price</Text>
-                                                <View style={{ flexDirection: 'row', alignItems: 'center', width: 160 }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, minWidth: 0, maxWidth: 240, marginLeft: 16 }}>
                                                     <Text style={{ color: subtextColor, fontSize: 16 }}>Rp</Text>
                                                     <TextInput
-                                                        style={[s.inputRow, { flex: 1, textAlign: 'right', paddingRight: 16, color: textColor }]}
+                                                        style={[s.inputRow, { flex: 1, minWidth: 0, width: 0, textAlign: 'right', paddingRight: 16, color: textColor }]}
                                                         placeholder="0"
                                                         placeholderTextColor={subtextColor}
-                                                        keyboardType="numeric"
-                                                        value={item.price === 0 ? '' : item.price.toString()}
-                                                        onChangeText={(v) => handleUpdateItemFields(item.id, { price: parseInt(v.replace(/[^0-9]/g, '')) || 0 })}
+                                                        keyboardType="numbers-and-punctuation"
+                                                        value={item.priceInput ?? (item.price === 0 ? '' : item.price.toString())}
+                                                        onChangeText={(v) => {
+                                                            if (/^-?\d*(?:[.,]\d*)?$/.test(v)) {
+                                                                handleUpdateItemFields(item.id, { priceInput: v, price: Number(v.replace(',', '.')) || 0 });
+                                                            }
+                                                        }}
                                                     />
                                                 </View>
                                             </View>
