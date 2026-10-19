@@ -86,7 +86,7 @@ export const PURCHASING_COLUMNS = `
     beneficiary_name, created_by, created_at, updated_at, rejection_reason, revision_reason, payment_proof_url,
     priority, target_date, request_number, approved_amount, approved_by_name, paid_amount,
     project:projects(id, project_name, project_code, project_number),
-    items:purchasing_items(id, name, item_name, qty, unit, unit_price, total),
+    items:purchasing_items(id, name, qty, unit, unit_price, total),
     invoices:purchasing_invoices(id, invoice_url, invoice_name, invoice_type, notes, created_at)
 `;
 
@@ -499,7 +499,6 @@ export async function createPurchasingRequest(userId: string, payload: Purchasin
         const itemsData = items.map((item: any) => ({
             request_id: request.id,
             name: item.name,
-            item_name: item.name,
             qty: item.qty,
             unit: item.unit,
             unit_price: item.unit_price,
@@ -595,7 +594,6 @@ export async function updatePurchasingRequest(
             const itemsData = items.map((item: any) => ({
                 request_id: id,
                 name: item.name,
-                item_name: item.name,
                 qty: item.qty,
                 unit: item.unit,
                 unit_price: item.unit_price,

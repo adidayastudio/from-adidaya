@@ -158,3 +158,15 @@ test('multiple invoice paths remain available if the nested attachment query is 
     assert.equal(rows.length, 3);
     assert.equal(rows[2].invoice_url, 'purchase/c.pdf');
 });
+
+for (const method of ['createPurchasingRequest', 'updatePurchasingRequest']) {
+    test(`${method} sends only the actual purchasing item name column`, async () => {
+        const { api, writes } = financeApi();
+        if (method === 'createPurchasingRequest') await api[method]('user', payload);
+        else await api[method]('user', 'request', payload);
+        const insert = writes.find(write => write.table === 'purchasing_items' && write.operation === 'insert');
+        assert.equal(insert.payload[0].name, 'Adjustment');
+        assert.equal('item_name' in insert.payload[0], false);
+        assert.equal(api.PURCHASING_COLUMNS.includes('item_name'), false);
+    });
+}
