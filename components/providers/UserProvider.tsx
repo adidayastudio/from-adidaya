@@ -103,7 +103,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [error, setError] = useState<string | null>(null);
 
-    const didInitRef = useRef(false);
     const profileFetchIdRef = useRef(0);
     const authRefreshInFlightRef = useRef<Promise<void> | null>(null);
     const profileRef = useRef<UserProfile | null>(null);
@@ -253,9 +252,6 @@ export function UserProvider({ children }: { children: ReactNode }) {
     );
 
     useEffect(() => {
-        if (didInitRef.current) return;
-        didInitRef.current = true;
-
         const cached = safeGetCachedProfile();
         if (cached) {
             setProfile(cached);
@@ -269,8 +265,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
             if (nextUser) {
                 setUser(nextUser);
                 setAuthStatus("authenticated");
-                setProfile((prev) => prev ?? buildOptimisticProfile(nextUser));
-                void refreshProfile({ background: true });
+                setProfile((prev) => prev?.id === nextUser.id ? prev : buildOptimisticProfile(nextUser));
             } else {
                 signOutLocal();
             }
@@ -279,7 +274,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         return () => {
             data.subscription.unsubscribe();
         };
-    }, [supabase, refreshAuth, refreshProfile, signOutLocal, buildOptimisticProfile]);
+    }, [supabase, refreshAuth, signOutLocal, buildOptimisticProfile]);
 
     useEffect(() => {
         if (authStatus === "authenticated" && user) {

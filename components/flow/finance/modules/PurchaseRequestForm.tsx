@@ -7,7 +7,7 @@ import { fetchAllProjects } from "@/lib/api/projects";
 import { Project } from "@/types/project";
 import { createPurchasingRequest, updatePurchasingRequest, fetchBeneficiaryAccounts, saveBeneficiaryAccount, BeneficiaryAccount } from "@/lib/api/finance";
 import { uploadFinanceFile } from "@/lib/api/storage";
-import { useFinance } from "../FinanceContext";
+import { supabase } from "@/lib/supabaseClient";
 import { CreditCard, Save, Trash2 } from "lucide-react";
 import { SearchableAccountSelect } from "./SearchableAccountSelect";
 import { ResourceSearchInput } from "./ResourceSearchInput";
@@ -35,7 +35,6 @@ export function PurchaseRequestForm({
     initialData?: any;
 }) {
     // -- CONTEXT & STATE --
-    const { userId } = useFinance();
     const [projectCode, setProjectCode] = useState(initialData?.project_code || "");
     const [projects, setProjects] = useState<Project[]>([]);
     const [category, setCategory] = useState<Category | "">(initialData?.type || "");
@@ -203,6 +202,12 @@ export function PurchaseRequestForm({
         setIsSubmitting(true);
 
         try {
+            // Verify the active session rather than relying on cached profile state.
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError || !user) {
+                throw new Error("Sesi login berakhir. Silakan login kembali sebelum menyimpan request.");
+            }
+            const userId = user.id;
             const selectedProject = projects.find(p => p.projectCode === projectCode);
             if (!selectedProject) throw new Error("Invalid project selected");
 
@@ -221,8 +226,6 @@ export function PurchaseRequestForm({
                 ...uploadedInvoiceUrls
             ];
             const primaryInvoiceUrl = allInvoiceUrls[0] || null;
-
-            if (!userId) throw new Error("User not authenticated");
 
             const payload: any = {
                 project_id: selectedProject.id,

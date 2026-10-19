@@ -14,7 +14,7 @@ import { fetchAllProjects } from "@/lib/api/projects";
 import { Project } from "@/types/project";
 import { createReimburseRequest, updateReimburseRequest, fetchBeneficiaryAccounts, saveBeneficiaryAccount, BeneficiaryAccount } from "@/lib/api/finance";
 import { uploadFinanceFile, getFinanceFileUrl } from "@/lib/api/storage";
-import { useFinance } from "../FinanceContext";
+import { supabase } from "@/lib/supabaseClient";
 import { FileText, Send, Trash2, Clock, Briefcase, FileSignature, ReceiptText, CreditCard, Save } from "lucide-react";
 import { SearchableAccountSelect } from "./SearchableAccountSelect";
 import { ResourceSearchInput } from "./ResourceSearchInput";
@@ -48,7 +48,6 @@ export function ReimburseRequestForm({
     initialData?: any;
 }) {
     // -- CONTEXT & STATE --
-    const { userId } = useFinance();
     const [projectCode, setProjectCode] = useState("");
     const [projects, setProjects] = useState<Project[]>([]);
 
@@ -245,6 +244,12 @@ export function ReimburseRequestForm({
         setIsSubmitting(true);
 
         try {
+            // Verify the active session rather than relying on cached profile state.
+            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            if (authError || !user) {
+                throw new Error("Sesi login berakhir. Silakan login kembali sebelum menyimpan request.");
+            }
+            const userId = user.id;
             const selectedProject = projects.find(p => p.projectCode === projectCode);
             if (!selectedProject) throw new Error("Invalid project selected");
 
@@ -263,8 +268,6 @@ export function ReimburseRequestForm({
                 ...uploadedInvoiceFiles.map(i => i.url)
             ];
             const primaryInvoiceUrl = allInvoiceUrls[0] || null;
-
-            if (!userId) throw new Error("User not authenticated");
 
             // Construct Details JSON
             const details: any = {};
