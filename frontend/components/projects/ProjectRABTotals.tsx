@@ -44,11 +44,11 @@ function IOSSwitch({ value, onValueChange, disabled, isDark, accessibilityLabel 
 
 export function ProjectRABTotals({ subtotal, settings, onChange, isDark, readOnly }: { subtotal: number; settings: RABTotalsSettings; onChange: (settings: RABTotalsSettings) => void; isDark: boolean; readOnly: boolean }) {
     const totals = calculateRABTotals(subtotal, settings), words = currencyWords(totals.total);
-    const text = isDark ? '#F5F5F7' : '#1C1C1E', muted = isDark ? '#9898A2' : '#73737D', surface = isDark ? '#1C1D23' : '#FFFFFF';
+    const text = isDark ? '#F5F5F7' : '#1C1C1E', muted = isDark ? '#9898A2' : '#73737D', surface = isDark ? '#1C1D23' : '#F2F2F7', cardBg = isDark ? '#16171C' : '#FFFFFF', border = isDark ? '#292930' : '#E5E5EA';
     const money = (value: number) => `Rp ${value.toLocaleString('id-ID', { maximumFractionDigits: 2 })}`;
     const pill = { height: 32, paddingHorizontal: 12, borderRadius: 999, backgroundColor: surface, flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 };
     const steps = [0, 1000, 10000, 100000, 1000000], modes = ['nearest', 'up', 'down'] as const;
-    return <View style={{ padding: 18, backgroundColor: isDark ? '#16171C' : '#F2F2F7', borderRadius: 18, gap: 12 }}>
+    return <View style={{ padding: 18, backgroundColor: cardBg, borderRadius: 18, gap: 12, borderWidth: isDark ? 1 : 0, borderColor: border }}>
         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
             <Text style={{ color: muted, fontSize: 13, fontWeight: '500' }}>Subtotal</Text>
             <Text style={{ color: text, fontSize: 13, fontWeight: '600' }}>{money(totals.subtotal)}</Text>

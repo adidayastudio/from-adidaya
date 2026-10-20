@@ -14,13 +14,13 @@ const groups = [
         { id: 'planning:rab', title: 'RAB' },
         { id: 'planning:schedule', title: 'Schedule' },
     ] },
-    { label: 'Work', dropdown: true, items: [{ id: 'work', title: 'Tasks & Deliverables', short: 'Tasks' }] },
-    { label: 'Document', items: [{ id: 'docs', title: 'Document' }] },
-    { label: 'Control', dropdown: true, items: [
-        { id: 'tracking', title: 'Control' },
-        { id: 'planning:reports', title: 'Reports' },
-        { id: 'activity', title: 'Activity' },
+    { label: 'Work', dropdown: true, items: [
+        { id: 'work', title: 'Tasks & Deliverables', short: 'Deliverables' },
+        { id: 'activity', title: 'Activity Log', short: 'Activity' },
+        { id: 'tracking', title: 'WBS Tracking', short: 'Tracking' },
+        { id: 'planning:reports', title: 'Reports', short: 'Reports' },
     ] },
+    { label: 'Document', items: [{ id: 'docs', title: 'Document' }] },
 ];
 export function ProjectFocusNavigation({ section, isDark, onSelect, onOpenModule, compact = false }: { section: string; isDark: boolean; onSelect: (id: string) => void; onOpenModule: (path: string) => void; compact?: boolean }) {
     const text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366';

@@ -17,6 +17,8 @@ import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
     useAnimatedStyle,
     withSpring,
+    withTiming,
+    Easing,
 } from 'react-native-reanimated';
 
 export interface Segment {
@@ -35,6 +37,8 @@ interface SegmentedControlProps {
     fullWidth?: boolean;
     equalWidth?: boolean;
     compact?: boolean;
+    animated?: boolean;
+    animationType?: 'spring' | 'timing';
 }
 
 export function SegmentedControl({
@@ -46,6 +50,8 @@ export function SegmentedControl({
     fullWidth = false,
     equalWidth = false,
     compact = false,
+    animated = true,
+    animationType = 'spring',
 }: SegmentedControlProps) {
     const segmentHeight = compact ? 26 : 36;
     const styles = compact ? {
@@ -76,10 +82,10 @@ export function SegmentedControl({
 
     const animatedIndicatorStyle = useAnimatedStyle(() => {
         return {
-            width: withSpring(activeWidth, springConfig),
+            width: !animated ? activeWidth : animationType === 'timing' ? withTiming(activeWidth, {duration:180,easing:Easing.out(Easing.quad)}) : withSpring(activeWidth, springConfig),
             transform: [
                 {
-                    translateX: withSpring(activePosition, springConfig),
+                    translateX: !animated ? activePosition : animationType === 'timing' ? withTiming(activePosition, {duration:180,easing:Easing.out(Easing.quad)}) : withSpring(activePosition, springConfig),
                 },
             ],
             opacity: activeWidth > 0 ? 1 : 0,
@@ -88,14 +94,14 @@ export function SegmentedControl({
 
     // Auto-scroll to center the active segment
     React.useEffect(() => {
-        if (activeWidth > 0 && scrollViewWidth > 0 && scrollViewRef.current) {
+        if (!equalWidth && activeWidth > 0 && scrollViewWidth > 0 && scrollViewRef.current) {
             const centerX = activePosition - (scrollViewWidth / 2) + (activeWidth / 2);
             scrollViewRef.current.scrollTo({
                 x: Math.max(0, centerX),
-                animated: true,
+                animated,
             });
         }
-    }, [activeSegment, activePosition, activeWidth, scrollViewWidth]);
+    }, [activeSegment, activePosition, activeWidth, scrollViewWidth, equalWidth, animated]);
 
     const handleLayout = (id: string, event: LayoutChangeEvent) => {
         const { width, x } = event.nativeEvent.layout;
@@ -130,7 +136,7 @@ export function SegmentedControl({
                     onLayout={(e) => setScrollViewWidth(e.nativeEvent.layout.width)}
                 >
                     {/* Highlight Sliding Indicator */}
-                    <Animated.View
+                    {animated && <Animated.View
                         pointerEvents="none"
                         style={[
                             styles.indicator,
@@ -140,7 +146,7 @@ export function SegmentedControl({
                             },
                             animatedIndicatorStyle,
                         ]}
-                    />
+                    />}
 
                     {segments.map((segment) => {
                         const isSelected = activeSegment === segment.id;
@@ -156,7 +162,8 @@ export function SegmentedControl({
                                     styles.segmentButton,
                                     fullWidth && { flexGrow: 1, flexShrink: 0, paddingHorizontal: 12 },
                                     equalWidth && { flex: 1, flexBasis: 0, flexShrink: 1, minWidth: 0, paddingHorizontal: 4 },
-                                    isDisabled && { opacity: 0.4 }
+                                    isDisabled && { opacity: 0.4 },
+                                    !animated && isSelected && {backgroundColor: isDark ? 'rgba(255, 255, 255, 0.16)' : 'rgba(0, 0, 0, 0.08)'}
                                 ]}
                                 onPress={() => {
                                     if (isDisabled) return;
@@ -172,7 +179,7 @@ export function SegmentedControl({
                                             styles.segmentText,
                                             {
                                                 color: itemColor,
-                                                fontWeight: isSelected ? '700' : '500',
+                                                fontWeight: !animated || animationType === 'timing' ? '600' : isSelected ? '700' : '500',
                                             },
                                         ]}
                                     >

@@ -1,0 +1,1462 @@
+{
+  "entries": [
+    {
+      "code": "00",
+      "name": "Kickoff & Administration",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "01",
+      "name": "Client & Brief",
+      "parentCode": "00",
+      "description": "PIF, CDB, identitas dan kontak klien, tujuan, kebutuhan, preferensi dan prioritas.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "02",
+      "name": "Site Survey",
+      "parentCode": "00",
+      "description": "Pengukuran, kondisi eksisting, akses, utilitas, foto dan temuan lapangan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "03",
+      "name": "Feasibility & Scope",
+      "parentCode": "00",
+      "description": "Kelayakan awal, alternatif, asumsi, batasan, scope dan pengecualian.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "04",
+      "name": "Proposal & Fee",
+      "parentCode": "00",
+      "description": "Layanan, deliverable, fee, termin dan ketentuan revisi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "05",
+      "name": "Contract & Appointment",
+      "parentCode": "00",
+      "description": "Kontrak, penunjukan, kewajiban para pihak dan perubahan kesepakatan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "06",
+      "name": "Project Setup",
+      "parentCode": "00",
+      "description": "Identitas, klasifikasi, luas awal, target, penomoran dan pengelolaan data.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "07",
+      "name": "Team Mobilization",
+      "parentCode": "00",
+      "description": "Organisasi, PIC, tanggung jawab, akses dan jalur koordinasi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "08",
+      "name": "Kickoff Meeting & Action Plan",
+      "parentCode": "00",
+      "description": "Agenda, notulen, keputusan, kebutuhan data dan tindakan awal.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09",
+      "name": "Kickoff Final & Approval",
+      "parentCode": "00",
+      "description": "Kompilasi dasar proyek yang disepakati.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "10",
+      "name": "Planning & Design",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "11",
+      "name": "Design Criteria",
+      "parentCode": "10",
+      "description": "Brief acuan, kriteria fungsi/kinerja, prinsip desain dan batasan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "12",
+      "name": "Space Planning",
+      "parentCode": "10",
+      "description": "Program ruang, luas, kapasitas, hubungan ruang, zoning, sirkulasi dan layout.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "13",
+      "name": "Concept Design",
+      "parentCode": "10",
+      "description": "Konsep arsitektur/interior/landscape, massa dan respons tapak.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "14",
+      "name": "Moodboard & Materials",
+      "parentCode": "10",
+      "description": "Referensi, warna, tekstur, kandidat material, sampel dan pilihan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "15",
+      "name": "3D Model",
+      "parentCode": "10",
+      "description": "Model pengembangan, alternatif, koordinasi dan versi model.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "16",
+      "name": "Design Presentation",
+      "parentCode": "10",
+      "description": "Render, perspektif, diagram, narasi dan paket presentasi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "17",
+      "name": "Design Development",
+      "parentCode": "10",
+      "description": "Desain terpilih, denah/tampak/potongan desain dan dimensi utama.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "18",
+      "name": "Design Review & Resolution",
+      "parentCode": "10",
+      "description": "Komentar, evaluasi opsi, respons, perubahan dan keputusan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19",
+      "name": "Design Final & Approval",
+      "parentCode": "10",
+      "description": "Paket desain terpilih beserta batas persetujuannya.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "20",
+      "name": "Engineering",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "21",
+      "name": "Engineering Basis & Input Data",
+      "parentCode": "20",
+      "description": "Data tapak/tanah, parameter, asumsi, kriteria dan referensi teknis.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "22",
+      "name": "Structural Engineering",
+      "parentCode": "20",
+      "description": "Beban, fondasi, elemen struktur, model dan laporan perhitungan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "23",
+      "name": "Mechanical Engineering",
+      "parentCode": "20",
+      "description": "Pendinginan, ventilasi, kapasitas peralatan dan ruang mekanikal.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "24",
+      "name": "Electrical Engineering",
+      "parentCode": "20",
+      "description": "Beban listrik, distribusi, kabel, penerangan, grounding dan cadangan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "25",
+      "name": "Plumbing & Drainage Engineering",
+      "parentCode": "20",
+      "description": "Air bersih, tangki, pompa, pipa, limbah dan drainase.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "26",
+      "name": "Fire Protection & Life Safety",
+      "parentCode": "20",
+      "description": "Kriteria keselamatan, sistem kebakaran, kapasitas dan koordinasi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "27",
+      "name": "Specialist Systems & Integration",
+      "parentCode": "20",
+      "description": "ELV, data/security, lift dan sistem spesialis sesuai scope.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "28",
+      "name": "Engineering Review & Verification",
+      "parentCode": "20",
+      "description": "Pemeriksaan perhitungan, koordinasi dan penyelesaian temuan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29",
+      "name": "Engineering Final & Approval",
+      "parentCode": "20",
+      "description": "Dasar teknis dan hasil engineering yang diperiksa.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "30",
+      "name": "Permits",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "31",
+      "name": "Permit Requirements & Strategy",
+      "parentCode": "30",
+      "description": "Daftar izin, instansi, tahapan, target dan PIC.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "32",
+      "name": "Land & Legal Documents",
+      "parentCode": "30",
+      "description": "Kepemilikan/penguasaan, kuasa, identitas dan legal pendukung.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "33",
+      "name": "Planning & Zoning Review",
+      "parentCode": "30",
+      "description": "Kesesuaian lokasi/fungsi, batasan tapak dan ketentuan pengembangan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "34",
+      "name": "Environmental & Supporting Studies",
+      "parentCode": "30",
+      "description": "Kajian lingkungan dan studi pendukung sesuai proyek.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "35",
+      "name": "Permit Submission Package",
+      "parentCode": "30",
+      "description": "Form, gambar, laporan, lampiran dan kelengkapan pengajuan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "36",
+      "name": "Authority Review & Responses",
+      "parentCode": "30",
+      "description": "Komentar instansi, perbaikan, respons dan pengajuan ulang.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "37",
+      "name": "Issued Permits & Conditions",
+      "parentCode": "30",
+      "description": "Izin terbit, nomor, tanggal, masa berlaku dan syarat.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "38",
+      "name": "Permit Monitoring & Closeout",
+      "parentCode": "30",
+      "description": "Pemenuhan persyaratan, pembaruan dan penutupan kewajiban.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39",
+      "name": "Permit Status & Clearance",
+      "parentCode": "30",
+      "description": "Status izin, cakupan dan batas pelaksanaan; bukan pengganti izin instansi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "40",
+      "name": "Technical Documentation",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "41",
+      "name": "Architectural Working Drawings",
+      "parentCode": "40",
+      "description": "Denah, tampak, potongan, detail dan schedule arsitektur.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "42",
+      "name": "Structural Working Drawings",
+      "parentCode": "40",
+      "description": "Fondasi, struktur, penulangan, sambungan dan detail berdasar perhitungan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "43",
+      "name": "MEP Working Drawings",
+      "parentCode": "40",
+      "description": "Gambar mekanikal, elektrikal, plumbing, kebakaran dan sistem terkait.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "44",
+      "name": "Interior & Landscape Working Drawings",
+      "parentCode": "40",
+      "description": "Detail interior, furniture, planting, hardscape dan pekerjaan terkait.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "45",
+      "name": "Technical Specifications",
+      "parentCode": "40",
+      "description": "Material, mutu, metode, kinerja, pemasangan dan pengujian.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "46",
+      "name": "BOQ & Quantity Documentation",
+      "parentCode": "40",
+      "description": "WBS acuan, volume, measurement sheet dan BOQ.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "47",
+      "name": "Cost Estimate & Baseline Schedule",
+      "parentCode": "40",
+      "description": "RAB, dasar harga, asumsi, jadwal dan bobot acuan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "48",
+      "name": "Technical Package Review & Issue Control",
+      "parentCode": "40",
+      "description": "Koordinasi, kelengkapan, revisi, transmittal dan tujuan terbit.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49",
+      "name": "Technical Package Final & Approval",
+      "parentCode": "40",
+      "description": "Paket teknis dengan tujuan penggunaan yang disetujui.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "50",
+      "name": "Procurement",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "51",
+      "name": "Procurement Plan & Packages",
+      "parentCode": "50",
+      "description": "Paket pengadaan, strategi, kebutuhan dan target pesan/kirim.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "52",
+      "name": "Vendor & Contractor Qualification",
+      "parentCode": "50",
+      "description": "Kandidat, profil, kemampuan, pengalaman dan kelayakan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "53",
+      "name": "RFQ & Tender Documents",
+      "parentCode": "50",
+      "description": "Undangan, scope, spesifikasi, BOQ dan instruksi penawaran.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "54",
+      "name": "Quotations & Bid Clarifications",
+      "parentCode": "50",
+      "description": "Penawaran, klarifikasi, pengecualian dan konfirmasi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "55",
+      "name": "Technical & Commercial Evaluation",
+      "parentCode": "50",
+      "description": "Evaluasi teknis, harga, syarat, risiko dan rekomendasi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "56",
+      "name": "Material & Equipment Selection",
+      "parentCode": "50",
+      "description": "Produk, sampel, spesifikasi vendor, alternatif dan pilihan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "57",
+      "name": "Award, Purchase Orders & Subcontracts",
+      "parentCode": "50",
+      "description": "Negosiasi, penunjukan, PO dan subkontrak.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "58",
+      "name": "Delivery & Procurement Closeout",
+      "parentCode": "50",
+      "description": "Pengiriman, penerimaan pesanan, kekurangan, klaim dan closeout.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59",
+      "name": "Procurement Final & Approval",
+      "parentCode": "50",
+      "description": "Dasar pemilihan dan persetujuan per paket pengadaan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "60",
+      "name": "Construction",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "61",
+      "name": "Site Mobilization & Logistics",
+      "parentCode": "60",
+      "description": "Kesiapan lapangan, fasilitas sementara, akses, penyimpanan dan logistik.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "62",
+      "name": "Method Statements & Work Planning",
+      "parentCode": "60",
+      "description": "Metode, urutan, tenaga/peralatan dan rencana kerja.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "63",
+      "name": "Shop Drawings & Technical Submittals",
+      "parentCode": "60",
+      "description": "Gambar kontraktor/vendor, detail fabrikasi dan submittal.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "64",
+      "name": "Site Instructions & RFIs",
+      "parentCode": "60",
+      "description": "Instruksi, pertanyaan teknis, respons, keputusan dan batas pelaksanaan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "65",
+      "name": "Work Execution Records",
+      "parentCode": "60",
+      "description": "Catatan harian, lokasi, tenaga/peralatan, foto dan aktivitas.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "66",
+      "name": "Installed Quantities & Work Measurement",
+      "parentCode": "60",
+      "description": "Opname, hasil terpasang, lokasi, volume dan bukti pengukuran.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "67",
+      "name": "Field Changes & Variation Implementation",
+      "parentCode": "60",
+      "description": "Pelaksanaan perubahan yang diotorisasi dan bukti pekerjaan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "68",
+      "name": "Construction Completion & Readiness",
+      "parentCode": "60",
+      "description": "Pekerjaan tersisa, kesiapan inspeksi dan serah terima.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69",
+      "name": "Construction Completion & Approval",
+      "parentCode": "60",
+      "description": "Penyelesaian pelaksanaan per area/paket; bukan pengganti penerimaan mutu atau serah terima.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "70",
+      "name": "Quality Inspection",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "71",
+      "name": "Quality Plan & Acceptance Criteria",
+      "parentCode": "70",
+      "description": "Rencana mutu, inspection/test plan, toleransi dan checkpoint.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "72",
+      "name": "Material Receiving Inspection",
+      "parentCode": "70",
+      "description": "Produk datang, kondisi, jumlah, kesesuaian dan sertifikat.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "73",
+      "name": "Workmanship & Installation Inspection",
+      "parentCode": "70",
+      "description": "Mutu pemasangan, dimensi, detail, lokasi dan hasil inspeksi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "74",
+      "name": "Testing & Commissioning",
+      "parentCode": "70",
+      "description": "Rencana/hasil pengujian, alat ukur, parameter dan commissioning.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "75",
+      "name": "Nonconformance & Corrective Actions",
+      "parentCode": "70",
+      "description": "Ketidaksesuaian, penyebab, koreksi, PIC dan target.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "76",
+      "name": "Punch List & Defect Rectification",
+      "parentCode": "70",
+      "description": "Cacat/kekurangan, lokasi, foto, perbaikan dan verifikasi ulang.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "77",
+      "name": "Joint & Witness Inspections",
+      "parentCode": "70",
+      "description": "Pemeriksaan bersama klien, konsultan, vendor dan pihak terkait.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "78",
+      "name": "Quality Dossier & Closeout",
+      "parentCode": "70",
+      "description": "Sertifikat, hasil uji, bukti koreksi dan kelengkapan rekaman mutu.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79",
+      "name": "Quality Final & Acceptance",
+      "parentCode": "70",
+      "description": "Kesimpulan kesesuaian dan penerimaan per paket/sistem.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "80",
+      "name": "Tracking & Control",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "81",
+      "name": "Baseline & Control Setup",
+      "parentCode": "80",
+      "description": "WBS, RAB, jadwal, bobot, periode dan aturan pengukuran.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "82",
+      "name": "Physical Progress Tracking",
+      "parentCode": "80",
+      "description": "Aktual per item/area, volume selesai, bobot dan bukti realisasi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "83",
+      "name": "Schedule Monitoring & Forecast",
+      "parentCode": "80",
+      "description": "Rencana/aktual, keterlambatan, milestone dan forecast selesai.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "84",
+      "name": "Cost Monitoring & Forecast",
+      "parentCode": "80",
+      "description": "Anggaran, komitmen, aktual, perubahan dan forecast akhir.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "85",
+      "name": "Payment & Commercial Tracking",
+      "parentCode": "80",
+      "description": "Pengajuan, verifikasi, invoice, pembayaran dan saldo.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "86",
+      "name": "Risk, Issue & Change Control",
+      "parentCode": "80",
+      "description": "Risiko, masalah, perubahan, dampak, keputusan dan tindak lanjut.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "87",
+      "name": "Coordination & Action Tracking",
+      "parentCode": "80",
+      "description": "Rapat, action register, PIC, target, eskalasi dan keputusan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "88",
+      "name": "Periodic Reporting & Recovery Plan",
+      "parentCode": "80",
+      "description": "Laporan berkala, penyimpangan, recovery dan forecast.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89",
+      "name": "Project Control Review & Approval",
+      "parentCode": "80",
+      "description": "Paket laporan per periode; revisi dibedakan dari periode baru.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "90",
+      "name": "Handover",
+      "parentCode": null,
+      "description": "Stage group",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "91",
+      "name": "Handover Plan & Requirements",
+      "parentCode": "90",
+      "description": "Scope, tahapan, penerima, target dan persyaratan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "92",
+      "name": "As-Built Drawings & Models",
+      "parentCode": "90",
+      "description": "Kondisi terpasang, pemeriksaan kesesuaian dan revisi.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "93",
+      "name": "Operation & Maintenance Manuals",
+      "parentCode": "90",
+      "description": "Operasi, perawatan, prosedur, troubleshooting dan jadwal.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "94",
+      "name": "Asset, Warranty & Spare Parts",
+      "parentCode": "90",
+      "description": "Aset, nomor seri, garansi, kontak vendor, spare parts dan perlengkapan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "95",
+      "name": "Training & Operational Demonstration",
+      "parentCode": "90",
+      "description": "Materi, peserta, pelatihan, demonstrasi dan kesiapan operator.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "96",
+      "name": "Final Account & Commercial Closeout",
+      "parentCode": "90",
+      "description": "Nilai akhir, perubahan, pembayaran, retensi dan kewajiban.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "97",
+      "name": "Handover Inspection & Acceptance Records",
+      "parentCode": "90",
+      "description": "Inspeksi, berita acara, kekurangan dan batas penerimaan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "98",
+      "name": "Defects Liability & Post-Handover Follow-up",
+      "parentCode": "90",
+      "description": "Masa pemeliharaan, cacat, tindak lanjut, verifikasi dan penutupan.",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99",
+      "name": "Handover Final & Acceptance",
+      "parentCode": "90",
+      "description": "Paket serah terima sebagian/awal/akhir dengan kewajiban tersisa.",
+      "reviewStatus": "pending"
+    }
+  ],
+  "chapters": [
+    {
+      "code": "09.01",
+      "name": "Document Control & Submission",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.02",
+      "name": "Project Overview",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.03",
+      "name": "Client Brief & Objectives",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.04",
+      "name": "Site Conditions Summary",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.05",
+      "name": "Agreed Scope & Deliverables",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.06",
+      "name": "Initial Budget & Milestones",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.07",
+      "name": "Project Organization & Responsibilities",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.08",
+      "name": "Communication & Coordination Procedures",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.09",
+      "name": "Assumptions, Risks & Open Items",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.10",
+      "name": "Kickoff Decisions & Action Plan",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.11",
+      "name": "Approval & Conditions",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "09.12",
+      "name": "Supporting Document Register",
+      "parentCode": "09",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.01",
+      "name": "Document Control & Submission",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.02",
+      "name": "Design Basis & Objectives",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.03",
+      "name": "Site Response & Design Concept",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.04",
+      "name": "Space Program & Layout",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.05",
+      "name": "Architectural Design",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.06",
+      "name": "Interior & Landscape Direction",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.07",
+      "name": "Materials & Finishes",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.08",
+      "name": "Design Visualization",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.09",
+      "name": "Technical Coordination Summary",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.10",
+      "name": "Budget & Schedule Implications",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.11",
+      "name": "Review & Decision Summary",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.12",
+      "name": "Approval & Outstanding Items",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "19.13",
+      "name": "Drawing, Model & Attachment Register",
+      "parentCode": "19",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.01",
+      "name": "Document Control & Submission",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.02",
+      "name": "Engineering Scope & Design Basis",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.03",
+      "name": "Input Data, Assumptions & References",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.04",
+      "name": "Structural Engineering Summary",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.05",
+      "name": "Mechanical Engineering Summary",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.06",
+      "name": "Electrical Engineering Summary",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.07",
+      "name": "Plumbing & Drainage Summary",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.08",
+      "name": "Fire Protection & Specialist Systems",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.09",
+      "name": "System Capacities & Space Requirements",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.10",
+      "name": "Interdisciplinary Coordination",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.11",
+      "name": "Verification Findings & Limitations",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.12",
+      "name": "Technical Approval & Outstanding Items",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "29.13",
+      "name": "Calculation, Model & Attachment Register",
+      "parentCode": "29",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.01",
+      "name": "Document Control & Reporting Date",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.02",
+      "name": "Project & Permit Scope",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.03",
+      "name": "Permit Requirements Register",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.04",
+      "name": "Land & Legal Document Summary",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.05",
+      "name": "Planning, Zoning & Supporting Studies",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.06",
+      "name": "Submission History",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.07",
+      "name": "Authority Comments & Resolutions",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.08",
+      "name": "Issued Permits & Validity",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.09",
+      "name": "Conditions, Restrictions & Obligations",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.10",
+      "name": "Outstanding Permits & Work Limitations",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.11",
+      "name": "Internal Clearance & Acknowledgement",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "39.12",
+      "name": "Permit & Attachment Register",
+      "parentCode": "39",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.01",
+      "name": "Document Control & Issue Purpose",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.02",
+      "name": "Package Scope & Source References",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.03",
+      "name": "Architectural Drawing Summary",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.04",
+      "name": "Structural Drawing Summary",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.05",
+      "name": "MEP Drawing Summary",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.06",
+      "name": "Interior & Landscape Drawing Summary",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.07",
+      "name": "Technical Specification Summary",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.08",
+      "name": "BOQ & Quantity Basis",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.09",
+      "name": "Cost Estimate & Baseline Schedule",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.10",
+      "name": "Coordination & Review Resolutions",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.11",
+      "name": "Exclusions, Qualifications & Outstanding Items",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.12",
+      "name": "Package Approval & Authorized Use",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "49.13",
+      "name": "Drawing, Specification & Attachment Register",
+      "parentCode": "49",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.01",
+      "name": "Document Control & Package Identification",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.02",
+      "name": "Procurement Scope & Budget Reference",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.03",
+      "name": "Procurement Method & Candidate List",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.04",
+      "name": "Bid & Clarification Summary",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.05",
+      "name": "Technical Evaluation",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.06",
+      "name": "Commercial Evaluation",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.07",
+      "name": "Selected Materials & Equipment",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.08",
+      "name": "Negotiation & Recommendation",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.09",
+      "name": "Award & Order Commitments",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.10",
+      "name": "Delivery Plan & Procurement Risks",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.11",
+      "name": "Approval & Conditions",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "59.12",
+      "name": "Procurement Attachment Register",
+      "parentCode": "59",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.01",
+      "name": "Document Control & Completion Scope",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.02",
+      "name": "Work Package & Location",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.03",
+      "name": "Approved Technical References",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.04",
+      "name": "Mobilization & Execution Summary",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.05",
+      "name": "Methods & Shop Drawing References",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.06",
+      "name": "Installed Quantities & Measurement",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.07",
+      "name": "Site Instructions & RFI Resolutions",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.08",
+      "name": "Implemented Changes & Variations",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.09",
+      "name": "Inspection & Testing References",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.10",
+      "name": "Remaining Work & Readiness",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.11",
+      "name": "Completion Verification & Approval",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "69.12",
+      "name": "Execution Record & Attachment Register",
+      "parentCode": "69",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.01",
+      "name": "Document Control & Inspection Scope",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.02",
+      "name": "Applicable Quality Criteria",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.03",
+      "name": "Inspection Coverage & Participants",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.04",
+      "name": "Material Compliance Summary",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.05",
+      "name": "Workmanship & Installation Results",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.06",
+      "name": "Testing & Commissioning Results",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.07",
+      "name": "Nonconformance & Corrective Actions",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.08",
+      "name": "Punch List & Reinspection Results",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.09",
+      "name": "Certificates & Quality Record Completeness",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.10",
+      "name": "Exceptions & Remaining Obligations",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.11",
+      "name": "Quality Acceptance & Conditions",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "79.12",
+      "name": "Inspection, Test & Attachment Register",
+      "parentCode": "79",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.01",
+      "name": "Document Control & Reporting Period",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.02",
+      "name": "Executive Summary",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.03",
+      "name": "Baseline & Approved Changes",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.04",
+      "name": "Physical Progress Performance",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.05",
+      "name": "Schedule Performance & Forecast",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.06",
+      "name": "Cost Performance & Forecast",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.07",
+      "name": "Payment & Commercial Position",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.08",
+      "name": "Procurement & Resource Constraints",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.09",
+      "name": "Quality & Site Condition Highlights",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.10",
+      "name": "Risks, Issues & Change Decisions",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.11",
+      "name": "Recovery Plan & Next-Period Actions",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.12",
+      "name": "Review, Acknowledgement & Decisions",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "89.13",
+      "name": "Reporting Evidence & Attachment Register",
+      "parentCode": "89",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.01",
+      "name": "Document Control & Handover Identification",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.02",
+      "name": "Project & Handover Scope",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.03",
+      "name": "Completion & Acceptance Basis",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.04",
+      "name": "Handover Inspection Results",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.05",
+      "name": "As-Built Drawing & Model Register",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.06",
+      "name": "Operation & Maintenance Documentation",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.07",
+      "name": "Asset, Warranty & Spare Parts Summary",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.08",
+      "name": "Training & Operational Readiness",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.09",
+      "name": "Final Account & Commercial Position",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.10",
+      "name": "Outstanding Work & Defects",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.11",
+      "name": "Responsibility Transfer & Key Dates",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.12",
+      "name": "Defects Liability & Follow-up Arrangements",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.13",
+      "name": "Acceptance, Signatures & Conditions",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    },
+    {
+      "code": "99.14",
+      "name": "Final Document & Attachment Register",
+      "parentCode": "99",
+      "reviewStatus": "pending"
+    }
+  ]
+}

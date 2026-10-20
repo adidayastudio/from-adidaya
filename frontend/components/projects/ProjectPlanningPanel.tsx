@@ -14,6 +14,7 @@ import { publishedWBSRows } from '@/lib/projectWBSWorkflow';
 import { ProjectStagesWork } from './ProjectStagesWork';
 import { ProjectVolumeCalculator } from './ProjectVolumeCalculator';
 import { ProjectWBSEditor } from './ProjectWBSEditor';
+import { ProjectSchedulePlanner } from './ProjectSchedulePlanner';
 import { saveProjectRAB } from '@/lib/api/projectRAB';
 import { mergeRABDrafts, RABDrafts } from '@/lib/legacy-rab/editing';
 import { legacyProjectInfo, legacyRABView } from '@/lib/legacy-rab/project-view';
@@ -87,8 +88,8 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
     const [retry, setRetry] = useState(0);
     const [stageTasks, setStageTasks] = useState<any[]>([]);
     const [rabItems, setRabItems] = useState<any[]>([]);
-    const text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366';
-    const pill = { height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 };
+    const text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366', border = isDark ? '#292930' : '#E5E5EA';
+    const pill = { height: 34, paddingHorizontal: 13, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, borderWidth: isDark ? 1 : 0, borderColor: border };
     const rabGroups = useMemo(() => rabView.rows.filter(row => row.isSection).map(row => row.code), [rabView.rows]);
     const rabExpanded = rabGroups.length > 0 && rabGroups.every(code => !rabCollapsed.has(code));
     useEffect(() => {
@@ -169,7 +170,6 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
         { title: 'Formula', width: 140, value: row => row.formula_type },
         { title: 'Parameters', width: 280, value: row => row.parameters ? Object.entries(row.parameters).map(([key, value]) => `${key}: ${value}`).join(' · ') : '—' },
     ] : [code, description, quantity, unit, { title: 'Status', width: 130, value: row => row.status ?? (row.is_active === undefined ? undefined : row.is_active ? 'Active' : 'Inactive') }];
-    const border = isDark ? '#303034' : '#D1D1D6';
     const table = (data: any[], cols: Column[], onPress?: (row: any) => void, editable = false) => <ScrollView horizontal style={{ marginBottom: 24 }}>
         <View style={{ minWidth: cols.reduce((total, column) => total + column.width, 0), borderWidth: 1, borderColor: border }}>
             {editable && <View style={{ flexDirection: 'row', backgroundColor: isDark ? '#19191C' : '#F4F4F5', borderBottomWidth: 1, borderBottomColor: border }}>{cols.map((column, index) => <Text key={column.title} style={{ width: column.width, color: secondary, textAlign: 'center', padding: 6, borderRightWidth: 1, borderRightColor: border }}>{index === 0 ? '#' : String.fromCharCode(64 + index)}</Text>)}</View>}
@@ -242,7 +242,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
                         setActiveCell(null);
                     }}
                 >
-                    <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', borderWidth: isDark ? 1 : 0, borderColor: border, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Text style={{ color: secondary, fontSize: 11, fontWeight: '500' }}>Method:</Text>
                         <Text style={{ color: text, fontSize: 12, fontWeight: '600' }}>{quickOpen ? 'Quick Estimates' : 'Detail RAB'}</Text>
                         <Ionicons name="chevron-down" size={11} color={secondary} />
@@ -274,7 +274,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
                             setActiveCell(null);
                         }}
                     >
-                        <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                        <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', borderWidth: isDark ? 1 : 0, borderColor: border, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                             <Text style={{ color: text, fontSize: 12, fontWeight: '500' }}>
                                 {rabView.tabs.find(tab => tab.id === discipline)?.label || 'All disciplines'}
                             </Text>
@@ -294,7 +294,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
                         setActiveCell(null);
                     }}
                 >
-                    <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', borderWidth: isDark ? 1 : 0, borderColor: border, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Text style={{ color: secondary, fontSize: 11, fontWeight: '500' }}>Version:</Text>
                         <Text style={{ color: text, fontSize: 12, fontWeight: '600' }}>
                             {rabVersion ? `v.${rabVersion}` : 'Draft'}
@@ -326,7 +326,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
     }, [
         section, quickOpen, quickDirty, rabTab, discipline, rabView.tabs,
         versionChoices, rabVersion, revisionBusy, anyDirty, rabSource,
-        rabImpacts.length, rabVolumeDraft, reviewsOpen, isDark, text, secondary
+        rabImpacts.length, rabVolumeDraft, reviewsOpen, isDark, text, secondary, border
     ]);
 
     useEffect(() => {
@@ -337,12 +337,12 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
                     <TouchableOpacity
                         accessibilityLabel="Search work items"
                         onPress={() => setSearchOpen(true)}
-                        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', alignItems: 'center', justifyContent: 'center' }}
+                        style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', borderWidth: isDark ? 1 : 0, borderColor: border, alignItems: 'center', justifyContent: 'center' }}
                     >
                         <Ionicons name="search-outline" size={15} color={secondary} />
                     </TouchableOpacity>
                 ) : (
-                    <View style={{ height: 34, paddingHorizontal: 10, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row', alignItems: 'center', gap: 6, width: 200 }}>
+                    <View style={{ height: 34, paddingHorizontal: 10, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', borderWidth: isDark ? 1 : 0, borderColor: border, flexDirection: 'row', alignItems: 'center', gap: 6, width: 200 }}>
                         <Ionicons name="search-outline" size={14} color={secondary} />
                         <TextInput
                             autoFocus
@@ -376,7 +376,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
                     ]}
                     onPress={event => setRabLanguages(['both', 'en', 'id'][event.nativeEvent.index] as any)}
                 >
-                    <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', borderWidth: isDark ? 1 : 0, borderColor: border, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Text style={{ color: text, fontSize: 12, fontWeight: '500' }}>
                             {rabLanguages === 'both' ? 'EN + ID' : rabLanguages.toUpperCase()}
                         </Text>
@@ -390,7 +390,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
                     actions={['XLS', 'CSV', 'PDF'].map(format => ({ title: `${format} · Coming soon`, disabled: true }))}
                     onPress={() => {}}
                 >
-                    <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                    <View style={{ height: 34, paddingHorizontal: 11, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', borderWidth: isDark ? 1 : 0, borderColor: border, flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                         <Ionicons name="download-outline" size={14} color="#007AFF" />
                         <Text style={{ color: '#007AFF', fontSize: 12, fontWeight: '600' }}>Export</Text>
                         <Ionicons name="chevron-down" size={11} color="#007AFF" />
@@ -423,7 +423,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
                         }
                     }}
                 >
-                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', alignItems: 'center', justifyContent: 'center' }}>
+                    <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', borderWidth: isDark ? 1 : 0, borderColor: border, alignItems: 'center', justifyContent: 'center' }}>
                         <Ionicons name="ellipsis-horizontal" size={17} color={secondary} />
                     </View>
                 </ContextMenu>
@@ -473,6 +473,11 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
         {loading && <ActivityIndicator color="#007AFF" />}
         {!!error && <View><Text accessibilityRole="alert" style={{ color: '#FF3B30', paddingVertical: 12 }}>{error}</Text><TouchableOpacity onPress={() => setRetry(value => value + 1)}><Text style={{ color: '#007AFF' }}>Retry</Text></TouchableOpacity></View>}
         {!loading && !error && <ProjectVolumeCalculator onTitleAccessoryChange={onTitleAccessoryChange} onHeaderTrailingChange={onHeaderTrailingChange} key={project.id} project={legacyProject} wbs={legacyWbs} calculations={rows} isDark={isDark} onDirtyChange={onDirtyChange} />}
+    </View>;
+    if (section === 'schedule') return <View style={{ flex: 1, minHeight: 0, paddingHorizontal: 20, paddingBottom: 16 }}>
+        {loading && <ActivityIndicator color="#007AFF" />}
+        {!!error && <View><Text accessibilityRole="alert" style={{ color: '#FF3B30', paddingVertical: 12 }}>{error}</Text><TouchableOpacity onPress={() => setRetry(value => value + 1)}><Text style={{ color: '#007AFF' }}>Retry</Text></TouchableOpacity></View>}
+        {!loading && !error && <ProjectSchedulePlanner onTitleAccessoryChange={onTitleAccessoryChange} onHeaderTrailingChange={onHeaderTrailingChange} key={project.id} project={legacyProject} wbs={displayedWbs} isDark={isDark} onDirtyChange={onDirtyChange} onProjectMetaChange={meta => setLegacyProject((curr: any) => ({ ...curr, meta }))} />}
     </View>;
     return <ScrollView contentContainerStyle={[{ padding: 24, paddingBottom: 60 }, ['stages', 'wbs'].includes(section) ? { maxWidth: 960, width: '100%', alignSelf: 'center' } : undefined]}>
         {selected && <TouchableOpacity onPress={() => { setSelected(null); setError(''); }} style={{ paddingVertical: 12, marginBottom: 12 }}><Text style={{ color: '#007AFF', fontWeight: '600' }}>‹ Back to list</Text></TouchableOpacity>}
@@ -550,7 +555,7 @@ export function ProjectPlanningPanel({ project, section, isDark, onDirtyChange, 
             {(dirty || !!saveMessage) && <Text style={{ color: secondary, fontSize: 11 }}>{dirty ? 'Unsaved' : saveMessage}</Text>}
             </>}
         </>}
-        {!selected && !['stages', 'wbs', 'volume'].includes(section) && <>
+        {!selected && !['stages', 'wbs', 'volume', 'schedule'].includes(section) && <>
             {section !== 'rab' && !!savedRows.length && <>
                 <Text style={{ color: text, fontSize: 16, fontWeight: '600', marginBottom: 12 }}>{section === 'schedule' ? 'Schedule' : 'Volume'} · Saved Data</Text>
                 {table(savedRows, columns)}

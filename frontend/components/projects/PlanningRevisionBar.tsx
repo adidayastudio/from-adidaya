@@ -10,7 +10,7 @@ export function PlanningRevisionBar({ projectId, meta, module, dirty, isDark, se
     const state = planningRevision(meta, module), latest = state.versions.slice(-1)[0];
     const title = module === 'volume' ? 'Volume' : 'RAB';
     const color = isDark ? '#F5F5F7' : '#1C1C1E', muted = isDark ? '#9898A2' : '#73737D';
-    const pill = { paddingHorizontal: 14, height: 34, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#F2F2F7', flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6 };
+    const pill = { paddingHorizontal: 14, height: 34, borderRadius: 999, backgroundColor: isDark ? '#1C1D23' : '#FFFFFF', flexDirection: 'row' as const, alignItems: 'center' as const, gap: 6, borderWidth: isDark ? 1 : 0, borderColor: isDark ? '#292930' : '#E5E5EA' };
     const impacts: PlanningImpact[] = (meta.planningImpact?.items || []).filter((item: PlanningImpact) => module === 'volume' ? item.volumeReview : item.rabReview);
     const choices = [...(state.draft ? [{ title: `${title} Draft`, version: 0 }] : []), ...[...state.versions].reverse().map((version: PlanningVersion) => ({ title: `${title} v.${version.version}`, version: version.version }))];
     const act = async (action: 'start' | 'publish' | 'review', id?: string) => {

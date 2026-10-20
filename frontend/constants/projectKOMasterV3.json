@@ -1,0 +1,1020 @@
+{
+  "version": 3,
+  "stage": "KO",
+  "sourceStatus": "Proposed mapping — review pending",
+  "legacyRows": [
+    {
+      "legacyCode": "01-01",
+      "title": "Cover",
+      "titleId": "Sampul",
+      "weight": 4,
+      "priority": "low",
+      "proposedCode": "KOG-01-01",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "01-02",
+      "title": "Table of Contents",
+      "titleId": "Daftar Isi",
+      "weight": 4,
+      "priority": "low",
+      "proposedCode": "KOG-01-02",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "01-03",
+      "title": "Purpose of Kickoff",
+      "titleId": "Tujuan KO",
+      "weight": 8,
+      "priority": "medium",
+      "proposedCode": "KOG-01-03",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "01-04",
+      "title": "Workflow Overview",
+      "titleId": "Tinjauan Alur Kerja",
+      "weight": 14,
+      "priority": "low",
+      "proposedCode": "KOX-02-01",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "02-01",
+      "title": "Project Understanding",
+      "titleId": "Pemahaman Proyek",
+      "weight": 24,
+      "priority": "high",
+      "proposedCode": "KOG-02-01",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "02-02",
+      "title": "Client Needs & Vision",
+      "titleId": "Visi & Kebutuhan Klien",
+      "weight": 42,
+      "priority": "high",
+      "proposedCode": "KOG-02-02",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "02-03",
+      "title": "Functional Requirements",
+      "titleId": "Kebutuhan Fungsional",
+      "weight": 24,
+      "priority": "high",
+      "proposedCode": "KOG-02-03",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "02-04",
+      "title": "Functional Requirements Matrix",
+      "titleId": "Matriks Kebutuhan Fungsional",
+      "weight": 24,
+      "priority": "high",
+      "proposedCode": "KOG-02-04",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "02-05",
+      "title": "Timeline Expectation",
+      "titleId": "Ekspektasi Lini Waktu",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": "KOT-01-01",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "03-01",
+      "title": "Design Scope & Deliverables",
+      "titleId": "Lingkup Kerja & Keluaran Desain",
+      "weight": 35,
+      "priority": "high",
+      "proposedCode": "KOX-01-01",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "03-02",
+      "title": "Construction Scope & Deliverables",
+      "titleId": "Lingkup Kerja & Pelaksanaan Konstruksi",
+      "weight": 35,
+      "priority": "high",
+      "proposedCode": "KOX-01-02",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "03-03",
+      "title": "Scope Exclusions",
+      "titleId": "Pengecualian Lingkup Kerja",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": "KOX-01-03",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "03-04",
+      "title": "Project Assumptions",
+      "titleId": "Asumsi Pekerjaan Proyek",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": "KOX-01-04",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-01",
+      "title": "Single Image",
+      "titleId": "Gambar Tunggal",
+      "weight": 15,
+      "priority": "high",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-02",
+      "title": "Multiple Image",
+      "titleId": "Multi Gambar Grid",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-03",
+      "title": "Image and Desc",
+      "titleId": "Gambar & Deskripsi",
+      "weight": 15,
+      "priority": "high",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-04",
+      "title": "Image and Point",
+      "titleId": "Gambar & Poin-Poin",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-05",
+      "title": "Multiple Image and Desc",
+      "titleId": "Multi Gambar & Deskripsi",
+      "weight": 10,
+      "priority": "medium",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-06",
+      "title": "Full Bleed Image Overlay",
+      "titleId": "Gambar Penuh Overlay",
+      "weight": 10,
+      "priority": "low",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "05-01",
+      "title": "Budget Expectation",
+      "titleId": "Ekspektasi Anggaran Biaya",
+      "weight": 24,
+      "priority": "high",
+      "proposedCode": "KOB-01-01",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "05-02",
+      "title": "Building Code Check",
+      "titleId": "Pemeriksaan Kode Bangunan",
+      "weight": 40,
+      "priority": "high",
+      "proposedCode": "KOX-03-01",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "05-03",
+      "title": "Height & GSB Analysis",
+      "titleId": "Analisis Tinggi & GSB",
+      "weight": 16,
+      "priority": "medium",
+      "proposedCode": "KOX-03-02",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "06-01",
+      "title": "Timeline Expectation",
+      "titleId": "Ekspektasi Lini Waktu",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": "KOT-01-01",
+      "treatment": "Link to KO T-01-01; retain legacy record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "06-02",
+      "title": "Visual Timeline Chart",
+      "titleId": "Grafik Visual Timeline",
+      "weight": 20,
+      "priority": "high",
+      "proposedCode": "KOT-01-02",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "06-03",
+      "title": "Area vs Cost Analysis",
+      "titleId": "Analisis Luas vs Biaya",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": "KOB-01-02",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "07-01",
+      "title": "Stage Timeline",
+      "titleId": "Lini Waktu Tahap",
+      "weight": 12,
+      "priority": "medium",
+      "proposedCode": "KOT-01-03",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "07-02",
+      "title": "Milestone Definition",
+      "titleId": "Penentuan Milestones",
+      "weight": 18,
+      "priority": "high",
+      "proposedCode": "KOT-01-04",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "08-01",
+      "title": "Signoff & Approval",
+      "titleId": "Persetujuan Dokumen",
+      "weight": 4,
+      "priority": "high",
+      "proposedCode": "KOR-99-01",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "08-02",
+      "title": "Client Approval",
+      "titleId": "Persetujuan Klien",
+      "weight": 5,
+      "priority": "urgent",
+      "proposedCode": "KOR-99-02",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "08-03",
+      "title": "Notes",
+      "titleId": "Catatan",
+      "weight": 1,
+      "priority": "low",
+      "proposedCode": "KOR-99-03",
+      "treatment": "Register work/content",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    }
+  ],
+  "items": [
+    {
+      "code": "KOG-01-01",
+      "title": "Cover",
+      "titleId": "Sampul",
+      "weight": 4,
+      "priority": "low",
+      "legacySources": [
+        {
+          "legacyCode": "01-01",
+          "title": "Cover",
+          "titleId": "Sampul",
+          "weight": 4,
+          "priority": "low",
+          "proposedCode": "KOG-01-01",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOG-01-01"
+      ],
+      "legacyOrder": "01-01"
+    },
+    {
+      "code": "KOG-01-02",
+      "title": "Table of Contents",
+      "titleId": "Daftar Isi",
+      "weight": 4,
+      "priority": "low",
+      "legacySources": [
+        {
+          "legacyCode": "01-02",
+          "title": "Table of Contents",
+          "titleId": "Daftar Isi",
+          "weight": 4,
+          "priority": "low",
+          "proposedCode": "KOG-01-02",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOG-01-02"
+      ],
+      "legacyOrder": "01-02"
+    },
+    {
+      "code": "KOG-01-03",
+      "title": "Purpose of Kickoff",
+      "titleId": "Tujuan KO",
+      "weight": 8,
+      "priority": "medium",
+      "legacySources": [
+        {
+          "legacyCode": "01-03",
+          "title": "Purpose of Kickoff",
+          "titleId": "Tujuan KO",
+          "weight": 8,
+          "priority": "medium",
+          "proposedCode": "KOG-01-03",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOG-01-03"
+      ],
+      "legacyOrder": "01-03"
+    },
+    {
+      "code": "KOX-02-01",
+      "title": "Workflow Overview",
+      "titleId": "Tinjauan Alur Kerja",
+      "weight": 14,
+      "priority": "low",
+      "legacySources": [
+        {
+          "legacyCode": "01-04",
+          "title": "Workflow Overview",
+          "titleId": "Tinjauan Alur Kerja",
+          "weight": 14,
+          "priority": "low",
+          "proposedCode": "KOX-02-01",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-02-01"
+      ],
+      "legacyOrder": "01-04"
+    },
+    {
+      "code": "KOG-02-01",
+      "title": "Project Understanding",
+      "titleId": "Pemahaman Proyek",
+      "weight": 24,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "02-01",
+          "title": "Project Understanding",
+          "titleId": "Pemahaman Proyek",
+          "weight": 24,
+          "priority": "high",
+          "proposedCode": "KOG-02-01",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOG-02-01"
+      ],
+      "legacyOrder": "02-01"
+    },
+    {
+      "code": "KOG-02-02",
+      "title": "Client Needs & Vision",
+      "titleId": "Visi & Kebutuhan Klien",
+      "weight": 42,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "02-02",
+          "title": "Client Needs & Vision",
+          "titleId": "Visi & Kebutuhan Klien",
+          "weight": 42,
+          "priority": "high",
+          "proposedCode": "KOG-02-02",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOG-02-02"
+      ],
+      "legacyOrder": "02-02"
+    },
+    {
+      "code": "KOG-02-03",
+      "title": "Functional Requirements",
+      "titleId": "Kebutuhan Fungsional",
+      "weight": 24,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "02-03",
+          "title": "Functional Requirements",
+          "titleId": "Kebutuhan Fungsional",
+          "weight": 24,
+          "priority": "high",
+          "proposedCode": "KOG-02-03",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOG-02-03"
+      ],
+      "legacyOrder": "02-03"
+    },
+    {
+      "code": "KOG-02-04",
+      "title": "Functional Requirements Matrix",
+      "titleId": "Matriks Kebutuhan Fungsional",
+      "weight": 24,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "02-04",
+          "title": "Functional Requirements Matrix",
+          "titleId": "Matriks Kebutuhan Fungsional",
+          "weight": 24,
+          "priority": "high",
+          "proposedCode": "KOG-02-04",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOG-02-04"
+      ],
+      "legacyOrder": "02-04"
+    },
+    {
+      "code": "KOT-01-01",
+      "title": "Timeline Expectation",
+      "titleId": "Ekspektasi Lini Waktu",
+      "weight": 15,
+      "priority": "medium",
+      "legacySources": [
+        {
+          "legacyCode": "02-05",
+          "title": "Timeline Expectation",
+          "titleId": "Ekspektasi Lini Waktu",
+          "weight": 15,
+          "priority": "medium",
+          "proposedCode": "KOT-01-01",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        },
+        {
+          "legacyCode": "06-01",
+          "title": "Timeline Expectation",
+          "titleId": "Ekspektasi Lini Waktu",
+          "weight": 15,
+          "priority": "medium",
+          "proposedCode": "KOT-01-01",
+          "treatment": "Link to KO T-01-01; retain legacy record",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOT-01-01"
+      ],
+      "legacyOrder": "02-05"
+    },
+    {
+      "code": "KOX-01-01",
+      "title": "Design Scope & Deliverables",
+      "titleId": "Lingkup Kerja & Keluaran Desain",
+      "weight": 35,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "03-01",
+          "title": "Design Scope & Deliverables",
+          "titleId": "Lingkup Kerja & Keluaran Desain",
+          "weight": 35,
+          "priority": "high",
+          "proposedCode": "KOX-01-01",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-01-01"
+      ],
+      "legacyOrder": "03-01"
+    },
+    {
+      "code": "KOX-01-02",
+      "title": "Construction Scope & Deliverables",
+      "titleId": "Lingkup Kerja & Pelaksanaan Konstruksi",
+      "weight": 35,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "03-02",
+          "title": "Construction Scope & Deliverables",
+          "titleId": "Lingkup Kerja & Pelaksanaan Konstruksi",
+          "weight": 35,
+          "priority": "high",
+          "proposedCode": "KOX-01-02",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-01-02"
+      ],
+      "legacyOrder": "03-02"
+    },
+    {
+      "code": "KOX-01-03",
+      "title": "Scope Exclusions",
+      "titleId": "Pengecualian Lingkup Kerja",
+      "weight": 15,
+      "priority": "medium",
+      "legacySources": [
+        {
+          "legacyCode": "03-03",
+          "title": "Scope Exclusions",
+          "titleId": "Pengecualian Lingkup Kerja",
+          "weight": 15,
+          "priority": "medium",
+          "proposedCode": "KOX-01-03",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-01-03"
+      ],
+      "legacyOrder": "03-03"
+    },
+    {
+      "code": "KOX-01-04",
+      "title": "Project Assumptions",
+      "titleId": "Asumsi Pekerjaan Proyek",
+      "weight": 15,
+      "priority": "medium",
+      "legacySources": [
+        {
+          "legacyCode": "03-04",
+          "title": "Project Assumptions",
+          "titleId": "Asumsi Pekerjaan Proyek",
+          "weight": 15,
+          "priority": "medium",
+          "proposedCode": "KOX-01-04",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-01-04"
+      ],
+      "legacyOrder": "03-04"
+    },
+    {
+      "code": "KOB-01-01",
+      "title": "Budget Expectation",
+      "titleId": "Ekspektasi Anggaran Biaya",
+      "weight": 24,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "05-01",
+          "title": "Budget Expectation",
+          "titleId": "Ekspektasi Anggaran Biaya",
+          "weight": 24,
+          "priority": "high",
+          "proposedCode": "KOB-01-01",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOB-01-01"
+      ],
+      "legacyOrder": "05-01"
+    },
+    {
+      "code": "KOX-03-01",
+      "title": "Building Code Check",
+      "titleId": "Pemeriksaan Kode Bangunan",
+      "weight": 40,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "05-02",
+          "title": "Building Code Check",
+          "titleId": "Pemeriksaan Kode Bangunan",
+          "weight": 40,
+          "priority": "high",
+          "proposedCode": "KOX-03-01",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-03-01"
+      ],
+      "legacyOrder": "05-02"
+    },
+    {
+      "code": "KOX-03-02",
+      "title": "Height & GSB Analysis",
+      "titleId": "Analisis Tinggi & GSB",
+      "weight": 16,
+      "priority": "medium",
+      "legacySources": [
+        {
+          "legacyCode": "05-03",
+          "title": "Height & GSB Analysis",
+          "titleId": "Analisis Tinggi & GSB",
+          "weight": 16,
+          "priority": "medium",
+          "proposedCode": "KOX-03-02",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-03-02"
+      ],
+      "legacyOrder": "05-03"
+    },
+    {
+      "code": "KOT-01-02",
+      "title": "Visual Timeline Chart",
+      "titleId": "Grafik Visual Timeline",
+      "weight": 20,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "06-02",
+          "title": "Visual Timeline Chart",
+          "titleId": "Grafik Visual Timeline",
+          "weight": 20,
+          "priority": "high",
+          "proposedCode": "KOT-01-02",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOT-01-02"
+      ],
+      "legacyOrder": "06-02"
+    },
+    {
+      "code": "KOB-01-02",
+      "title": "Area vs Cost Analysis",
+      "titleId": "Analisis Luas vs Biaya",
+      "weight": 15,
+      "priority": "medium",
+      "legacySources": [
+        {
+          "legacyCode": "06-03",
+          "title": "Area vs Cost Analysis",
+          "titleId": "Analisis Luas vs Biaya",
+          "weight": 15,
+          "priority": "medium",
+          "proposedCode": "KOB-01-02",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOB-01-02"
+      ],
+      "legacyOrder": "06-03"
+    },
+    {
+      "code": "KOT-01-03",
+      "title": "Stage Timeline",
+      "titleId": "Lini Waktu Tahap",
+      "weight": 12,
+      "priority": "medium",
+      "legacySources": [
+        {
+          "legacyCode": "07-01",
+          "title": "Stage Timeline",
+          "titleId": "Lini Waktu Tahap",
+          "weight": 12,
+          "priority": "medium",
+          "proposedCode": "KOT-01-03",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOT-01-03"
+      ],
+      "legacyOrder": "07-01"
+    },
+    {
+      "code": "KOT-01-04",
+      "title": "Milestone Definition",
+      "titleId": "Penentuan Milestones",
+      "weight": 18,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "07-02",
+          "title": "Milestone Definition",
+          "titleId": "Penentuan Milestones",
+          "weight": 18,
+          "priority": "high",
+          "proposedCode": "KOT-01-04",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOT-01-04"
+      ],
+      "legacyOrder": "07-02"
+    },
+    {
+      "code": "KOR-99-01",
+      "title": "Signoff & Approval",
+      "titleId": "Persetujuan Dokumen",
+      "weight": 4,
+      "priority": "high",
+      "legacySources": [
+        {
+          "legacyCode": "08-01",
+          "title": "Signoff & Approval",
+          "titleId": "Persetujuan Dokumen",
+          "weight": 4,
+          "priority": "high",
+          "proposedCode": "KOX-04-01",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-04-01"
+      ],
+      "legacyOrder": "08-01"
+    },
+    {
+      "code": "KOR-99-02",
+      "title": "Client Approval",
+      "titleId": "Persetujuan Klien",
+      "weight": 5,
+      "priority": "urgent",
+      "legacySources": [
+        {
+          "legacyCode": "08-02",
+          "title": "Client Approval",
+          "titleId": "Persetujuan Klien",
+          "weight": 5,
+          "priority": "urgent",
+          "proposedCode": "KOX-04-02",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOX-04-02"
+      ],
+      "legacyOrder": "08-02"
+    },
+    {
+      "code": "KOR-99-03",
+      "title": "Notes",
+      "titleId": "Catatan",
+      "weight": 1,
+      "priority": "low",
+      "legacySources": [
+        {
+          "legacyCode": "08-03",
+          "title": "Notes",
+          "titleId": "Catatan",
+          "weight": 1,
+          "priority": "low",
+          "proposedCode": "KOG-01-04",
+          "treatment": "Register work/content",
+          "sourceVersion": "Legacy 2.0",
+          "migrationStatus": "proposed"
+        }
+      ],
+      "previousCodes": [
+        "KOG-01-04"
+      ],
+      "legacyOrder": "08-03"
+    }
+  ],
+  "groups": [
+    {
+      "stage": "KO",
+      "category": "G",
+      "code": "01",
+      "name": "General Presentation & Information"
+    },
+    {
+      "stage": "KO",
+      "category": "X",
+      "code": "02",
+      "name": "Workflow / Procedure"
+    },
+    {
+      "stage": "KO",
+      "category": "G",
+      "code": "02",
+      "name": "Project & Client Brief"
+    },
+    {
+      "stage": "KO",
+      "category": "T",
+      "code": "01",
+      "name": "Timeline & Milestones"
+    },
+    {
+      "stage": "KO",
+      "category": "X",
+      "code": "01",
+      "name": "Scope & Deliverables"
+    },
+    {
+      "stage": "KO",
+      "category": "B",
+      "code": "01",
+      "name": "Initial Budget & Feasibility"
+    },
+    {
+      "stage": "KO",
+      "category": "X",
+      "code": "03",
+      "name": "Site & Regulatory Constraints"
+    },
+    {
+      "stage": "KO",
+      "category": "R",
+      "code": "99",
+      "name": "Approval, Signoff & Notes"
+    }
+  ],
+  "layoutPresets": [
+    {
+      "legacyCode": "04-01",
+      "title": "Single Image",
+      "titleId": "Gambar Tunggal",
+      "weight": 15,
+      "priority": "high",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-02",
+      "title": "Multiple Image",
+      "titleId": "Multi Gambar Grid",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-03",
+      "title": "Image and Desc",
+      "titleId": "Gambar & Deskripsi",
+      "weight": 15,
+      "priority": "high",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-04",
+      "title": "Image and Point",
+      "titleId": "Gambar & Poin-Poin",
+      "weight": 15,
+      "priority": "medium",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-05",
+      "title": "Multiple Image and Desc",
+      "titleId": "Multi Gambar & Deskripsi",
+      "weight": 10,
+      "priority": "medium",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    },
+    {
+      "legacyCode": "04-06",
+      "title": "Full Bleed Image Overlay",
+      "titleId": "Gambar Penuh Overlay",
+      "weight": 10,
+      "priority": "low",
+      "proposedCode": null,
+      "treatment": "Editor preset; archive original Work record",
+      "sourceVersion": "Legacy 2.0",
+      "migrationStatus": "proposed"
+    }
+  ]
+}

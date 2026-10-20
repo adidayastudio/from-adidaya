@@ -1,3 +1,5 @@
+import ContextMenu from '@/components/ui/PlatformContextMenu';
+import { ProjectRegisterWorkspace } from './register-v3/ProjectRegisterWorkspace';
 import { FocusModeIcon } from '@/components/ui/FocusModeIcon';
 import { ProjectFocusNavigation } from './ProjectFocusNavigation';
 import { InstantTooltip } from '@/components/ui/InstantTooltip';
@@ -39,20 +41,19 @@ const GROUPS = [
     ] },
     { title: 'WORK', items: [
         { id: 'work', title: 'Tasks & Deliverables', icon: 'checkbox-outline' },
-        
+        { id: 'activity', title: 'Activity Log', icon: 'pulse-outline' },
+        { id: 'tracking', title: 'WBS Tracking', icon: 'stats-chart-outline' },
+        { id: 'planning:reports', title: 'Reports', icon: 'document-text-outline' },
     ] },
     { title: '', items: [
         { id: 'docs', title: 'Documents', icon: 'folder-outline' },
-        { id: 'tracking', title: 'Control', icon: 'stats-chart-outline' },
-        { id: 'planning:reports', title: 'Reports', icon: 'document-text-outline' },
-        { id: 'activity', title: 'Activity', icon: 'pulse-outline' },
     ] },
 ];
 const SETTING_NAMES: Record<string, string> = { general: 'Project Information', team: 'Team & Access', stages: 'Stages & Deliverables', wbs: 'WBS Preferences', control: 'Progress & Quality', cost: 'Cost & Budgeting', time: 'Time & Schedule', prices: 'Price Libraries', reports: 'Report Preferences', management: 'Project Management' };
 
 export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderContent }: {
     initialProject: Project; onClose: () => void; onRefresh?: () => void;
-    renderContent: (project: Project, section: string, onSelect: (section: string) => void, openSettings: () => void, setHeaderAction: (action: HeaderToolbarAction | null) => void) => React.ReactNode;
+    renderContent: (project: Project, section: string, onSelect: (section: string) => void, openSettings: () => void, setHeaderAction: (action: HeaderToolbarAction | null) => void, setHeaderTrailing: (content: React.ReactNode) => void) => React.ReactNode;
 }) {
     const collapseSidebar = useContext(ProjectSidebarContext);
     useFocusEffect(useCallback(() => collapseSidebar(), [collapseSidebar]));
@@ -60,6 +61,8 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     const isDark = resolvedTheme === 'dark', text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366';
     const [focusMode, setFocusMode] = useState(false);
     const [project, setProject] = useState(initialProject), [section, setSection] = useState('overview');
+    const [registerVersion, setRegisterVersion] = useState<2 | 3>(3);
+    const registerMode = section === 'planning:stages' ? 'planning' : section === 'work' ? 'work' : section === 'docs' ? 'documents' : null;
     const [planningTitleAccessory, setPlanningTitleAccessory] = useState<React.ReactNode>(null);
     const [planningToolbar, setPlanningToolbar] = useState<React.ReactNode>(null);
     const [headerTrailing, setHeaderTrailing] = useState<React.ReactNode>(null);
@@ -67,13 +70,13 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     const [expandedGroups, setExpandedGroups] = useState<string[]>(['PLANNING', 'WORK']);
     const [dirty, setDirty] = useState(false), [settingsOpen, setSettingsOpen] = useState(false), [error, setError] = useState('');
     useEffect(() => { setProject(initialProject); }, [initialProject]);
-    const proceed = (action: () => void) => {
+    const proceed = useCallback((action: () => void) => {
         if (!dirty) { action(); return; }
         const discard = () => { setDirty(false); action(); };
         if (Platform.OS === 'web') { if (window.confirm('Discard unsaved project settings?')) discard(); }
         else Alert.alert('Unsaved changes', 'Discard unsaved project settings?', [{ text: 'Keep editing', style: 'cancel' }, { text: 'Discard', style: 'destructive', onPress: discard }]);
-    };
-    const select = (value: string) => { const next = ({ people: 'settings:team', resources: 'planning:wbs', finance: 'planning:rab', progress: 'tracking', setup: 'settings:general' } as Record<string, string>)[value] || value; if (next !== section) proceed(() => { setSection(next); setError(''); setPlanningTitleAccessory(null); setHeaderTrailing(null); }); };
+    }, [dirty]);
+    const select = useCallback((value: string) => { const next = ({ people: 'settings:team', resources: 'planning:wbs', finance: 'planning:rab', progress: 'tracking', setup: 'settings:general' } as Record<string, string>)[value] || value; if (next !== section) proceed(() => { setSection(next); setError(''); setPlanningTitleAccessory(null); setHeaderTrailing(null); }); }, [section, proceed]);
     const refresh = async () => {
         const latest = await getProjectById(project.id);
         if (latest) setProject(latest);
@@ -151,18 +154,19 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, ...DESKTOP_PANEL_HEADER, minHeight: 66 }}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap', gap: 10, minWidth: 0, overflow: 'hidden' }}>
                     <Text style={{ ...DESKTOP_PANEL_TITLE, color: text, flexShrink: 0 }}>{title}</Text>
+                    {!!registerMode && <ContextMenu title="Workspace version" dropdownMenuMode actions={[{ title: 'Version 3.0', selected: registerVersion === 3 }, { title: 'Legacy 2.0', selected: registerVersion === 2 }]} onPress={event => { const nextVersion = event.nativeEvent.index === 0 ? 3 : 2; if (nextVersion === registerVersion) return; proceed(() => { setRegisterVersion(nextVersion); setPlanningTitleAccessory(null); setHeaderTrailing(null); setHeaderAction(null); }); }}><View style={{ paddingHorizontal: 12, height: 34, justifyContent: 'center', borderRadius: 999, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={{ color: registerVersion === 3 ? '#007AFF' : secondary, fontSize: 12, fontWeight: '600' }}>{registerVersion === 3 ? 'Version 3.0' : 'Legacy 2.0'}</Text><Ionicons name="chevron-down" size={12} color={secondary}/></View></ContextMenu>}
                     {planningTitleAccessory}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     {headerTrailing}
                     {!focusMode && focusToggle(false)}
-                    {headerAction && ['work'].includes(section) && <HeaderToolbar isDark={isDark} textColor={text} actions={[headerAction]} />}
+                    {headerAction && <HeaderToolbar isDark={isDark} textColor={text} actions={[headerAction]} />}
                 </View>
             </View>
             {!!error && <Text accessibilityRole="alert" style={{ color: '#FF3B30', padding: 16 }}>{error}</Text>}
-            {Screen ? <Screen key={`${project.id}-${section}`} projectId={project.id} isEmbedded onDirtyChange={setDirty} onSaved={refresh} />
+            {registerMode && registerVersion === 3 ? <ProjectRegisterWorkspace projectId={project.id} mode={registerMode} isDark={isDark} onTitleAccessoryChange={setPlanningTitleAccessory} onHeaderTrailingChange={setHeaderTrailing} onDirtyChange={setDirty} onNavigate={select} /> : Screen ? <Screen key={`${project.id}-${section}`} projectId={project.id} isEmbedded onDirtyChange={setDirty} onSaved={refresh} />
                 : section.startsWith('planning:') ? <ProjectPlanningPanel onHeaderTrailingChange={setHeaderTrailing} onTitleAccessoryChange={setPlanningTitleAccessory} onNavigatePlanning={value => select(`planning:${value}`)} onToolbarChange={setPlanningToolbar} key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
-                : renderContent(project, section, select, () => { setSettingsOpen(true); select('settings:general'); }, setHeaderAction)}
+                : renderContent(project, section, select, () => { setSettingsOpen(true); select('settings:general'); }, setHeaderAction, setHeaderTrailing)}
         </View>
     </View>;
 }

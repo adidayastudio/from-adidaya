@@ -1,0 +1,1536 @@
+{
+  "version": 3,
+  "stages": [
+    {
+      "id": 100,
+      "code": "KO",
+      "name": "Kickoff"
+    },
+    {
+      "id": 200,
+      "code": "SD",
+      "name": "Schematic Design"
+    },
+    {
+      "id": 300,
+      "code": "DD",
+      "name": "Design Development"
+    },
+    {
+      "id": 400,
+      "code": "ED",
+      "name": "Detailed Engineering Design"
+    },
+    {
+      "id": 500,
+      "code": "PR",
+      "name": "Procurement"
+    },
+    {
+      "id": 600,
+      "code": "CN",
+      "name": "Construction"
+    },
+    {
+      "id": 700,
+      "code": "HO",
+      "name": "Handover"
+    }
+  ],
+  "categories": [
+    {
+      "code": "G",
+      "name": "General",
+      "order": 1
+    },
+    {
+      "code": "X",
+      "name": "Execution / Administration",
+      "order": 2
+    },
+    {
+      "code": "D",
+      "name": "Diagram / Concept",
+      "order": 3
+    },
+    {
+      "code": "A",
+      "name": "Architecture",
+      "order": 4
+    },
+    {
+      "code": "S",
+      "name": "Structure",
+      "order": 5
+    },
+    {
+      "code": "M",
+      "name": "MEP",
+      "order": 6
+    },
+    {
+      "code": "I",
+      "name": "Interior",
+      "order": 7
+    },
+    {
+      "code": "L",
+      "name": "Landscape",
+      "order": 8
+    },
+    {
+      "code": "V",
+      "name": "Visualization",
+      "order": 9
+    },
+    {
+      "code": "B",
+      "name": "Budget",
+      "order": 10
+    },
+    {
+      "code": "T",
+      "name": "Time",
+      "order": 11
+    },
+    {
+      "code": "R",
+      "name": "Report",
+      "order": 12
+    }
+  ],
+  "groups": {
+    "A": [
+      {
+        "code": "00",
+        "name": "General / Index"
+      },
+      {
+        "code": "01",
+        "name": "Denah / Floor Plan"
+      },
+      {
+        "code": "02",
+        "name": "Tampak / Elevation"
+      },
+      {
+        "code": "03",
+        "name": "Potongan / Section"
+      },
+      {
+        "code": "04",
+        "name": "Material / Finishes"
+      },
+      {
+        "code": "05",
+        "name": "Door & Window"
+      },
+      {
+        "code": "06",
+        "name": "Roof & Ceiling"
+      },
+      {
+        "code": "07",
+        "name": "Wet Area / Detail Plan"
+      },
+      {
+        "code": "08",
+        "name": "Construction Details"
+      },
+      {
+        "code": "09",
+        "name": "Other Architectural"
+      }
+    ],
+    "S": [
+      {
+        "code": "00",
+        "name": "General / Notes"
+      },
+      {
+        "code": "01",
+        "name": "Fondasi"
+      },
+      {
+        "code": "02",
+        "name": "Sloof / Ground Beam"
+      },
+      {
+        "code": "03",
+        "name": "Kolom"
+      },
+      {
+        "code": "04",
+        "name": "Balok"
+      },
+      {
+        "code": "05",
+        "name": "Pelat"
+      },
+      {
+        "code": "06",
+        "name": "Atap"
+      },
+      {
+        "code": "07",
+        "name": "Tangga / Vertical Structure"
+      },
+      {
+        "code": "08",
+        "name": "Sambungan & Detail Khusus"
+      },
+      {
+        "code": "09",
+        "name": "Struktur Lain"
+      }
+    ],
+    "M": [
+      {
+        "code": "00",
+        "name": "General / Index"
+      },
+      {
+        "code": "01",
+        "name": "HVAC / Mechanical Plan"
+      },
+      {
+        "code": "02",
+        "name": "Ventilation / Air Distribution"
+      },
+      {
+        "code": "03",
+        "name": "Equipment Layout"
+      },
+      {
+        "code": "04",
+        "name": "Ducting / Piping"
+      },
+      {
+        "code": "05",
+        "name": "Mechanical Schematic"
+      },
+      {
+        "code": "06",
+        "name": "Mechanical Details"
+      },
+      {
+        "code": "07",
+        "name": "Equipment Schedule"
+      },
+      {
+        "code": "08",
+        "name": "Controls / Integration"
+      },
+      {
+        "code": "09",
+        "name": "Other Mechanical"
+      }
+    ],
+    "E": [
+      {
+        "code": "00",
+        "name": "General / Index"
+      },
+      {
+        "code": "01",
+        "name": "Lighting Plan"
+      },
+      {
+        "code": "02",
+        "name": "Power & Outlet Plan"
+      },
+      {
+        "code": "03",
+        "name": "Single-Line Diagram"
+      },
+      {
+        "code": "04",
+        "name": "Panel / Distribution"
+      },
+      {
+        "code": "05",
+        "name": "ELV / ICT / Security"
+      },
+      {
+        "code": "06",
+        "name": "Grounding / Lightning"
+      },
+      {
+        "code": "07",
+        "name": "Electrical Details"
+      },
+      {
+        "code": "08",
+        "name": "Electrical Schedule"
+      },
+      {
+        "code": "09",
+        "name": "Other Electrical"
+      }
+    ],
+    "P": [
+      {
+        "code": "00",
+        "name": "General / Index"
+      },
+      {
+        "code": "01",
+        "name": "Water Supply Plan"
+      },
+      {
+        "code": "02",
+        "name": "Wastewater Plan"
+      },
+      {
+        "code": "03",
+        "name": "Drainage / Stormwater"
+      },
+      {
+        "code": "04",
+        "name": "Pump / Tank System"
+      },
+      {
+        "code": "05",
+        "name": "Plumbing Riser / Schematic"
+      },
+      {
+        "code": "06",
+        "name": "Plumbing Details"
+      },
+      {
+        "code": "07",
+        "name": "Fixture Schedule"
+      },
+      {
+        "code": "08",
+        "name": "Specialty Systems"
+      },
+      {
+        "code": "09",
+        "name": "Other Plumbing"
+      }
+    ],
+    "I": [
+      {
+        "code": "00",
+        "name": "General / Index"
+      },
+      {
+        "code": "01",
+        "name": "Interior Layout"
+      },
+      {
+        "code": "02",
+        "name": "Floor Finishes"
+      },
+      {
+        "code": "03",
+        "name": "Reflected Ceiling"
+      },
+      {
+        "code": "04",
+        "name": "Interior Elevations"
+      },
+      {
+        "code": "05",
+        "name": "Interior Sections"
+      },
+      {
+        "code": "06",
+        "name": "Furniture / Millwork"
+      },
+      {
+        "code": "07",
+        "name": "Fixture / Equipment"
+      },
+      {
+        "code": "08",
+        "name": "Interior Details"
+      },
+      {
+        "code": "09",
+        "name": "Other Interior"
+      }
+    ],
+    "L": [
+      {
+        "code": "00",
+        "name": "General / Index"
+      },
+      {
+        "code": "01",
+        "name": "Site / Landscape Plan"
+      },
+      {
+        "code": "02",
+        "name": "Hardscape"
+      },
+      {
+        "code": "03",
+        "name": "Softscape / Planting"
+      },
+      {
+        "code": "04",
+        "name": "Grading / Levels"
+      },
+      {
+        "code": "05",
+        "name": "Landscape Details"
+      },
+      {
+        "code": "06",
+        "name": "Irrigation"
+      },
+      {
+        "code": "07",
+        "name": "Site Furniture"
+      },
+      {
+        "code": "08",
+        "name": "Landscape Schedule"
+      },
+      {
+        "code": "09",
+        "name": "Other Landscape"
+      }
+    ],
+    "V": [
+      {
+        "code": "00",
+        "name": "Visualization Index"
+      },
+      {
+        "code": "01",
+        "name": "Exterior Render"
+      },
+      {
+        "code": "02",
+        "name": "Interior Render"
+      },
+      {
+        "code": "03",
+        "name": "Aerial / Site Visualization"
+      },
+      {
+        "code": "04",
+        "name": "Diagrammatic 3D"
+      },
+      {
+        "code": "05",
+        "name": "Animation / Walkthrough"
+      },
+      {
+        "code": "06",
+        "name": "Video Presentation"
+      },
+      {
+        "code": "07",
+        "name": "3D Model Deliverables"
+      },
+      {
+        "code": "08",
+        "name": "Visual Presentation Boards"
+      },
+      {
+        "code": "09",
+        "name": "Other Visualization"
+      }
+    ],
+    "B": [
+      {
+        "code": "00",
+        "name": "Basis / Register"
+      },
+      {
+        "code": "01",
+        "name": "Quantity Takeoff / Volume"
+      },
+      {
+        "code": "02",
+        "name": "BOQ"
+      },
+      {
+        "code": "03",
+        "name": "RAB / Cost Estimate"
+      },
+      {
+        "code": "04",
+        "name": "Unit Rates / Analysis"
+      },
+      {
+        "code": "05",
+        "name": "Cost Comparison"
+      },
+      {
+        "code": "06",
+        "name": "Change / Variation Cost"
+      },
+      {
+        "code": "07",
+        "name": "Cost Control / Forecast"
+      },
+      {
+        "code": "08",
+        "name": "Payment / Final Account"
+      },
+      {
+        "code": "09",
+        "name": "Other Budget"
+      }
+    ],
+    "T": [
+      {
+        "code": "00",
+        "name": "Basis / Register"
+      },
+      {
+        "code": "01",
+        "name": "Initial / Master Schedule"
+      },
+      {
+        "code": "02",
+        "name": "Design Schedule"
+      },
+      {
+        "code": "03",
+        "name": "Procurement Schedule"
+      },
+      {
+        "code": "04",
+        "name": "Construction Schedule"
+      },
+      {
+        "code": "05",
+        "name": "Lookahead Schedule"
+      },
+      {
+        "code": "06",
+        "name": "Milestones"
+      },
+      {
+        "code": "07",
+        "name": "Schedule Update"
+      },
+      {
+        "code": "08",
+        "name": "Recovery Plan"
+      },
+      {
+        "code": "09",
+        "name": "Other Time"
+      }
+    ],
+    "R": [
+      {
+        "code": "00",
+        "name": "Report Register"
+      },
+      {
+        "code": "01",
+        "name": "Daily Report"
+      },
+      {
+        "code": "02",
+        "name": "Weekly Report"
+      },
+      {
+        "code": "03",
+        "name": "Monthly Report"
+      },
+      {
+        "code": "04",
+        "name": "Design Review"
+      },
+      {
+        "code": "05",
+        "name": "Coordination Report"
+      },
+      {
+        "code": "06",
+        "name": "Quality / Inspection Report"
+      },
+      {
+        "code": "07",
+        "name": "Cost / Schedule Report"
+      },
+      {
+        "code": "08",
+        "name": "Completion Report"
+      },
+      {
+        "code": "09",
+        "name": "Other Report"
+      }
+    ]
+  },
+  "examples": [
+    {
+      "code": "KOG-01-01",
+      "title": "Cover"
+    },
+    {
+      "code": "KOG-01-02",
+      "title": "Table of Contents"
+    },
+    {
+      "code": "KOG-01-03",
+      "title": "Purpose of Kickoff"
+    },
+    {
+      "code": "KOX-02-01",
+      "title": "Workflow Overview"
+    },
+    {
+      "code": "KOG-02-01",
+      "title": "Project Understanding"
+    },
+    {
+      "code": "KOG-02-02",
+      "title": "Client Needs & Vision"
+    },
+    {
+      "code": "KOG-02-03",
+      "title": "Functional Requirements"
+    },
+    {
+      "code": "KOG-02-04",
+      "title": "Functional Requirements Matrix"
+    },
+    {
+      "code": "KOT-01-01",
+      "title": "Timeline Expectation"
+    },
+    {
+      "code": "KOX-01-01",
+      "title": "Design Scope & Deliverables"
+    },
+    {
+      "code": "KOX-01-02",
+      "title": "Construction Scope & Deliverables"
+    },
+    {
+      "code": "KOX-01-03",
+      "title": "Scope Exclusions"
+    },
+    {
+      "code": "KOX-01-04",
+      "title": "Project Assumptions"
+    },
+    {
+      "code": "KOB-01-01",
+      "title": "Budget Expectation"
+    },
+    {
+      "code": "KOX-03-01",
+      "title": "Building Code Check"
+    },
+    {
+      "code": "KOX-03-02",
+      "title": "Height & GSB Analysis"
+    },
+    {
+      "code": "KOT-01-02",
+      "title": "Visual Timeline Chart"
+    },
+    {
+      "code": "KOB-01-02",
+      "title": "Area vs Cost Analysis"
+    },
+    {
+      "code": "KOT-01-03",
+      "title": "Stage Timeline"
+    },
+    {
+      "code": "KOT-01-04",
+      "title": "Milestone Definition"
+    },
+    {
+      "code": "KOR-99-01",
+      "title": "Signoff & Approval"
+    },
+    {
+      "code": "KOR-99-02",
+      "title": "Client Approval"
+    },
+    {
+      "code": "KOR-99-03",
+      "title": "Notes"
+    },
+    {
+      "code": "SDG-01-01",
+      "title": "Cover"
+    },
+    {
+      "code": "SDG-01-02",
+      "title": "Table of Contents"
+    },
+    {
+      "code": "SDG-01-03",
+      "title": "Purpose of SD"
+    },
+    {
+      "code": "SDX-01-01",
+      "title": "SD Scope & Deliverables"
+    },
+    {
+      "code": "SDX-02-01",
+      "title": "Workflow Overview"
+    },
+    {
+      "code": "SDG-02-01",
+      "title": "Project Understanding"
+    },
+    {
+      "code": "SDA-00-01",
+      "title": "Room List"
+    },
+    {
+      "code": "SDA-00-02",
+      "title": "Area Calculation"
+    },
+    {
+      "code": "SDD-01-01",
+      "title": "Zoning Diagram"
+    },
+    {
+      "code": "SDD-02-01",
+      "title": "Initial Massing"
+    },
+    {
+      "code": "SDD-02-02",
+      "title": "Alternative Massing"
+    },
+    {
+      "code": "SDD-02-03",
+      "title": "Selected Massing"
+    },
+    {
+      "code": "SDA-01-01",
+      "title": "1st Floor Plan"
+    },
+    {
+      "code": "SDA-01-02",
+      "title": "2nd Floor Plan"
+    },
+    {
+      "code": "SDA-01-03",
+      "title": "Roof Plan"
+    },
+    {
+      "code": "SDD-03-01",
+      "title": "Horizontal Circulation"
+    },
+    {
+      "code": "SDD-03-02",
+      "title": "Vertical Circulation"
+    },
+    {
+      "code": "SDD-03-03",
+      "title": "Service Area"
+    },
+    {
+      "code": "SDD-04-01",
+      "title": "Design Concept"
+    },
+    {
+      "code": "SDD-04-02",
+      "title": "Material Direction"
+    },
+    {
+      "code": "SDD-04-03",
+      "title": "Spatial Experience"
+    },
+    {
+      "code": "SDV-01-01",
+      "title": "Exterior Visualization"
+    },
+    {
+      "code": "SDV-02-01",
+      "title": "Interior Visualization"
+    },
+    {
+      "code": "SDB-01-01",
+      "title": "Cost Ballpark Summary"
+    },
+    {
+      "code": "SDB-01-02",
+      "title": "Cost Ballpark Detail"
+    },
+    {
+      "code": "SDT-01-01",
+      "title": "Timeline Ballpark Summary"
+    },
+    {
+      "code": "SDT-01-02",
+      "title": "Timeline Ballpark Detail"
+    },
+    {
+      "code": "SDR-99-01",
+      "title": "Internal Approval"
+    },
+    {
+      "code": "SDR-99-02",
+      "title": "Client Approval"
+    },
+    {
+      "code": "SDR-99-03",
+      "title": "Notes"
+    },
+    {
+      "code": "DDG-01-01",
+      "title": "Cover"
+    },
+    {
+      "code": "DDG-01-02",
+      "title": "Table of Contents"
+    },
+    {
+      "code": "DDG-01-03",
+      "title": "Purpose of DD"
+    },
+    {
+      "code": "DDX-01-01",
+      "title": "DD Scope & Deliverables"
+    },
+    {
+      "code": "DDX-02-01",
+      "title": "Workflow Overview"
+    },
+    {
+      "code": "DDG-02-01",
+      "title": "Project Understanding"
+    },
+    {
+      "code": "DDA-01-01",
+      "title": "1st Floor Plan"
+    },
+    {
+      "code": "DDA-01-02",
+      "title": "2nd Floor Plan"
+    },
+    {
+      "code": "DDA-01-03",
+      "title": "Roof Plan"
+    },
+    {
+      "code": "DDA-02-01",
+      "title": "Front Elevation"
+    },
+    {
+      "code": "DDA-02-02",
+      "title": "Back Elevation"
+    },
+    {
+      "code": "DDA-02-03",
+      "title": "Left Elevation"
+    },
+    {
+      "code": "DDA-02-04",
+      "title": "Right Elevation"
+    },
+    {
+      "code": "DDA-03-01",
+      "title": "Section A"
+    },
+    {
+      "code": "DDA-03-02",
+      "title": "Section B"
+    },
+    {
+      "code": "DDA-04-01",
+      "title": "Floor Material"
+    },
+    {
+      "code": "DDA-04-02",
+      "title": "Wall Material"
+    },
+    {
+      "code": "DDA-04-03",
+      "title": "Ceiling Material"
+    },
+    {
+      "code": "DDA-04-04",
+      "title": "Roof Material"
+    },
+    {
+      "code": "DDV-01-01",
+      "title": "Exterior Visualization"
+    },
+    {
+      "code": "DDV-02-01",
+      "title": "Interior Visualization"
+    },
+    {
+      "code": "DDX-03-01",
+      "title": "ARS-STR Coordination"
+    },
+    {
+      "code": "DDX-03-02",
+      "title": "ARS-MEP Coordination"
+    },
+    {
+      "code": "DDB-01-01",
+      "title": "Cost Estimation Summary"
+    },
+    {
+      "code": "DDB-01-02",
+      "title": "Cost Estimation Detail"
+    },
+    {
+      "code": "DDT-01-01",
+      "title": "Timeline Estimation Summary"
+    },
+    {
+      "code": "DDT-01-02",
+      "title": "Timeline Estimation Detail"
+    },
+    {
+      "code": "DDR-99-01",
+      "title": "Internal Approval"
+    },
+    {
+      "code": "DDR-99-02",
+      "title": "Client Approval"
+    },
+    {
+      "code": "DDR-99-03",
+      "title": "Notes"
+    },
+    {
+      "code": "EDG-01-01",
+      "title": "Cover"
+    },
+    {
+      "code": "EDG-01-02",
+      "title": "Table of Contents"
+    },
+    {
+      "code": "EDG-01-03",
+      "title": "Purpose of ED"
+    },
+    {
+      "code": "EDG-01-04",
+      "title": "ED Scope & Deliverables"
+    },
+    {
+      "code": "EDG-01-05",
+      "title": "Workflow Overview"
+    },
+    {
+      "code": "EDG-01-06",
+      "title": "Project Understanding"
+    },
+    {
+      "code": "EDA-00-01",
+      "title": "General Notes"
+    },
+    {
+      "code": "EDA-01-01",
+      "title": "Siteplan"
+    },
+    {
+      "code": "EDA-01-02",
+      "title": "1st Floor Plan"
+    },
+    {
+      "code": "EDA-01-03",
+      "title": "2nd Floor Plan"
+    },
+    {
+      "code": "EDA-01-04",
+      "title": "Roof Plan"
+    },
+    {
+      "code": "EDA-02-01",
+      "title": "Front Elevation"
+    },
+    {
+      "code": "EDA-02-02",
+      "title": "Back Elevation"
+    },
+    {
+      "code": "EDA-02-03",
+      "title": "Left Elevation"
+    },
+    {
+      "code": "EDA-02-04",
+      "title": "Right Elevation"
+    },
+    {
+      "code": "EDA-03-01",
+      "title": "Section A"
+    },
+    {
+      "code": "EDA-03-02",
+      "title": "Section B"
+    },
+    {
+      "code": "EDA-03-03",
+      "title": "Section C"
+    },
+    {
+      "code": "EDA-03-04",
+      "title": "Section D"
+    },
+    {
+      "code": "EDA-04-01",
+      "title": "1st Floor Material Finishes"
+    },
+    {
+      "code": "EDA-04-02",
+      "title": "2nd Floor Material Finishes"
+    },
+    {
+      "code": "EDA-04-03",
+      "title": "1st Floor Wall Finishes"
+    },
+    {
+      "code": "EDA-04-04",
+      "title": "2nd Floor Wall Finishes"
+    },
+    {
+      "code": "EDA-04-05",
+      "title": "1st Floor Ceiling Finishes"
+    },
+    {
+      "code": "EDA-04-06",
+      "title": "2nd Floor Ceiling Finishes"
+    },
+    {
+      "code": "EDA-04-07",
+      "title": "Roof Finishes"
+    },
+    {
+      "code": "EDA-05-01",
+      "title": "1st Floor Door-Window Keyplan"
+    },
+    {
+      "code": "EDA-05-02",
+      "title": "2nd Floor Door-Window Keyplan"
+    },
+    {
+      "code": "EDA-05-03",
+      "title": "Door Detail"
+    },
+    {
+      "code": "EDA-05-04",
+      "title": "Window Detail"
+    },
+    {
+      "code": "EDA-05-05",
+      "title": "Door-Window Detail"
+    },
+    {
+      "code": "EDA-06-01",
+      "title": "Detail Room A"
+    },
+    {
+      "code": "EDA-06-02",
+      "title": "Detail Room B"
+    },
+    {
+      "code": "EDA-06-03",
+      "title": "Detail Room C"
+    },
+    {
+      "code": "EDA-06-04",
+      "title": "Detail Room D"
+    },
+    {
+      "code": "EDA-06-05",
+      "title": "Stair Detail"
+    },
+    {
+      "code": "EDA-06-06",
+      "title": "Elevator Detail"
+    },
+    {
+      "code": "EDA-06-07",
+      "title": "Ramp Detail"
+    },
+    {
+      "code": "EDA-06-08",
+      "title": "Detail A"
+    },
+    {
+      "code": "EDA-06-09",
+      "title": "Detail B"
+    },
+    {
+      "code": "EDS-00-01",
+      "title": "General Notes"
+    },
+    {
+      "code": "EDS-00-02",
+      "title": "Structural Calculation"
+    },
+    {
+      "code": "EDS-00-03",
+      "title": "Structural Axonometry"
+    },
+    {
+      "code": "EDS-01-01",
+      "title": "Foundation Plan"
+    },
+    {
+      "code": "EDS-01-02",
+      "title": "Foundation Detail"
+    },
+    {
+      "code": "EDS-02-01",
+      "title": "Tie Beam Plan"
+    },
+    {
+      "code": "EDS-02-02",
+      "title": "Tie Beam Detail"
+    },
+    {
+      "code": "EDS-03-01",
+      "title": "1st Floor Column Plan"
+    },
+    {
+      "code": "EDS-03-02",
+      "title": "2nd Floor Column Plan"
+    },
+    {
+      "code": "EDS-03-03",
+      "title": "Column Detail"
+    },
+    {
+      "code": "EDS-04-01",
+      "title": "2nd Floor Beam Plan"
+    },
+    {
+      "code": "EDS-04-02",
+      "title": "Ring Balk Plan"
+    },
+    {
+      "code": "EDS-04-03",
+      "title": "Beam Detail"
+    },
+    {
+      "code": "EDS-05-01",
+      "title": "2nd Floor Plate Plan"
+    },
+    {
+      "code": "EDS-05-02",
+      "title": "Roof Plate Plan"
+    },
+    {
+      "code": "EDS-05-03",
+      "title": "Floor Plate Detail"
+    },
+    {
+      "code": "EDS-06-01",
+      "title": "Roof Frame Plan"
+    },
+    {
+      "code": "EDS-06-02",
+      "title": "Roof Frame Detail"
+    },
+    {
+      "code": "EDS-07-01",
+      "title": "Stair Structure Detail"
+    },
+    {
+      "code": "EDS-07-02",
+      "title": "Elevator Structure Detail"
+    },
+    {
+      "code": "EDS-07-03",
+      "title": "Ramp Structure Detail"
+    },
+    {
+      "code": "EDS-08-01",
+      "title": "Portal Design"
+    },
+    {
+      "code": "EDS-08-02",
+      "title": "Structural Detail"
+    },
+    {
+      "code": "EDM-00-01",
+      "title": "General Notes"
+    },
+    {
+      "code": "EDM-00-02",
+      "title": "MEP Calculation"
+    },
+    {
+      "code": "EDM-01-01",
+      "title": "AC/HVAC Plan"
+    },
+    {
+      "code": "EDM-01-02",
+      "title": "AC/HVAC Isometric"
+    },
+    {
+      "code": "EDM-02-01",
+      "title": "Fire Protection Plan"
+    },
+    {
+      "code": "EDE-00-01",
+      "title": "Electrical Calculation"
+    },
+    {
+      "code": "EDE-00-02",
+      "title": "Power Diagram (SLD)"
+    },
+    {
+      "code": "EDE-01-01",
+      "title": "1st Floor Lighting Plan"
+    },
+    {
+      "code": "EDE-01-02",
+      "title": "2nd Floor Lighting Plan"
+    },
+    {
+      "code": "EDE-02-01",
+      "title": "1st Floor Power Plan"
+    },
+    {
+      "code": "EDE-02-02",
+      "title": "2nd Floor Power Plan"
+    },
+    {
+      "code": "EDE-03-01",
+      "title": "Grounding Plan"
+    },
+    {
+      "code": "EDE-04-01",
+      "title": "Electrical Detail"
+    },
+    {
+      "code": "EDP-01-01",
+      "title": "Clean Water Diagram (SLD)"
+    },
+    {
+      "code": "EDP-01-02",
+      "title": "Clean Water Plan"
+    },
+    {
+      "code": "EDP-01-03",
+      "title": "Clean Water Isometric"
+    },
+    {
+      "code": "EDP-02-01",
+      "title": "Dirty Water Diagram (SLD)"
+    },
+    {
+      "code": "EDP-02-02",
+      "title": "Dirty Water Plan"
+    },
+    {
+      "code": "EDP-02-03",
+      "title": "Dirty Water Isometric"
+    },
+    {
+      "code": "EDP-03-01",
+      "title": "Rain Water Plan"
+    },
+    {
+      "code": "EDP-03-02",
+      "title": "Rain Water Isometric"
+    },
+    {
+      "code": "EDP-04-01",
+      "title": "Filter/Pump Detail"
+    },
+    {
+      "code": "EDP-04-02",
+      "title": "Ground Tank Detail"
+    },
+    {
+      "code": "EDP-04-03",
+      "title": "Septic Tank Detail"
+    },
+    {
+      "code": "EDP-04-04",
+      "title": "Grease Trap Detail"
+    },
+    {
+      "code": "EDP-04-05",
+      "title": "Infiltration Well Detail"
+    },
+    {
+      "code": "EDV-01-01",
+      "title": "Exterior Visualization"
+    },
+    {
+      "code": "EDV-01-02",
+      "title": "Interior Visualization"
+    },
+    {
+      "code": "EDB-01-01",
+      "title": "Master Budget"
+    },
+    {
+      "code": "EDB-01-02",
+      "title": "STR Budget"
+    },
+    {
+      "code": "EDB-01-03",
+      "title": "ARS Budget"
+    },
+    {
+      "code": "EDB-01-04",
+      "title": "MEP Budget"
+    },
+    {
+      "code": "EDT-01-01",
+      "title": "Master Schedule"
+    },
+    {
+      "code": "EDT-01-02",
+      "title": "STR Schedule"
+    },
+    {
+      "code": "EDT-01-03",
+      "title": "ARS Schedule"
+    },
+    {
+      "code": "EDT-01-04",
+      "title": "MEP Schedule"
+    },
+    {
+      "code": "EDR-99-01",
+      "title": "Internal Approval"
+    },
+    {
+      "code": "EDR-99-02",
+      "title": "Client Approval"
+    },
+    {
+      "code": "EDR-99-03",
+      "title": "Notes"
+    },
+    {
+      "code": "PRG-01-01",
+      "title": "Cover"
+    },
+    {
+      "code": "PRG-01-02",
+      "title": "Table of Contents"
+    },
+    {
+      "code": "PRG-01-03",
+      "title": "Purpose of PC"
+    },
+    {
+      "code": "PRG-01-04",
+      "title": "PC Scope & Deliverables"
+    },
+    {
+      "code": "PRG-01-05",
+      "title": "Workflow Overview"
+    },
+    {
+      "code": "PRG-01-06",
+      "title": "Project Understanding"
+    },
+    {
+      "code": "PRX-01-01",
+      "title": "Outline Material Specs"
+    },
+    {
+      "code": "PRX-02-01",
+      "title": "Material Vendor List"
+    },
+    {
+      "code": "PRX-02-02",
+      "title": "Contractor/Subcontractor List"
+    },
+    {
+      "code": "PRX-03-01",
+      "title": "RFQ Preparation"
+    },
+    {
+      "code": "PRX-03-02",
+      "title": "RFQ Distribution"
+    },
+    {
+      "code": "PRX-04-01",
+      "title": "Technical Comparison"
+    },
+    {
+      "code": "PRX-05-01",
+      "title": "Evaluation"
+    },
+    {
+      "code": "PRX-05-02",
+      "title": "Final Selection"
+    },
+    {
+      "code": "PRA-01-01",
+      "title": "Architecture Material Specs/RKS"
+    },
+    {
+      "code": "PRS-01-01",
+      "title": "Structure Material Specs/RKS"
+    },
+    {
+      "code": "PRM-01-01",
+      "title": "MEP Material Specs/RKS"
+    },
+    {
+      "code": "PRB-01-01",
+      "title": "Cost Comparison"
+    },
+    {
+      "code": "PRR-01-01",
+      "title": "Monthly Purchases & Report (Month 1-6)"
+    },
+    {
+      "code": "PRR-02-01",
+      "title": "Weekly Purchases & Report (Week 1-4)"
+    },
+    {
+      "code": "PRR-03-01",
+      "title": "Daily Purchases & Report"
+    },
+    {
+      "code": "PRR-99-01",
+      "title": "Internal Approval"
+    },
+    {
+      "code": "PRR-99-02",
+      "title": "Client Approval"
+    },
+    {
+      "code": "PRR-99-03",
+      "title": "Notes"
+    },
+    {
+      "code": "CNG-01-01",
+      "title": "Cover"
+    },
+    {
+      "code": "CNG-01-02",
+      "title": "Table of Contents"
+    },
+    {
+      "code": "CNG-01-03",
+      "title": "Purpose of CN"
+    },
+    {
+      "code": "CNG-01-04",
+      "title": "CN Scope & Deliverables"
+    },
+    {
+      "code": "CNG-01-05",
+      "title": "Workflow Overview"
+    },
+    {
+      "code": "CNG-01-06",
+      "title": "Project Understanding"
+    },
+    {
+      "code": "CNX-01-01",
+      "title": "Site Setup"
+    },
+    {
+      "code": "CNX-01-02",
+      "title": "Temporary Utilities"
+    },
+    {
+      "code": "CNX-01-03",
+      "title": "Workers Setup"
+    },
+    {
+      "code": "CNX-02-01",
+      "title": "Material Inspection"
+    },
+    {
+      "code": "CNX-02-02",
+      "title": "Work Inspection"
+    },
+    {
+      "code": "CNX-02-03",
+      "title": "HSE Inspection"
+    },
+    {
+      "code": "CNA-01-01",
+      "title": "ARS Shop Drawing"
+    },
+    {
+      "code": "CNS-01-01",
+      "title": "STR Shop Drawing"
+    },
+    {
+      "code": "CNM-01-01",
+      "title": "MEP Shop Drawing"
+    },
+    {
+      "code": "CNR-01-01",
+      "title": "Monthly Progress Report (Month 1-6)"
+    },
+    {
+      "code": "CNR-02-01",
+      "title": "Weekly Progress Report (Week 1-4)"
+    },
+    {
+      "code": "CNR-03-01",
+      "title": "Daily Progress Report"
+    },
+    {
+      "code": "HOG-01-01",
+      "title": "Cover"
+    },
+    {
+      "code": "HOG-01-02",
+      "title": "Table of Contents"
+    },
+    {
+      "code": "HOG-01-03",
+      "title": "Purpose of HO"
+    },
+    {
+      "code": "HOG-01-04",
+      "title": "HO Scope & Deliverables"
+    },
+    {
+      "code": "HOG-01-05",
+      "title": "Workflow Overview"
+    },
+    {
+      "code": "HOG-01-06",
+      "title": "Project Understanding"
+    },
+    {
+      "code": "HOX-01-01",
+      "title": "Punchlist"
+    },
+    {
+      "code": "HOX-01-02",
+      "title": "Rectification"
+    },
+    {
+      "code": "HOX-02-01",
+      "title": "Operation & Maintenance Manual"
+    },
+    {
+      "code": "HOX-02-02",
+      "title": "Warranty Docs"
+    },
+    {
+      "code": "HOA-01-01",
+      "title": "ARS As-Built Drawing"
+    },
+    {
+      "code": "HOS-01-01",
+      "title": "STR As-Built Drawing"
+    },
+    {
+      "code": "HOM-01-01",
+      "title": "MEP As-Built Drawing"
+    },
+    {
+      "code": "HOR-99-01",
+      "title": "Client Sign-Off"
+    },
+    {
+      "code": "HOR-99-02",
+      "title": "Project Closure"
+    }
+  ]
+}

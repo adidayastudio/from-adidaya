@@ -32,6 +32,8 @@ const SF_TO_FEATHER: Record<string, string> = {
 
 // SF Symbol name → Ionicons name mapping
 const SF_TO_IONICONS: Record<string, string> = {
+    'arrow.up.left.and.arrow.down.right': 'expand-outline',
+    'arrow.down.right.and.arrow.up.left': 'contract-outline',
     'activity': 'pulse-outline',
     'arrow.up.doc': 'cloud-upload-outline',
     'house.fill': 'home',

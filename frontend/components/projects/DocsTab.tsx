@@ -1,3 +1,5 @@
+import { ProjectTemplateDocumentEditor } from './ProjectTemplateDocumentEditor';
+import { createTemplateDocument, ProjectDocumentTemplate } from '@/lib/projectDocumentTemplates';
 import { DocumentFolderTree } from './DocumentFolderTree';
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
@@ -28,6 +30,7 @@ import { FormaUniversalFileViewer } from '@/components/chat/FormaUniversalFileVi
 import { FilePreviewItem } from '@/lib/filePreviewStrategy';
 
 export interface DocsTabProps {
+    folderHeaderControls?: { search: string; expanded: string[]; setExpanded: (value: string[]) => void };
     project: Project;
     isDark: boolean;
     onRefresh?: () => void;
@@ -45,6 +48,14 @@ export interface DocsTabProps {
 }
 
 export interface ProjectDocItem {
+    documentBlocks?: import('@/lib/projectDocumentTemplates').DocumentBlock[];
+    documentNumber?: string;
+    revision?: string;
+    content?: string;
+    templateCode?: string;
+    templateSourceUrl?: string;
+    projectName?: string;
+    updatedAt?: string;
     id: string;
     name: string;
     size: string;
@@ -230,6 +241,7 @@ export const BouncyToolbarButton = ({
 };
 
 export function DocsTab({
+    folderHeaderControls,
     project,
     isDark,
     onRefresh,
@@ -269,6 +281,8 @@ export function DocsTab({
     const searchQuery = propSearchQuery ?? '';
     const docFilterType = propDocFilterType ?? 'all';
     const docSortMode = propDocSortMode ?? 'date-desc';
+
+    const [editingTemplateDocument, setEditingTemplateDocument] = useState<ProjectDocItem | null>(null);
 
     // Modals
     const [previewItem, setPreviewItem] = useState<FilePreviewItem | null>(null);
@@ -442,6 +456,7 @@ export function DocsTab({
 
     const openFilePreview = (doc: ProjectDocItem) => {
         Haptics.selectionAsync();
+        if (doc.templateCode) { setEditingTemplateDocument(doc); return; }
         router.push({
             pathname: '/file-preview',
             params: {
@@ -458,10 +473,13 @@ export function DocsTab({
         });
     };
 
+    if (editingTemplateDocument) return <ProjectTemplateDocumentEditor key={editingTemplateDocument.id} projectId={project.id} document={editingTemplateDocument} isDark={isDark} onClose={() => setEditingTemplateDocument(null)} onSaved={documents => { setDocsList(documents); onRefresh?.(); }} />;
+    const openTemplate = (template: ProjectDocumentTemplate) => setEditingTemplateDocument(createTemplateDocument(template, project, docsList, `pdoc-template-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`));
+
     return (
         <View style={styles.container}>
             <View style={styles.filterSection}>
-                <DocumentFolderTree documents={filteredDocs} isDark={isDark} renderDocument={doc => <ContextMenu actions={getDocCardContextMenuActions(doc)} disabled={isDocSelectMode} onPress={event => handleDocActionPress(doc, event.nativeEvent.name)}>
+                <DocumentFolderTree onUseTemplate={!isDocSelectMode && docFilterType === 'all' ? openTemplate : undefined} headerControls={folderHeaderControls} documents={filteredDocs} isDark={isDark} renderDocument={doc => <ContextMenu actions={getDocCardContextMenuActions(doc)} disabled={isDocSelectMode} onPress={event => handleDocActionPress(doc, event.nativeEvent.name)}>
                     <TouchableOpacity onPress={() => isDocSelectMode ? handleToggleSelectDoc(doc.id) : openFilePreview(doc)} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12 }}>
                         <Ionicons name={isDocSelectMode ? selectedDocIds.includes(doc.id) ? 'checkmark-circle' : 'ellipse-outline' : 'document-text-outline'} size={22} color={formaBlue} />
                         <View style={{ flex: 1 }}><Text style={{ color: textColor, fontWeight: '500' }}>{doc.name}</Text><Text style={{ color: subtextColor, fontSize: 12, marginTop: 4 }}>{doc.size} · {formatDocCardDate(doc.date, doc.time)}</Text></View>
@@ -471,7 +489,7 @@ export function DocsTab({
             </View>
 
             {/* Spacer for floating bottom search / multi-select toolbars */}
-            <View style={{ height: Math.max(insets.bottom, 16) + 84 }} />
+            {(!folderHeaderControls || isDocSelectMode) && <View style={{ height: Math.max(insets.bottom, 16) + 84 }} />}
 
             {/* 2. Global Forma Universal File & Media Viewer */}
             <FormaUniversalFileViewer

@@ -1,3 +1,4 @@
+import { PROJECT_CATALOG } from '@/lib/projectCatalog';
 import { ProjectPlanningNavigation } from '@/components/projects/ProjectPlanningNavigation';
 import { ProjectPlanningPanel } from '@/components/projects/ProjectPlanningPanel';
 import { ProjectWorkspace } from '@/components/projects/ProjectWorkspace';
@@ -8,6 +9,8 @@ import { ActivityTab } from '@/components/projects/ActivityTab';
 import { DocsTab, ProjectDocItem, DEFAULT_PROJECT_MOCK_DOCS, BouncyToolbarButton, getDocSectionLabel } from '@/components/projects/DocsTab';
 import { OverviewTab } from '@/components/projects/OverviewTab';
 import { TrackingTab } from '@/components/projects/TrackingTab';
+import { ProjectDeliverablesWorkspace } from '@/components/projects/deliverables/ProjectDeliverablesWorkspace';
+import { ProjectWBSTracking } from '@/components/projects/tracking/ProjectWBSTracking';
 import { SwiftUIAddTaskSheet } from '@/components/tasks/SwiftUIAddTaskSheet';
 import { SwiftUIAddActionSheet } from '@/components/actions/SwiftUIAddActionSheet';
 import { SwiftUIAddMilestoneSheet } from '@/components/projects/SwiftUIAddMilestoneSheet';
@@ -231,6 +234,7 @@ export function ProjectDetailContent({
     onOpenSetupModule,
     contentOnly = false,
     onHeaderActionChange,
+    onHeaderTrailingChange,
 }: {
     projectId?: string;
     initialProject?: Project;
@@ -244,6 +248,7 @@ export function ProjectDetailContent({
     onOpenSetupModule?: (moduleId: string) => void;
     contentOnly?: boolean;
     onHeaderActionChange?: (action: HeaderToolbarAction | null) => void;
+    onHeaderTrailingChange?: (content: React.ReactNode) => void;
 }) {
     const { width: viewportWidth } = useWindowDimensions();
     const isPreview = isPreviewMode !== undefined ? isPreviewMode : (isEmbedded && !isFocusedWorkspace);
@@ -262,6 +267,8 @@ export function ProjectDetailContent({
     const { resolvedTheme } = useTheme();
     const { activeTenant } = useTenantContext();
     const isDark = resolvedTheme === 'dark';
+    const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
+    const subtextColor = isDark ? '#8E8E93' : '#6e6e73';
     const scrollViewRef = React.useRef<ScrollView>(null);
 
     const fabScale = useSharedValue(1);
@@ -389,6 +396,8 @@ export function ProjectDetailContent({
     const [savedDocIds, setSavedDocIds] = useState<string[]>([]);
     const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
     const [isDocSelectMode, setIsDocSelectMode] = useState<boolean>(false);
+    const [folderSearch, setFolderSearch] = useState('');
+    const [folderExpanded, setFolderExpanded] = useState<string[]>([]);
     const [docsSearchQuery, setDocsSearchQuery] = useState('');
     const [isDocsSearchExpanded, setIsDocsSearchExpanded] = useState(false);
     const [docsFilterType, setDocsFilterType] = useState<string>('all');
@@ -714,22 +723,86 @@ export function ProjectDetailContent({
 
     useEffect(() => {
         if (!onHeaderActionChange) return;
-        if (!project?.id || isPreview || activeTab !== 'work') { onHeaderActionChange(null); return; }
-        onHeaderActionChange({
-            id: 'add', icon: 'add', image: 'plus', title: 'Add', tintColor: FormaBlue[700],
-            menuActions: [
-                { title: 'Add Action', systemIcon: 'bolt.fill' },
-                { title: 'Add Task', systemIcon: 'checklist' },
-                { title: 'Add Milestone', systemIcon: 'flag' },
-            ],
-            onMenuPress: event => {
-                if (event.nativeEvent.name === 'Add Action') setIsAddActionVisible(true);
-                else if (event.nativeEvent.name === 'Add Task') setIsAddTaskVisible(true);
-                else if (event.nativeEvent.name === 'Add Milestone') setShowAddMilestoneModal(true);
-            },
-        });
-        return () => onHeaderActionChange(null);
+        onHeaderActionChange(null);
     }, [project?.id, isPreview, activeTab, onHeaderActionChange]);
+
+    useEffect(() => {
+        if (!onHeaderTrailingChange || activeTab === 'tracking' || activeTab === 'progress' || activeTab === 'docs') return;
+        if (!project || activeTab !== 'activity') {
+            onHeaderTrailingChange(null);
+            return;
+        }
+        const drafts = Array.isArray(project.meta?.draftActivities) ? project.meta.draftActivities as any[] : [];
+        const filtered = activityFilter !== 'all' || !!activityDateRange.startDate;
+        const actions: HeaderToolbarAction[] = [
+            { id: 'search', title: 'Search activities', icon: 'search', onPress: () => setIsActivitySearchExpanded(value => !value) },
+            { id: 'filter', title: 'Filter activities', icon: 'options-outline', image: 'line.3.horizontal.decrease', tintColor: filtered ? '#007AFF' : textColor,
+                menuActions: [
+                    { title: 'All Activities', selected: !filtered },
+                    { title: 'Updates', selected: activityFilter === 'updates' },
+                    { title: 'Works', selected: activityFilter === 'works' },
+                    { title: 'Modules', selected: activityFilter === 'modules' },
+                    { title: activityDateRange.label ? `Date: ${activityDateRange.label}` : 'Date Range...', selected: !!activityDateRange.startDate },
+                    ...(filtered ? [{ title: 'Reset Filters' }] : []),
+                ],
+                onMenuPress: ({ nativeEvent: { name } }) => {
+                    if (name === 'All Activities' || name === 'Reset Filters') {
+                        setActivityFilter('all');
+                        setActivityDateRange({ startDate: null, endDate: null, label: undefined });
+                    } else if (name === 'Updates') setActivityFilter('updates');
+                    else if (name === 'Works') setActivityFilter('works');
+                    else if (name === 'Modules') setActivityFilter('modules');
+                    else setIsDateRangeSheetVisible(true);
+                },
+            },
+            { id: 'drafts', title: 'Activity drafts', icon: 'file-tray-outline', image: 'tray', badge: drafts.length || undefined,
+                menuActions: drafts.length ? [
+                    ...drafts.map((draft, index) => ({ title: `${draft.title || draft.description || `Draft #${index + 1}`}`.slice(0, 30) })),
+                    { title: 'Clear All Drafts', destructive: true },
+                ] : [{ title: 'No Saved Drafts', disabled: true }],
+                onMenuPress: async ({ nativeEvent: { name, index } }) => {
+                    if (name === 'Clear All Drafts') {
+                        await saveProjectMeta(project.id, { ...(project.meta || {}), draftActivities: [] });
+                        await loadProject();
+                    } else if (drafts[index]) {
+                        setSelectedDraftActivity(drafts[index]);
+                        setIsAddActivityVisible(true);
+                    }
+                },
+            },
+            { id: 'add-activity', title: 'Post Update', icon: 'add', isPrimary: true, onPress: () => { setSelectedDraftActivity(null); setIsAddActivityVisible(true); } },
+        ];
+        onHeaderTrailingChange(<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {isActivitySearchExpanded && <View style={{ flexDirection: 'row', alignItems: 'center', width: 240, borderRadius: 24, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', paddingHorizontal: 12 }}>
+                <TextInput autoFocus accessibilityLabel="Search activities" placeholder="Search activities..." placeholderTextColor="#8E8E93" value={activitySearchQuery} onChangeText={setActivitySearchQuery} style={{ flex: 1, height: 40, color: textColor }} />
+                <TouchableOpacity accessibilityLabel="Close activity search" onPress={() => { setActivitySearchQuery(''); setIsActivitySearchExpanded(false); }}><Ionicons name="close" size={18} color={textColor} /></TouchableOpacity>
+            </View>}
+            <HeaderToolbar isDark={isDark} textColor={textColor} actions={actions} maxDirectActions={4} />
+        </View>);
+        return () => onHeaderTrailingChange(null);
+    }, [onHeaderTrailingChange, project, activeTab, activityFilter, activityDateRange, isActivitySearchExpanded, activitySearchQuery, isDark, textColor, loadProject]);
+
+    // Keep the document controls in the workspace header, alongside its title.
+    const uploadDocRef = React.useRef(handleUploadDoc);
+    uploadDocRef.current = handleUploadDoc;
+    useEffect(() => {
+        if (!onHeaderTrailingChange || activeTab !== 'docs') return;
+        const actions: HeaderToolbarAction[] = [
+            { id: 'search-documents', icon: 'search', image: 'magnifyingglass', title: 'Search documents', onPress: () => setIsDocsSearchExpanded(value => !value) },
+            { id: 'toggle-folders', icon: folderExpanded.length ? 'contract-outline' : 'expand-outline', image: folderExpanded.length ? 'arrow.down.right.and.arrow.up.left' : 'arrow.up.left.and.arrow.down.right', title: folderExpanded.length ? 'Collapse all' : 'Expand all', onPress: () => setFolderExpanded(folderExpanded.length ? [] : ['inbox', ...PROJECT_CATALOG.map(entry => entry.code)]) },
+            { id: 'filter-documents', icon: 'options-outline', image: 'line.3.horizontal.decrease', title: 'Filter documents', menuActions: docFilterActions, onMenuPress: event => handleDocFilterAction(event.nativeEvent.name), tintColor: docsFilterType !== 'all' ? '#007AFF' : textColor },
+            { id: 'sort-documents', icon: 'swap-vertical', image: 'arrow.up.arrow.down', title: 'Sort documents', menuActions: docSortActions, onMenuPress: event => handleDocSortAction(event.nativeEvent.name) },
+            { id: 'upload-document', icon: 'add', image: 'plus', title: 'Add document', isPrimary: true, menuActions: docUploadActions, onMenuPress: event => { const name = event.nativeEvent.name; void uploadDocRef.current(name === 'Take Photo' ? 'camera' : name === 'Photo Library' ? 'photo' : 'file'); } },
+        ];
+        onHeaderTrailingChange(<View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {isDocsSearchExpanded && <View style={{ width: 240, height: 40, borderRadius: 999, paddingHorizontal: 12, backgroundColor: isDark ? '#1C1C1E' : '#F2F2F7', flexDirection: 'row', alignItems: 'center' }}>
+                <TextInput autoFocus accessibilityLabel="Search folders or documents" placeholder="Search folders or documents" placeholderTextColor="#8E8E93" value={folderSearch} onChangeText={value => { setFolderSearch(value); if (value.trim()) setFolderExpanded(['inbox', ...PROJECT_CATALOG.map(entry => entry.code)]); }} style={{ flex: 1, height: 40, color: textColor }} />
+                <TouchableOpacity accessibilityLabel="Close document search" onPress={() => { setFolderSearch(''); setIsDocsSearchExpanded(false); }}><Ionicons name="close" size={18} color={textColor} /></TouchableOpacity>
+            </View>}
+            <HeaderToolbar isDark={isDark} textColor={textColor} actions={actions} maxDirectActions={6} />
+        </View>);
+        return () => onHeaderTrailingChange(null);
+    }, [onHeaderTrailingChange, activeTab, isDocsSearchExpanded, folderSearch, folderExpanded, isDark, textColor, docFilterActions, docSortActions, docUploadActions, handleDocFilterAction, handleDocSortAction, docsFilterType]);
 
     const handleTaskSaved = async (newTask: Task) => {
         setIsAddTaskVisible(false);
@@ -764,16 +837,21 @@ export function ProjectDetailContent({
             case 'reports':
                 return <ProjectPlanningPanel project={project} section="reports" isDark={isDark} />;
             case 'work':
+                return (
+                    <ProjectDeliverablesWorkspace
+                        project={project}
+                        isDark={isDark}
+                        onProjectMetaChange={() => loadProject(true)}
+                    />
+                );
             case 'tracking':
             case 'progress':
                 return (
-                    <TrackingTab
-                        inlineDetails={contentOnly}
-                        taskListOnly={activeTab === 'work'}
+                    <ProjectWBSTracking
                         project={project}
                         isDark={isDark}
-                        onRefresh={loadProject}
-                        onProgressChange={setDynamicProgress}
+                        onProjectMetaChange={() => loadProject(true)}
+                    onHeaderTrailingChange={onHeaderTrailingChange}
                     />
                 );
             case 'activity':
@@ -798,6 +876,7 @@ export function ProjectDetailContent({
             case 'docs':
                 return (
                     <DocsTab
+                        folderHeaderControls={onHeaderTrailingChange ? { search: folderSearch, expanded: folderExpanded, setExpanded: setFolderExpanded } : undefined}
                         project={project}
                         isDark={isDark}
                         onRefresh={loadProject}
@@ -846,8 +925,6 @@ export function ProjectDetailContent({
         }
     };
 
-    const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
-    const subtextColor = isDark ? '#8E8E93' : '#6e6e73';
 
     const actions: HeaderToolbarAction[] = [
         {
@@ -1176,9 +1253,9 @@ export function ProjectDetailContent({
                             dropdownMenuMode
                             actions={[
                                 { title: 'Planning', systemIcon: 'calendar', selected: activeTab === 'planning' },
-                                { title: 'Control', systemIcon: 'chart.bar', selected: activeTab === 'tracking' },
+                                { title: 'WBS Tracking', systemIcon: 'chart.bar', selected: activeTab === 'tracking' },
                                 { title: 'Reports', systemIcon: 'doc.text', selected: activeTab === 'reports' },
-                                { title: 'Activity', systemIcon: 'bolt.horizontal', selected: activeTab === 'activity' },
+                                { title: 'Activity Log', systemIcon: 'bolt.horizontal', selected: activeTab === 'activity' },
                             ]}
                             onPress={(event) => {
                                 const next = ['planning', 'tracking', 'reports', 'activity'][event.nativeEvent.index];
@@ -1186,7 +1263,7 @@ export function ProjectDetailContent({
                             }}
                         >
                             <TouchableOpacity accessibilityRole="button" accessibilityLabel="More project areas" style={{ padding: 12 }}>
-                                <Text style={{ color: textColor, textAlign: 'center' }}>{({ planning: 'Planning', tracking: 'Control', reports: 'Reports', activity: 'Activity' } as Record<string, string>)[activeTab] || 'More'} ···</Text>
+                                <Text style={{ color: textColor, textAlign: 'center' }}>{({ planning: 'Planning', tracking: 'WBS Tracking', reports: 'Reports', activity: 'Activity Log' } as Record<string, string>)[activeTab] || 'More'} ···</Text>
                             </TouchableOpacity>
                         </ContextMenu>
                     </View>
@@ -1254,8 +1331,8 @@ export function ProjectDetailContent({
                 </View>
             </Modal>
 
-            {/* Floating Action Button (Overview/Work Tab): Add Milestone, Add Task, Add Action, Manual Progress */}
-            {project && !isPreview && !onHeaderActionChange && (activeTab === 'overview' || activeTab === 'work') && (
+            {/* Floating Action Button (Overview Tab): Add Milestone, Add Task, Add Action, Manual Progress */}
+            {project && !isPreview && !onHeaderActionChange && activeTab === 'overview' && (
                 <View
                     style={[
                         styles.floatingFabContainer,
@@ -1320,7 +1397,7 @@ export function ProjectDetailContent({
             )}
 
             {/* Floating Toolbar for ACTIVITY tab (Search Icon + Filter ContextMenu + Add Activity FAB) */}
-            {project && activeTab === 'activity' && (
+            {project && !onHeaderTrailingChange && activeTab === 'activity' && (
                 <KeyboardAvoidingView
                     behavior={Platform.OS === 'ios' ? 'position' : undefined}
                     keyboardVerticalOffset={Platform.OS === 'ios' ? (insets.bottom > 0 ? insets.bottom + 8 : 16) : 0}
@@ -1607,7 +1684,7 @@ export function ProjectDetailContent({
             )}
 
             {/* Floating Toolbar for DOCS tab (Liquid Glass Search Capsule + Filter ContextMenu + Sort ContextMenu OR Multi-Select Floating Bar) */}
-            {project && activeTab === 'docs' && (
+            {project && activeTab === 'docs' && (!onHeaderTrailingChange || isDocSelectMode) && (
                 isDocSelectMode ? (
                     <View
                         style={[
@@ -2538,9 +2615,9 @@ export default function ProjectDetailScreen() {
     return <>
         <Stack.Screen options={{ headerShown: false }} />
         {project ? <ProjectWorkspace key={project.id} initialProject={project} onClose={() => router.back()}
-            renderContent={(selected, tab, onSelect, openSettings, setHeaderAction) => <ProjectDetailContent key={`${selected.id}-${tab}`} projectId={selected.id}
+            renderContent={(selected, tab, onSelect, openSettings, setHeaderAction, setHeaderTrailing) => <ProjectDetailContent key={`${selected.id}-${tab}`} projectId={selected.id}
                 initialProject={selected} contentOnly isEmbedded isFocusedWorkspace isPreviewMode={false}
-                activeTabProp={tab} onTabChange={onSelect} onOpenSetupModule={openSettings} onHeaderActionChange={setHeaderAction} />}
+                activeTabProp={tab} onTabChange={onSelect} onOpenSetupModule={openSettings} onHeaderActionChange={setHeaderAction} onHeaderTrailingChange={setHeaderTrailing} />}
         /> : <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}><ActivityIndicator color="#007AFF" /></View>}
     </>;
 }
