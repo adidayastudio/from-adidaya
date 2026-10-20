@@ -1,3 +1,4 @@
+import { readProjectWorkspaceLocation, projectWorkspaceParams } from '@/lib/projectWorkspaceLocation';
 import { ProjectWorkspace } from '@/components/projects/ProjectWorkspace';
 import { compareProjectNumbers } from '@/lib/projectSorting';
 import ContextMenu from '@/components/ui/PlatformContextMenu';
@@ -18,7 +19,7 @@ import { UnauthenticatedView } from '@/components/ui/UnauthenticatedView';
 import { Ionicons } from '@expo/vector-icons';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Stack, router, usePathname, useFocusEffect } from 'expo-router';
+import { Stack, router, usePathname, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { useIsFocused } from '@react-navigation/native';
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View, Platform, TextInput, Alert, ActionSheetIOS, Modal, StatusBar as RNStatusBar, useWindowDimensions, Share } from 'react-native';
@@ -124,7 +125,11 @@ export default function ProjectScreen() {
     const [projects, setProjects] = useState<Project[]>([]);
     const [projectSort, setProjectSort] = useState<'number' | 'name' | 'activity'>('number');
     const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-    const [focusedProject, setFocusedProject] = useState<Project | null>(null);
+    const workspaceQuery=useLocalSearchParams<{project?:string;section?:string;focus?:string;register?:string}>();
+    const requestedProjectId=readProjectWorkspaceLocation(workspaceQuery).projectId;
+    const focusedProject=isAuthenticated?projects.find(project=>project.id===requestedProjectId)||null:null;
+    const setFocusedProject=(project:Project|null)=>{if((project?.id||'')!==requestedProjectId)router.setParams(projectWorkspaceParams(project?.id));};
+    const [projectsLoaded,setProjectsLoaded]=useState(false);
     const [activeProjectTab, setActiveProjectTab] = useState<string>('overview');
     const [projectDetailSetup, setProjectDetailSetupValue] = useState<string | null>(null);
     const [projectSettingsDirty, setProjectSettingsDirty] = useState(false);
@@ -145,10 +150,6 @@ export default function ProjectScreen() {
     const hasProjects = projects.length > 0;
 
     useEffect(() => {
-        if (focusedProject) {
-            const updated = projects.find(p => p.id === focusedProject.id);
-            if (updated) setFocusedProject(updated);
-        }
         if (selectedProject) {
             const updated = projects.find(p => p.id === selectedProject.id);
             if (updated) setSelectedProject(updated);
@@ -239,6 +240,7 @@ export default function ProjectScreen() {
             getProjectNumberingSettings(),
         ]);
         setProjects(data);
+        setProjectsLoaded(true);
         setNumberingSettings(settings);
         if (showLoading) setIsLoading(false);
     }, [isAuthenticated, isAdidaya, activeTenant?.id, activeWorkspace?.id]);
@@ -381,6 +383,8 @@ export default function ProjectScreen() {
         })
         .slice(0, 10); // Radar limit
     const archivedProjects = filteredProjects.filter(p => p.isArchived);
+
+    if(isDesktopWeb&&isAuthenticated&&requestedProjectId&&!projectsLoaded)return <View style={{flex:1,alignItems:'center',justifyContent:'center'}}><Stack.Screen options={{headerShown:false}}/><ActivityIndicator color="#007AFF"/></View>;
 
     if (isDesktopWeb && focusedProject) {
         return <>

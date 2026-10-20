@@ -1,3 +1,6 @@
+import { ProjectFinancePanel } from './ProjectFinancePanel';
+import { ProjectModulePanel } from './ProjectModulePanel';
+import { readProjectWorkspaceLocation } from '@/lib/projectWorkspaceLocation';
 import ContextMenu from '@/components/ui/PlatformContextMenu';
 import { ProjectRegisterWorkspace } from './register-v3/ProjectRegisterWorkspace';
 import { FocusModeIcon } from '@/components/ui/FocusModeIcon';
@@ -5,7 +8,7 @@ import { ProjectFocusNavigation } from './ProjectFocusNavigation';
 import { InstantTooltip } from '@/components/ui/InstantTooltip';
 import { ProjectSidebarContext } from '@/context/ProjectSidebarContext';
 import { PROJECT_LINKED_MODULES } from '@/lib/projectLinkedModules';
-import { router, useFocusEffect } from 'expo-router';
+import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { DESKTOP_LIST_PANE, DESKTOP_PANEL_HEADER, DESKTOP_PANEL_TITLE } from '@/constants/desktopLayout';
 import React, { useEffect, useState, useContext, useCallback } from 'react';
@@ -59,9 +62,10 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     useFocusEffect(useCallback(() => collapseSidebar(), [collapseSidebar]));
     const { activeTenant } = useTenantContext(), { resolvedTheme } = useTheme();
     const isDark = resolvedTheme === 'dark', text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366';
-    const [focusMode, setFocusMode] = useState(false);
-    const [project, setProject] = useState(initialProject), [section, setSection] = useState('overview');
-    const [registerVersion, setRegisterVersion] = useState<2 | 3>(3);
+    const location=readProjectWorkspaceLocation(useLocalSearchParams<{project?:string;section?:string;focus?:string;register?:string}>());
+    const [focusMode, setFocusMode] = useState(location.focus);
+    const [project, setProject] = useState(initialProject), [section, setSection] = useState(location.section);
+    const [registerVersion, setRegisterVersion] = useState<2 | 3>(location.registerVersion);
     const registerMode = section === 'planning:stages' ? 'planning' : section === 'work' ? 'work' : section === 'docs' ? 'documents' : null;
     const [planningTitleAccessory, setPlanningTitleAccessory] = useState<React.ReactNode>(null);
     const [planningToolbar, setPlanningToolbar] = useState<React.ReactNode>(null);
@@ -76,7 +80,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
         if (Platform.OS === 'web') { if (window.confirm('Discard unsaved project settings?')) discard(); }
         else Alert.alert('Unsaved changes', 'Discard unsaved project settings?', [{ text: 'Keep editing', style: 'cancel' }, { text: 'Discard', style: 'destructive', onPress: discard }]);
     }, [dirty]);
-    const select = useCallback((value: string) => { const next = ({ people: 'settings:team', resources: 'planning:wbs', finance: 'planning:rab', progress: 'tracking', setup: 'settings:general' } as Record<string, string>)[value] || value; if (next !== section) proceed(() => { setSection(next); setError(''); setPlanningTitleAccessory(null); setHeaderTrailing(null); }); }, [section, proceed]);
+    const select = useCallback((value: string) => { const next = ({ people: 'settings:team', resources: 'planning:wbs', finance: 'planning:rab', progress: 'tracking', setup: 'settings:general' } as Record<string, string>)[value] || value; if (next !== section) proceed(() => { setSection(next); router.setParams({section:next}); setError(''); setPlanningTitleAccessory(null); setHeaderTrailing(null); }); }, [section, proceed]);
     const refresh = async () => {
         const latest = await getProjectById(project.id);
         if (latest) setProject(latest);
@@ -84,13 +88,14 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
     };
     const settingsId = section.startsWith('settings:') ? section.split(':')[1] : null;
     const Screen = settingsId ? SETTINGS[settingsId] : null;
-    const title = settingsId ? SETTING_NAMES[settingsId] : GROUPS.flatMap(group => group.items).find(item => item.id === section)?.title || 'Tracking';
+    const linkedModule=PROJECT_LINKED_MODULES.find(module=>module.section===section);
+    const title = linkedModule?.title || (settingsId ? SETTING_NAMES[settingsId] : GROUPS.flatMap(group => group.items).find(item => item.id === section)?.title || 'Tracking');
     const projectActions: HeaderToolbarAction[] = [
                     { id: 'star', icon: project.isPinned ? 'star' : 'star-outline', image: project.isPinned ? 'star.fill' : 'star', onPress: async () => { try { const updated = await updateProjectApi(project.id, { isPinned: !project.isPinned }); if (updated) setProject(updated); onRefresh?.(); } catch (e) { setError((e as any)?.message || 'Unable to save favorite.'); } } },
                     { id: 'share', icon: 'share-outline', image: 'square.and.arrow.up', onPress: async () => { try { await Share.share({ title: project.title, message: `${project.number}-${project.code} · ${project.title}` }); } catch (e) { setError((e as any)?.message || 'Unable to share project.'); } } },
                     { id: 'settings', icon: 'settings-outline', image: 'gearshape', onPress: () => { setSettingsOpen(true); select('settings:general'); } },
                 ];
-    const focusToggle = (labelled = false) => <InstantTooltip label={focusMode ? 'Exit Focus' : 'Focus Mode'}><TouchableOpacity accessibilityLabel={focusMode ? 'Exit Focus' : 'Focus Mode'} accessibilityState={{ selected: focusMode }} onPress={() => setFocusMode(value => !value)} style={{ height: 34, minWidth: 34, paddingHorizontal: labelled ? 12 : 0, borderRadius: 999, flexDirection: 'row', gap: 7, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}><FocusModeIcon active={focusMode} size={17} color={focusMode ? '#007AFF' : text} />{labelled && <Text style={{ color: focusMode ? '#007AFF' : text, fontSize: 12, fontWeight: '600' }}>{focusMode ? 'Exit Focus' : 'Focus Mode'}</Text>}</TouchableOpacity></InstantTooltip>;
+    const focusToggle = (labelled = false) => <InstantTooltip label={focusMode ? 'Exit Focus' : 'Focus Mode'}><TouchableOpacity accessibilityLabel={focusMode ? 'Exit Focus' : 'Focus Mode'} accessibilityState={{ selected: focusMode }} onPress={() => { const next=!focusMode;setFocusMode(next);router.setParams({focus:next?'1':'0'}); }} style={{ height: 34, minWidth: 34, paddingHorizontal: labelled ? 12 : 0, borderRadius: 999, flexDirection: 'row', gap: 7, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', alignItems: 'center', justifyContent: 'center' }}><FocusModeIcon active={focusMode} size={17} color={focusMode ? '#007AFF' : text} />{labelled && <Text style={{ color: focusMode ? '#007AFF' : text, fontSize: 12, fontWeight: '600' }}>{focusMode ? 'Exit Focus' : 'Focus Mode'}</Text>}</TouchableOpacity></InstantTooltip>;
     return <View style={{ flex: 1, flexDirection: 'row', minHeight: 0, backgroundColor: isDark ? '#000000' : '#F2F2F7' }}>
         {!focusMode && <View style={{ ...DESKTOP_LIST_PANE, borderRightWidth: 1, borderRightColor: isDark ? '#242426' : '#E5E5EA' }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, ...DESKTOP_PANEL_HEADER, minHeight: 66 }}>
@@ -122,8 +127,8 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
                     </TouchableOpacity>)}
                 </View>)}
                 <View style={{ marginTop: 8, marginBottom: 12 }}>
-                    <Text style={{ color: secondary, paddingHorizontal: 12, paddingVertical: 10, fontSize: 10, fontWeight: '700', letterSpacing: 1 }}>LINKED MODULES</Text>
-                    {PROJECT_LINKED_MODULES.map(module => <TouchableOpacity key={module.id} accessibilityRole="button" accessibilityLabel={`Open ${module.title}`} onPress={() => proceed(() => router.push(module.path))} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 11, borderRadius: 14, marginBottom: 2 }}>
+                    <Text style={{ color: secondary, paddingHorizontal: 12, paddingVertical: 10, fontSize: 10, fontWeight: '700', letterSpacing: 1 }}>MODULES</Text>
+                    {PROJECT_LINKED_MODULES.map(module => <TouchableOpacity key={module.id} accessibilityRole="button" accessibilityLabel={`Open ${module.title}`} onPress={() => select(module.section)} accessibilityState={{selected:section===module.section}} style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 12, paddingVertical: 11, borderRadius: 14, marginBottom: 2, backgroundColor:section===module.section?(isDark?'#1C1C1E':'#E8E8ED'):'transparent' }}>
                         <Ionicons name={module.icon} size={16} color={module.color} />
                         <Text style={{ color: text, flex: 1, fontSize: 13, fontWeight: '500' }}>{module.title}</Text>
                     </TouchableOpacity>)}
@@ -143,7 +148,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
                         {project.number}-{project.code} · {project.title}
                     </Text>
                     <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', minWidth: 0 }}>
-                        <ProjectFocusNavigation compact section={section} isDark={isDark} onSelect={select} onOpenModule={path => proceed(() => router.push(path as any))} />
+                        <ProjectFocusNavigation compact section={section} isDark={isDark} onSelect={select} />
                     </View>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                         <HeaderToolbar isDark={isDark} textColor={text} maxDirectActions={3} actions={projectActions} />
@@ -154,7 +159,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10, ...DESKTOP_PANEL_HEADER, minHeight: 66 }}>
                 <View style={{ flex: 1, flexDirection: 'row', alignItems: 'center', flexWrap: 'nowrap', gap: 10, minWidth: 0, overflow: 'hidden' }}>
                     <Text style={{ ...DESKTOP_PANEL_TITLE, color: text, flexShrink: 0 }}>{title}</Text>
-                    {!!registerMode && <ContextMenu title="Workspace version" dropdownMenuMode actions={[{ title: 'Version 3.0', selected: registerVersion === 3 }, { title: 'Legacy 2.0', selected: registerVersion === 2 }]} onPress={event => { const nextVersion = event.nativeEvent.index === 0 ? 3 : 2; if (nextVersion === registerVersion) return; proceed(() => { setRegisterVersion(nextVersion); setPlanningTitleAccessory(null); setHeaderTrailing(null); setHeaderAction(null); }); }}><View style={{ paddingHorizontal: 12, height: 34, justifyContent: 'center', borderRadius: 999, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={{ color: registerVersion === 3 ? '#007AFF' : secondary, fontSize: 12, fontWeight: '600' }}>{registerVersion === 3 ? 'Version 3.0' : 'Legacy 2.0'}</Text><Ionicons name="chevron-down" size={12} color={secondary}/></View></ContextMenu>}
+                    {!!registerMode && <ContextMenu title="Workspace version" dropdownMenuMode actions={[{ title: 'Version 3.0', selected: registerVersion === 3 }, { title: 'Legacy 2.0', selected: registerVersion === 2 }]} onPress={event => { const nextVersion = event.nativeEvent.index === 0 ? 3 : 2; if (nextVersion === registerVersion) return; proceed(() => { setRegisterVersion(nextVersion); router.setParams({register:String(nextVersion)}); setPlanningTitleAccessory(null); setHeaderTrailing(null); setHeaderAction(null); }); }}><View style={{ paddingHorizontal: 12, height: 34, justifyContent: 'center', borderRadius: 999, backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', flexDirection: 'row', alignItems: 'center', gap: 6 }}><Text style={{ color: registerVersion === 3 ? '#007AFF' : secondary, fontSize: 12, fontWeight: '600' }}>{registerVersion === 3 ? 'Version 3.0' : 'Legacy 2.0'}</Text><Ionicons name="chevron-down" size={12} color={secondary}/></View></ContextMenu>}
                     {planningTitleAccessory}
                 </View>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 0 }}>
@@ -164,7 +169,7 @@ export function ProjectWorkspace({ initialProject, onClose, onRefresh, renderCon
                 </View>
             </View>
             {!!error && <Text accessibilityRole="alert" style={{ color: '#FF3B30', padding: 16 }}>{error}</Text>}
-            {registerMode && registerVersion === 3 ? <ProjectRegisterWorkspace projectId={project.id} mode={registerMode} isDark={isDark} onTitleAccessoryChange={setPlanningTitleAccessory} onHeaderTrailingChange={setHeaderTrailing} onDirtyChange={setDirty} onNavigate={select} /> : Screen ? <Screen key={`${project.id}-${section}`} projectId={project.id} isEmbedded onDirtyChange={setDirty} onSaved={refresh} />
+            {linkedModule?.id==='finance' ? <ProjectFinancePanel key={`${project.id}-finance`} projectId={project.id} isDark={isDark} onHeaderTrailingChange={setHeaderTrailing}/> : linkedModule ? <ProjectModulePanel key={`${project.id}-${linkedModule.id}`} projectId={project.id} module={linkedModule.id} isDark={isDark} onHeaderTrailingChange={setHeaderTrailing}/> : registerMode && registerVersion === 3 ? <ProjectRegisterWorkspace projectId={project.id} mode={registerMode} isDark={isDark} onTitleAccessoryChange={setPlanningTitleAccessory} onHeaderTrailingChange={setHeaderTrailing} onDirtyChange={setDirty} onNavigate={select} /> : Screen ? <Screen key={`${project.id}-${section}`} projectId={project.id} isEmbedded onDirtyChange={setDirty} onSaved={refresh} />
                 : section.startsWith('planning:') ? <ProjectPlanningPanel onHeaderTrailingChange={setHeaderTrailing} onTitleAccessoryChange={setPlanningTitleAccessory} onNavigatePlanning={value => select(`planning:${value}`)} onToolbarChange={setPlanningToolbar} key={section} project={project} section={section.split(':')[1] as PlanningSection} isDark={isDark} onDirtyChange={setDirty} />
                 : renderContent(project, section, select, () => { setSettingsOpen(true); select('settings:general'); }, setHeaderAction, setHeaderTrailing)}
         </View>

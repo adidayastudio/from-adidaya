@@ -254,13 +254,14 @@ function formatReferenceNumber(type: 'PO' | 'RE', project: any, requestNumber: a
     return `${type}-${projectNum}-${reqNum}`;
 }
 
-export async function fetchPurchasingRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY') {
+export async function fetchPurchasingRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY', projectId?: string) {
     let query = supabase
         .from('purchasing_requests')
         .select(PURCHASING_COLUMNS)
         .order('created_at', { ascending: false })
         .range(0, 4999); // Override Supabase default 1000-row limit
 
+    if (projectId) query = query.eq('project_id', projectId);
     if (!isTeam) {
         query = query.eq('created_by', userId);
     }
@@ -273,6 +274,7 @@ export async function fetchPurchasingRequests(userId: string, isTeam: boolean, o
             .select(`*, project:projects(id, project_name, project_code, project_number), items:purchasing_items(*)`)
             .order('created_at', { ascending: false })
             .range(0, 4999);
+        if (projectId) fallbackQuery = fallbackQuery.eq('project_id', projectId);
         if (!isTeam) {
             fallbackQuery = fallbackQuery.eq('created_by', userId);
         }
@@ -284,6 +286,7 @@ export async function fetchPurchasingRequests(userId: string, isTeam: boolean, o
                 .select('*')
                 .order('created_at', { ascending: false })
                 .range(0, 4999);
+            if (projectId) simpleQuery = simpleQuery.eq('project_id', projectId);
             if (!isTeam) {
                 simpleQuery = simpleQuery.eq('created_by', userId);
             }
@@ -291,6 +294,7 @@ export async function fetchPurchasingRequests(userId: string, isTeam: boolean, o
             data = simpleRes.data;
             if (simpleRes.error) {
                 console.error("Failed all purchasing requests queries:", simpleRes.error);
+                if (projectId) throw simpleRes.error;
                 return [];
             }
         } else {
@@ -809,13 +813,14 @@ export async function payFinanceRequest(userId: string, id: string, type: 'purch
 }
 
 
-export async function fetchReimburseRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY') {
+export async function fetchReimburseRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY', projectId?: string) {
     let query = supabase
         .from('reimbursement_requests')
         .select(REIMBURSE_COLUMNS)
         .order('created_at', { ascending: false })
         .range(0, 4999); // Override Supabase default 1000-row limit
 
+    if (projectId) query = query.eq('project_id', projectId);
     if (!isTeam) {
         query = query.eq('user_id', userId);
     }
@@ -828,6 +833,7 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
             .select(`*, project:projects(id, project_name, project_code, project_number), items:reimbursement_items(*)`)
             .order('created_at', { ascending: false })
             .range(0, 4999);
+        if (projectId) fallbackQuery = fallbackQuery.eq('project_id', projectId);
         if (!isTeam) {
             fallbackQuery = fallbackQuery.eq('user_id', userId);
         }
@@ -839,6 +845,7 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
                 .select('*')
                 .order('created_at', { ascending: false })
                 .range(0, 4999);
+            if (projectId) simpleQuery = simpleQuery.eq('project_id', projectId);
             if (!isTeam) {
                 simpleQuery = simpleQuery.eq('user_id', userId);
             }
@@ -846,6 +853,7 @@ export async function fetchReimburseRequests(userId: string, isTeam: boolean, or
             data = simpleRes.data;
             if (simpleRes.error) {
                 console.error("Failed all reimburse requests queries:", simpleRes.error);
+                if (projectId) throw simpleRes.error;
                 return [];
             }
         } else {

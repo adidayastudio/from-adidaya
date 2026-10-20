@@ -22,7 +22,8 @@ const groups = [
     ] },
     { label: 'Document', items: [{ id: 'docs', title: 'Document' }] },
 ];
-export function ProjectFocusNavigation({ section, isDark, onSelect, onOpenModule, compact = false }: { section: string; isDark: boolean; onSelect: (id: string) => void; onOpenModule: (path: string) => void; compact?: boolean }) {
+export function ProjectFocusNavigation({ section, isDark, onSelect, compact = false }: { section: string; isDark: boolean; onSelect: (id: string) => void; compact?: boolean }) {
+    const currentModule=PROJECT_LINKED_MODULES.find(module=>module.section===section);
     const text = isDark ? '#FFFFFF' : '#1C1C1E', secondary = isDark ? '#AEAEB2' : '#636366';
     const itemStyle = { borderRadius: 999, height: compact ? 32 : 36, paddingHorizontal: compact ? 12 : 16, flexDirection: 'row' as const, alignItems: 'center' as const, justifyContent: 'center' as const, gap: compact ? 5 : 8 };
     return <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexGrow: 0 }} contentContainerStyle={{ alignItems: 'center' }}>
@@ -35,7 +36,7 @@ export function ProjectFocusNavigation({ section, isDark, onSelect, onOpenModule
                 const content = <><Text style={{ color: current ? text : secondary, fontSize: compact ? 12 : 13, fontWeight: current ? '700' : '500' }}>{label}</Text>{group.dropdown && <Ionicons name="chevron-down" size={compact ? 11 : 12} color={current ? text : secondary} />}</>;
                 return group.dropdown ? <ContextMenu key={group.label} title={group.label} dropdownMenuMode actions={group.items.map(item => ({ title: item.title, selected: item.id === section }))} onPress={event => onSelect(group.items[event.nativeEvent.index].id)}><View accessibilityLabel={label} style={style}>{content}</View></ContextMenu> : <TouchableOpacity key={group.label} accessibilityRole="tab" accessibilityState={{ selected: !!current }} onPress={() => onSelect(group.items[0].id)} style={style}>{content}</TouchableOpacity>;
             })}
-            <ContextMenu title="Module" dropdownMenuMode actions={PROJECT_LINKED_MODULES.map(module => ({ title: module.title }))} onPress={event => onOpenModule(PROJECT_LINKED_MODULES[event.nativeEvent.index].path)}><View accessibilityLabel="Module" style={itemStyle}><Text style={{ color: secondary, fontSize: compact ? 12 : 13, fontWeight: '500' }}>Module</Text><Ionicons name="chevron-down" size={compact ? 11 : 12} color={secondary} /></View></ContextMenu>
+            <ContextMenu title="Module" dropdownMenuMode actions={PROJECT_LINKED_MODULES.map(module => ({ title: module.title,selected:module.section===section }))} onPress={event => onSelect(PROJECT_LINKED_MODULES[event.nativeEvent.index].section)}><View accessibilityLabel="Module" style={{...itemStyle,backgroundColor:currentModule?(isDark?'#414143':'#E8E8ED'):'transparent'}}><Text style={{ color: currentModule?text:secondary, fontSize: compact ? 12 : 13, fontWeight: currentModule?'700':'500' }}>{currentModule?`Module | ${currentModule.title}`:'Module'}</Text><Ionicons name="chevron-down" size={compact ? 11 : 12} color={secondary} /></View></ContextMenu>
         </View>
     </ScrollView>;
 }
