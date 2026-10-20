@@ -15,3 +15,11 @@ const result=read({project:['one','two'],section:'unknown',focus:'0',register:'i
 assert.equal(result.projectId,'one');assert.equal(result.section,'overview');assert.equal(result.focus,false);assert.equal(result.registerVersion,3);
 for(const section of ['work','docs','planning:rab','planning:schedule','settings:general','module:finance','module:resources','module:report'])assert.equal(read({section}).section,section);
 });
+
+test('project navigation minimizes progressively as the workspace or editor needs more room',()=>{
+const module={};vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/projectWorkspaceLayout.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,{exports:module});const layout=module.projectWorkspaceLayout;
+assert.equal(layout(2000,false).compactProjectNavigation,false);assert.equal(layout(2000,true).compactProjectNavigation,false);
+assert.equal(layout(1466,false).compactProjectNavigation,false);assert.equal(layout(1466,true).compactProjectNavigation,true);assert.equal(layout(1466,true).collapseAppNavigation,true);
+assert.equal(layout(1200,false).compactProjectNavigation,true);assert.equal(layout(1200,false).collapseAppNavigation,true);
+assert.equal(layout(2000,false).collapseAppNavigation,false);
+});

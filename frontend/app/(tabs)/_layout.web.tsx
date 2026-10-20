@@ -61,10 +61,14 @@ export default function ResponsiveWebLayout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const collapsedRef = useRef(isCollapsed);
   collapsedRef.current = isCollapsed;
+  const projectCollapseLeases = useRef(0);
+  const beforeProjectCollapse = useRef(false);
   const collapseForProject = useCallback(() => {
-    const previous = collapsedRef.current;
+    if(projectCollapseLeases.current===0)beforeProjectCollapse.current=collapsedRef.current;
+    projectCollapseLeases.current+=1;
     setIsCollapsed(true);
-    return () => setIsCollapsed(previous);
+    let released=false;
+    return () => {if(released)return;released=true;projectCollapseLeases.current-=1;if(projectCollapseLeases.current===0)setIsCollapsed(beforeProjectCollapse.current);};
   }, []);
   useEffect(() => {
     const style = document.createElement('style');

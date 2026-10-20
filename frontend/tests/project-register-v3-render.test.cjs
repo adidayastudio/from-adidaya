@@ -1,8 +1,8 @@
 const test=require('node:test'),assert=require('node:assert/strict'),React=require('react'),{renderToString}=require('react-dom/server'),fs=require('node:fs'),vm=require('node:vm'),ts=require('typescript'),path=require('node:path');
-function load(file,react=React){file=path.resolve(file);if(file.endsWith('.json'))return JSON.parse(fs.readFileSync(file,'utf8'));const exports={};const component=props=>React.createElement('div',{'aria-label':props.accessibilityLabel},props.children);vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText,{exports,require:name=>{
-if(name==='react')return react;
-if(name==='react-native')return{View:component,Text:component,ScrollView:component,ActivityIndicator:()=>null,TextInput:props=>React.createElement('input',{'aria-label':props.accessibilityLabel,defaultValue:props.value}),TouchableOpacity:component,Platform:{OS:'web'},Linking:{openURL:()=>{}}};
-if(name==='@expo/vector-icons')return{Ionicons:()=>null};
+function load(file,react=React){file=path.resolve(file);if(!fs.existsSync(file)&&file.endsWith('.ts'))file=file.slice(0,-3)+'/index.ts';if(file.endsWith('.json'))return JSON.parse(fs.readFileSync(file,'utf8'));const exports={};const component=props=>React.createElement('div',{'aria-label':props.accessibilityLabel},props.children);vm.runInNewContext(ts.transpileModule(fs.readFileSync(file,'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022,jsx:ts.JsxEmit.React,esModuleInterop:true}}).outputText,{exports,require:name=>{
+if(name==='@/context/TenantContext')return {useTenantContext:()=>({activeTenant:null})};if(name==='@/lib/supabase'||name==='./supabase')return {supabase:{}};if(name==='react')return react;
+if(name==='react-native')return{StyleSheet:{create:value=>value},View:component,Text:component,ScrollView:component,Modal:props=>props.visible?component(props):null,ActivityIndicator:()=>null,TextInput:props=>React.createElement('input',{'aria-label':props.accessibilityLabel,defaultValue:props.value}),TouchableOpacity:component,Platform:{OS:'web'},Linking:{openURL:()=>{}}};
+if(name==='@react-native-community/datetimepicker')return {__esModule:true,default:component};if(name==='@expo/vector-icons')return{Ionicons:()=>null,Feather:()=>null};
 if(name.includes('HeaderToolbar'))return{HeaderToolbar:component};
 if(name.includes('PlatformContextMenu'))return{__esModule:true,default:component};
 if(name.includes('legacy-stages/layout'))return {stageWorkCSV:()=>'',stageWorkHTML:()=>'',stageWorkRows:()=>[]};
@@ -54,4 +54,37 @@ do{pending=false;cursor=0;queued=[];const current=++renderCount;Component({proje
 assert.equal(headerUpdates,1);
 const findActions=node=>node?.props?.actions||React.Children.toArray(node?.props?.children).map(findActions).find(Boolean);
 findActions(header).find(action=>action.id==='add').onPress();assert.deepEqual(navigated,[renderCount,'work']);
+});
+
+test('desktop detail occupies inline width and animates alongside table without a modal or backdrop',()=>{
+const {DeliverableEditorSheet}=load('components/projects/register-v3/DeliverableEditorSheet.tsx');
+const props={visible:true,isDark:true,onClose:()=>{},children:React.createElement('span',null,'Detail fields')};
+const open=DeliverableEditorSheet(props),closed=DeliverableEditorSheet({...props,visible:false});
+assert.equal(open.props.accessibilityLabel,'Deliverable detail panel');assert.equal(open.props.style.width,'36%');assert.equal(closed.props.style.width,0);assert.equal(open.props.style.transitionDuration,'220ms');
+const html=renderToString(open);assert.ok(html.includes('Detail fields'));assert.ok(!html.includes('Close deliverable detail'));assert.ok(!renderToString(closed).includes('Detail fields'));
+});
+
+test('V3 reuses Legacy document pages with V3 codes and project information',()=>{
+const {RegisterDocumentEditor}=load('components/projects/register-v3/RegisterDocumentEditor.tsx');
+for(const [title,expected] of [['Cover','Cover Subtitle / Notes:'],['Table of Contents','KOG-01-01'],['Design Summary','Page Description / Content:']]){
+const state={...treeState,items:[{...treeState.items[0],title,pageContent:{description:'Existing content'}}]};
+const html=renderToString(React.createElement(RegisterDocumentEditor,{state,item:state.items[0],project:{title:'Actual project',code:'ACT',number:'042'},isDark:true,readOnly:false,onChange:()=>{}}));
+assert.ok(html.includes(expected),expected);assert.ok(html.includes('KOG-01-01'));assert.ok(html.includes('Actual project'));assert.ok(!html.includes('Pages in Section'));assert.ok(!html.includes('Rumah Rawamangun'));assert.ok(!html.includes('Mark this deliverable page as complete'));
+}
+});
+
+test('deadline uses an empty-capable native date input, keeps local dates and can clear',()=>{
+const {PlatformDatePicker}=load('components/people/member-profile/components/PlatformDatePicker.tsx');let selected,cleared=false;
+const element=PlatformDatePicker({value:new Date(NaN),pill:true,isDark:true,disabled:true,onChange:value=>{selected=value},onClear:()=>{cleared=true}});
+const field=element.props.children;assert.equal(field.type,'input');assert.equal(field.props.type,'date');assert.equal(field.props.value,'');assert.equal(field.props.disabled,true);assert.equal(field.props.style.height,40);
+field.props.onChange({target:{value:'2026-10-25'}});assert.equal(selected.getFullYear(),2026);assert.equal(selected.getMonth(),9);assert.equal(selected.getDate(),25);field.props.onChange({target:{value:''}});assert.equal(cleared,true);
+});
+test('detail presents labelled editor action, date picker, priority, compact notes and document preview',()=>{
+const item={...treeState.items[0],title:'Design Summary',suffix:'',status:'Not Started',revision:'00',url:'',notes:'',pic:'',deadline:'',priority:'high',pageContent:{description:'Saved document contents'}};
+const state={...treeState,items:[item]};
+const mock={...React,useState:initial=>{let value=typeof initial==='function'?initial():initial;if(value?.schemaVersion===3)value=state;else if(value===null)value=item;else if(value===true)value=false;return [value,()=>{}]},useEffect:()=>{},useLayoutEffect:()=>{},useMemo:callback=>callback(),useCallback:callback=>callback,useRef:initial=>({current:initial})};
+const {ProjectRegisterWorkspace:Workspace}=load('components/projects/register-v3/ProjectRegisterWorkspace.tsx',mock);
+const html=renderToString(React.createElement(Workspace,{projectId:'project',mode:'work',isDark:true}));
+for(const label of ['Open editor','Deadline','Priority','High','Notes','Expand notes','Preview','Saved document contents','Add link'])assert.ok(html.includes(label),label);
+assert.ok(html.includes('type="date"'));assert.ok(!html.includes('File / link · https://'));assert.ok(!html.includes('Notes / linked source reference'));
 });

@@ -10,7 +10,9 @@ export interface RegisterRevision {
     title: string;
     code: string;
     url: string;
+    fileName?: string;
     publishedAt: string;
+    pageContent?: Record<string,string>;
     notes: string;
     relatedModule?: string;
 }
@@ -35,8 +37,11 @@ export interface RegisterItem {
     status: RegisterStatus;
     revision: string;
     url: string;
+    fileName?: string;
+    pageContent?: Record<string,string>;
     notes: string;
     pic: string;
+    assignees?: {id:string;name:string}[];
     deadline: string;
     relatedModule?: string;
     versions: RegisterRevision[];
@@ -114,11 +119,11 @@ export function publishRegisterItem(state: RegisterV3, id: string, revisionId: s
     validateRegisterItem(item);
     if (item.status !== 'Approved')
         throw new Error('Approve the item before publishing.');
-    if (!item.url && !item.relatedModule)
-        throw new Error('Link a file or an existing module before publishing.');
+    if (!item.url && !item.relatedModule && !Object.values(item.pageContent||{}).some(value=>value.trim()))
+        throw new Error('Link a file, connect a module, or enter document content before publishing.');
     if (item.versions.some(version => version.revision === item.revision))
         throw new Error('Create a new revision first.');
-    const snapshot: RegisterRevision = { id: revisionId, version: item.versions.length + 1, revision: item.revision, title: item.title, code: item.code, url: item.url, notes: item.notes, relatedModule: item.relatedModule, publishedAt: now };
+    const snapshot: RegisterRevision = { id: revisionId, version: item.versions.length + 1, revision: item.revision, title: item.title, code: item.code, url: item.url, ...(item.fileName?{fileName:item.fileName}:{}), notes: item.notes, ...(item.pageContent?{pageContent:{...item.pageContent}}:{}), relatedModule: item.relatedModule, publishedAt: now };
     return { ...state, items: state.items.map(row => row.id === id ? { ...row, versions: [...row.versions, snapshot] } : row) };
 }
 export function reviseRegisterItem(state: RegisterV3, id: string): RegisterV3 {

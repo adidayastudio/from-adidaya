@@ -18,6 +18,7 @@ import {
 
 interface ProjectStageDeliverableEditorProps {
     project: any;
+    pageEditor?: {stage:StageInfo;taskCode:string;content:Record<string,string>;readOnly:boolean;onChange:(content:Record<string,string>)=>void};
     stageCode: string; // e.g. '01-KO'
     initialSectionCode?: string;
     isDark: boolean;
@@ -28,6 +29,7 @@ interface ProjectStageDeliverableEditorProps {
 
 export function ProjectStageDeliverableEditor({
     project,
+    pageEditor,
     stageCode,
     initialSectionCode,
     isDark,
@@ -43,7 +45,7 @@ export function ProjectStageDeliverableEditor({
     const redAccent = '#EF4444';
 
     // 1. Get stage data
-    const stages = useMemo(() => getProjectStageList(project.meta), [project.meta]);
+    const stages = useMemo(() => pageEditor?[pageEditor.stage]:getProjectStageList(project.meta), [project.meta,pageEditor?.stage]);
     const currentStage = useMemo(() => {
         return stages.find(s => s.code === stageCode) || stages[0];
     }, [stages, stageCode]);
@@ -64,15 +66,16 @@ export function ProjectStageDeliverableEditor({
     }, [stageTasks, activeSection]);
 
     // Active page
-    const [activePageTaskCode, setActivePageTaskCode] = useState<string>(() => {
+    const [selectedPageTaskCode, setActivePageTaskCode] = useState<string>(() => {
         return sectionTasks[0]?.code || '01-02';
     });
 
+    const activePageTaskCode=pageEditor?.taskCode||selectedPageTaskCode;
     useEffect(() => {
-        if (sectionTasks.length > 0 && !sectionTasks.some(t => t.code === activePageTaskCode)) {
+        if (!pageEditor && sectionTasks.length > 0 && !sectionTasks.some(t => t.code === activePageTaskCode)) {
             setActivePageTaskCode(sectionTasks[0].code);
         }
-    }, [sectionTasks, activePageTaskCode]);
+    }, [sectionTasks, activePageTaskCode,pageEditor]);
 
     // Page view mode: Single Page vs All Pages
     const [viewMode, setViewMode] = useState<'single' | 'all'>('single');
@@ -111,6 +114,7 @@ export function ProjectStageDeliverableEditor({
 
     // Update Page Content Draft
     const handleUpdateContent = (taskCode: string, field: string, val: string) => {
+        if(pageEditor){if(!pageEditor.readOnly)pageEditor.onChange({...pageEditor.content,[field]:val});return;}
         setPageContentDrafts(prev => ({
             ...prev,
             [taskCode]: {
@@ -259,14 +263,14 @@ export function ProjectStageDeliverableEditor({
     // -------------------------------------------------------------
     const renderCanvas = () => {
         const activeTask = stageTasks.find(t => t.code === activePageTaskCode) || stageTasks[0];
-        const draft = pageContentDrafts[activeTask?.code] || {};
+        const draft = pageEditor?.content || pageContentDrafts[activeTask?.code] || {};
         const isTOC = activeTask?.code === '01-02' || activeTask?.name?.toLowerCase().includes('contents');
         const isCover = activeTask?.code === '01-01' || activeTask?.name?.toLowerCase().includes('cover');
 
         return (
             <View style={{ flex: 1, minWidth: 0 }}>
                 {/* Canvas Controls Header: Single Page / All Pages + Page Stepper */}
-                <View style={styles.canvasControlsRow}>
+                {!pageEditor&&<View style={styles.canvasControlsRow}>
                     <View style={[styles.segmentedPillContainer, { backgroundColor: isDark ? '#1F2028' : '#E9ECEF' }]}>
                         <TouchableOpacity
                             onPress={() => setViewMode('single')}
@@ -324,15 +328,15 @@ export function ProjectStageDeliverableEditor({
                             <Ionicons name="chevron-forward" size={14} color={text} />
                         </TouchableOpacity>
                     </View>
-                </View>
+                </View>}
 
                 {/* Printable Document Paper Sheet (A4-Style Layout) */}
                 <ScrollView contentContainerStyle={styles.paperScrollContainer}>
-                    <View style={[styles.documentPaper, { backgroundColor: '#FFFFFF', borderColor: isDark ? '#333' : '#E5E7EB' }]}>
+                    <View style={[styles.documentPaper, { backgroundColor: '#FFFFFF', borderColor: isDark ? '#333' : '#E5E7EB',padding:pageEditor?16:36 }]}>
                         {/* Document Header Line */}
                         <View style={styles.docHeaderRow}>
                             <Text style={styles.docHeaderProject}>
-                                {`#${project.number || '008'}-${project.code || 'RWM'} · ${project.title || 'Rumah Rawamangun'}`}
+                                {`#${project.number || (pageEditor?'':'008')}-${project.code || (pageEditor?'':'RWM')} · ${project.title || (pageEditor?'':'Rumah Rawamangun')}`}
                             </Text>
                             <Text style={styles.docHeaderStage}>
                                 {currentStage.name} v1.{new Date().getFullYear()}
@@ -367,7 +371,7 @@ export function ProjectStageDeliverableEditor({
                                     </Text>
                                     <View style={{ width: 60, height: 3, backgroundColor: redAccent, marginVertical: 10 }} />
                                     <Text style={{ fontSize: 13, color: '#6B7280' }}>
-                                        Location: {project.location || 'Jakarta, Indonesia'}
+                                        Location: {project.location || (pageEditor?'—':'Jakarta, Indonesia')}
                                     </Text>
                                     <Text style={{ fontSize: 13, color: '#6B7280' }}>
                                         Date: {new Date().toLocaleDateString('id-ID', { year: 'numeric', month: 'long', day: 'numeric' })}
@@ -378,6 +382,7 @@ export function ProjectStageDeliverableEditor({
                                 <View style={styles.pageEditBlock}>
                                     <Text style={styles.editBlockLabel}>Cover Subtitle / Notes:</Text>
                                     <TextInput
+                                        editable={!pageEditor?.readOnly}
                                         value={draft.notes || ''}
                                         onChangeText={val => handleUpdateContent(activeTask.code, 'notes', val)}
                                         placeholder="Add notes or subtitle for this deliverable cover..."
@@ -425,6 +430,7 @@ export function ProjectStageDeliverableEditor({
                                 <View style={styles.pageEditBlock}>
                                     <Text style={styles.editBlockLabel}>Page Description / Content:</Text>
                                     <TextInput
+                                        editable={!pageEditor?.readOnly}
                                         multiline
                                         numberOfLines={4}
                                         value={draft.description || ''}
@@ -438,6 +444,7 @@ export function ProjectStageDeliverableEditor({
                                 <View style={styles.pageEditBlock}>
                                     <Text style={styles.editBlockLabel}>Attachments / Image URLs:</Text>
                                     <TextInput
+                                        editable={!pageEditor?.readOnly}
                                         value={draft.attachmentUrl || ''}
                                         onChangeText={val => handleUpdateContent(activeTask.code, 'attachmentUrl', val)}
                                         placeholder="https://... image or CAD drawing URL"
@@ -447,7 +454,7 @@ export function ProjectStageDeliverableEditor({
                                 </View>
 
                                 {/* Completion Toggle */}
-                                <TouchableOpacity
+                                {!pageEditor&&<TouchableOpacity
                                     onPress={() => handleToggleTaskComplete(activeTask.code)}
                                     style={styles.completeToggleRow}
                                 >
@@ -459,7 +466,7 @@ export function ProjectStageDeliverableEditor({
                                     <Text style={{ fontSize: 13, fontWeight: '600', color: completedTasks.has(activeTask.code) ? '#10B981' : '#374151' }}>
                                         {completedTasks.has(activeTask.code) ? 'Page marked as complete' : 'Mark this deliverable page as complete'}
                                     </Text>
-                                </TouchableOpacity>
+                                </TouchableOpacity>}
                             </View>
                         )}
 
@@ -474,6 +481,7 @@ export function ProjectStageDeliverableEditor({
         );
     };
 
+    if(pageEditor)return renderCanvas();
     return (
         <View style={styles.container}>
             {/* ---------------- Top Bar: Back Arrow, Stage Badge, Export & Save ---------------- */}

@@ -145,3 +145,20 @@ assert.equal(treeModel.registerTreeSections(state,'KO','',true)[0].tasks[0].item
 for(const category of ['M','E','P'])state=planning.addPlanningWork(state,'ED',category,'01',category);
 const mep=treeModel.registerTreeSections(state,'ED');assert.equal(mep.length,1);assert.equal(mep[0].name,'MEP');assert.equal(mep[0].tasks.length,3);
 });
+
+test('PIC supports multiple People, deselection and initials without dropping legacy names',()=>{
+const pic=loader()('lib/projectDeliverablePIC.ts');let item={pic:''};item={...item,...pic.togglePIC(item,{id:'a',name:'Ayu Putri'})};item={...item,...pic.togglePIC(item,{id:'b',name:'Budi Santoso'})};assert.equal(item.pic,'Ayu Putri, Budi Santoso');assert.equal(item.assignees.length,2);assert.equal(pic.picInitials('Ayu Putri'),'AP');assert.equal(pic.picInitials('Budi'),'BU');item={...item,...pic.togglePIC(item,{id:'a',name:'Ayu Putri'})};assert.equal(item.pic,'Budi Santoso');assert.equal(pic.selectedPIC({pic:'Previous Person'})[0].name,'Previous Person');
+});
+test('weighted progress counts parent weight once and excludes excluded subtrees',()=>{
+const progress=loader()('lib/projectDeliverableProgress.ts');let state=add();const parent={...state.items[0],weight:10,status:'Not Started'};const child={...parent,id:'child',parentId:parent.id,weight:2,status:'Approved'};const other={...parent,id:'other',weight:30,status:'Not Started'};state={...state,items:[parent,child,other]};assert.equal(progress.deliverableProgress(state,'ED').percent,25);assert.throws(()=>progress.setDeliverableStatus(state,parent.id,'Approved'));state.items[0]={...parent,excluded:true};assert.equal(progress.deliverableProgress(state,'ED').percent,0);
+});
+
+test('deliverable upload uses tenant/project/item path, unique files and propagates storage errors',async()=>{
+let failure=null,captured;const exports={};const bucket={upload:async(...args)=>{captured=args;return {error:failure}},getPublicUrl:path=>({data:{publicUrl:'https://files.example/'+path}})};
+vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/api/projectDeliverableFile.ts','utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{exports,crypto:{randomUUID:()=> 'unique'},require:()=>({supabase:{storage:{from:name=>{assert.equal(name,'project-files');return bucket}}}})});
+const url=await exports.uploadDeliverableFile('tenant','project','item','Site plan.pdf','application/pdf',new ArrayBuffer(2));assert.ok(url.endsWith('/tenant/projects/project/deliverables/item/unique/Site_plan.pdf'));assert.equal(captured[2].upsert,false);failure=new Error('Storage denied');await assert.rejects(()=>exports.uploadDeliverableFile('tenant','project','item','a.pdf','',new ArrayBuffer(2)),/Storage denied/);await assert.rejects(()=>exports.uploadDeliverableFile('','project','item','a.pdf','',new ArrayBuffer(2)),/context/);
+});
+
+test('Legacy-style document content saves in V3 and is frozen in published revisions',()=>{
+let state=add();state=core.updateRegisterItem(state,{...state.items[0],status:'Approved',pageContent:{description:'Original page'}});state=core.publishRegisterItem(state,'one','rev','now');assert.equal(state.items[0].versions[0].pageContent.description,'Original page');state=core.reviseRegisterItem(state,'one');state=core.updateRegisterItem(state,{...state.items[0],pageContent:{description:'Revised page'}});assert.equal(state.items[0].versions[0].pageContent.description,'Original page');assert.equal(state.items[0].pageContent.description,'Revised page');
+});

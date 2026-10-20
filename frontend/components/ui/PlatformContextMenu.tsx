@@ -141,7 +141,7 @@ export function PlatformContextMenu({
                                     <optgroup key={i} label={act.title}>
                                         {act.actions.map((subAct, subI) => (
                                             <option key={`${i}-${subI}`} value={`${i}-${subI}`} disabled={subAct.disabled}>
-                                                {subAct.subtitle ? `[${subAct.subtitle}] ${subAct.title}` : subAct.title}
+                                                {`${subAct.selected || subAct.state === 'on' ? '✓ ' : ''}${subAct.subtitle ? `[${subAct.subtitle}] ${subAct.title}` : subAct.title}`}
                                             </option>
                                         ))}
                                     </optgroup>
@@ -149,7 +149,7 @@ export function PlatformContextMenu({
                             }
                             return (
                                 <option key={i} value={i} disabled={act.disabled}>
-                                    {act.subtitle ? `[${act.subtitle}] ${act.title}` : act.title}
+                                    {`${act.selected || act.state === 'on' ? '✓ ' : ''}${act.subtitle ? `[${act.subtitle}] ${act.title}` : act.title}`}
                                 </option>
                             );
                         })}
