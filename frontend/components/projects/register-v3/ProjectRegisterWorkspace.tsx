@@ -47,8 +47,8 @@ export function ProjectRegisterWorkspace({ projectId, projectInfo={}, mode, isDa
     const {activeTenant}=useTenantContext();
     const [people,setPeople]=useState<DeliverablePerson[]>([]);
     const [documentEditing,setDocumentEditing]=useState(false);
-    const [linkEditing,setLinkEditing]=useState(false),[notesExpanded,setNotesExpanded]=useState(false);
-    useEffect(()=>{setLinkEditing(false);setNotesExpanded(false);},[editor?.id]);
+    const [linkEditing,setLinkEditing]=useState(false),[notesHeight,setNotesHeight]=useState(46);
+    useEffect(()=>{setLinkEditing(false);setNotesHeight(46);},[editor?.id]);
     const editorIsOpen=!!editor;
     useEffect(()=>{onEditorActiveChange?.(editorIsOpen);return()=>onEditorActiveChange?.(false);},[editorIsOpen,onEditorActiveChange]);
     useEffect(()=>{if(!editor)setDocumentEditing(false);},[editor]);
@@ -107,7 +107,7 @@ export function ProjectRegisterWorkspace({ projectId, projectInfo={}, mode, isDa
     </View>, [searchOpen, search, secondary, pill, color, allTreeOpen, treeKeys, mode, documentStage, documentSort, navigate, isDark]);
     useLayoutEffect(() => { if (mode === 'planning') return; onHeaderTrailingChange?.(toolbar); }, [toolbar, onHeaderTrailingChange, mode]);
     useLayoutEffect(() => () => { onTitleAccessoryChange?.(null); onHeaderTrailingChange?.(null); }, [onTitleAccessoryChange, onHeaderTrailingChange]);
-    const button = (label: string, action: () => void, primary = false, disabled = false) => <TouchableOpacity accessibilityRole="button" disabled={saving || disabled} onPress={action} style={{ ...pill,paddingVertical:8,paddingHorizontal:12, backgroundColor: primary ? '#007AFF' : surface, opacity: saving || disabled ? 0.45 : 1 }}><Text style={{ color: primary ? '#FFFFFF' : color, fontSize: 12, fontWeight: '600' }}>{label}</Text></TouchableOpacity>;
+    const button = (label: string, action: () => void, primary = false, disabled = false) => <TouchableOpacity accessibilityRole="button" disabled={saving || disabled} onPress={action} style={{ ...pill, paddingVertical: 7, paddingHorizontal: 14, backgroundColor: primary ? '#007AFF' : (isDark ? '#2C2C2E' : '#E5E5EA'), opacity: saving || disabled ? 0.45 : 1 }}><Text style={{ color: primary ? '#FFFFFF' : color, fontSize: 12, fontWeight: '600' }}>{label}</Text></TouchableOpacity>;
     const input = (label: string, value: string, onChange: (value: string) => void, multiline = false) => <View style={{ gap: 6, flex: multiline ? undefined : 1, minWidth: 120 }}><Text style={{ color: secondary, fontSize: 12 }}>{label}</Text><TextInput accessibilityLabel={label} editable={!saving && !locked} value={value} onChangeText={onChange} multiline={multiline} style={{ ...pill, color, minHeight: multiline ? 90 : 40, borderRadius: multiline ? 16 : 999, textAlignVertical: multiline ? 'top' : 'center' }}/></View>;
     const moduleSection = (value?: string) => value === 'Volume' ? 'planning:volume' : value === 'RAB' ? 'planning:rab' : value === 'Schedule' ? 'planning:schedule' : value === 'Report' ? 'planning:reports' : '';
     const linkedModules = actualCategory === 'B' ? ['Volume', 'RAB'] : actualCategory === 'T' ? ['Schedule'] : actualCategory === 'R' ? ['Report'] : [];
@@ -159,38 +159,82 @@ export function ProjectRegisterWorkspace({ projectId, projectInfo={}, mode, isDa
     };
     const saveEditor=(publish=false)=>{if(!editor)return;let savedItem:RegisterItem|undefined;void run(()=>{let next=updateRegisterItem(state,editor);if(publish)next=publishRegisterItem(next,editor.id,globalThis.crypto.randomUUID(),new Date().toISOString());savedItem=next.items.find(item=>item.id===editor.id);return next;}).then(ok=>{if(ok&&savedItem)setEditor(savedItem);});};
     const locked = !!editor && editor.versions.at(-1)?.revision === editor.revision;
-    const editorPanel=editor?<ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{padding:24,gap:12,paddingBottom:60,maxWidth:960,width:'100%',alignSelf:'center'}}>
-        {!!error&&<Text accessibilityRole="alert" style={{color:'#FF3B30'}}>{error}</Text>}
-        {editor && <View style={{ gap: 16 }}>
-            <View style={{flexDirection:'row',alignItems:'center',flexWrap:'wrap',gap:8}}>
-                <Text numberOfLines={1} style={{color,fontWeight:'700',width:'100%'}}>{editor.code} · Rev {editor.revision}</Text>
-                {locked?button('Create Revision',()=>{let draft:RegisterItem|undefined;void run(()=>{const next=reviseRegisterItem(state,editor.id);draft=next.items.find(item=>item.id===editor.id);return next;}).then(ok=>{if(ok&&draft)setEditor(draft);});}):<ContextMenu title="Save" dropdownMenuMode disabled={saving} actions={[{title:'Save changes'},{title:'Publish',disabled:editor.status!=='Approved'}]} onPress={event=>saveEditor(event.nativeEvent.index===1)}><View style={{...pill,paddingVertical:8,paddingHorizontal:12,backgroundColor:'#007AFF',flexDirection:'row',alignItems:'center',gap:6,opacity:saving?0.45:1}}><Text style={{color:'#FFFFFF',fontSize:12,fontWeight:'600'}}>Save</Text><Ionicons name="chevron-down" size={11} color="#FFFFFF"/></View></ContextMenu>}
-                {!documentEditing&&<TouchableOpacity accessibilityRole="button" accessibilityLabel="Open editor" disabled={saving} onPress={()=>setDocumentEditing(true)} style={{...pill,paddingVertical:8,paddingHorizontal:12,flexDirection:'row',gap:6,alignItems:'center',backgroundColor:isDark?'#0A2038':'#E6EEFF',borderWidth:1,borderColor:'#007AFF'}}><Text style={{color:'#007AFF',fontSize:12,fontWeight:'600'}}>Open editor</Text><Feather name="arrow-up-right" size={15} color="#007AFF"/></TouchableOpacity>}
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close detail" disabled={saving} onPress={closeEditor} style={{...pill,padding:8}}><Ionicons name="close" size={17} color={secondary}/></TouchableOpacity>
+    const editorPanel=editor?<View style={{flex:1,minHeight:0,flexDirection:'column'}}>
+        <View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between',paddingHorizontal:20,paddingTop:20,paddingBottom:12}}>
+            <Text numberOfLines={1} style={{color,fontSize:16,fontWeight:'700',letterSpacing:-0.2}}>{editor.code}</Text>
+            <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
+                <Text style={{color:secondary,fontSize:13,fontWeight:'500'}}>Rev {editor.revision}</Text>
+                {locked&&<View style={{paddingHorizontal:8,paddingVertical:2,borderRadius:999,backgroundColor:isDark?'#2C2C2E':'#E5E5EA'}}><Text style={{color:secondary,fontSize:10,fontWeight:'600'}}>PUBLISHED</Text></View>}
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Close detail" disabled={saving} onPress={closeEditor} style={{width:28,height:28,borderRadius:999,backgroundColor:surface,alignItems:'center',justifyContent:'center'}}><Ionicons name="close" size={16} color={secondary}/></TouchableOpacity>
             </View>
-            {locked && <Text style={{ color: secondary }}>Published version. Create a revision to make changes.</Text>}
-            <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}><Text style={{ color: secondary }}>Status</Text><ContextMenu dropdownMenuMode disabled={locked || saving || hasDeliverableChildren(state,editor)} actions={statuses.map(value => ({ title: `${value} · ${DELIVERABLE_STATUS_PROGRESS[value]}%`, selected: value === editor.status }))} onPress={event => setEditor({ ...editor, status: statuses[event.nativeEvent.index] })}><View style={pill}><Text style={{ color }}>{hasDeliverableChildren(state,editor)?`${Math.round(itemDeliverableProgress(state,editor))}% · Subtasks`:editor.status} ⌄</Text></View></ContextMenu>
-                {linkedModules.length > 0 && <ContextMenu dropdownMenuMode disabled={locked || saving} actions={[{ title: 'None' }, ...linkedModules.map(value => ({ title: value }))]} onPress={event => setEditor({ ...editor, relatedModule: event.nativeEvent.index ? linkedModules[event.nativeEvent.index - 1] : undefined })}><View style={pill}><Text style={{ color }}>Linked module: {editor.relatedModule || 'None'} ⌄</Text></View></ContextMenu>}
-                {!!editor.relatedModule && button('Open module', () => onNavigate?.(moduleSection(editor.relatedModule)))}
+        </View>
+        <ScrollView keyboardShouldPersistTaps="handled" style={{flex:1,minHeight:0}} contentContainerStyle={{padding:20,gap:16,paddingBottom:28}}>
+            {!!error&&<View style={{padding:10,borderRadius:10,backgroundColor:isDark?'rgba(255,59,48,0.15)':'#FDE8E8'}}><Text accessibilityRole="alert" style={{color:'#FF3B30',fontSize:12}}>{error}</Text></View>}
+            {locked&&<Text style={{color:secondary,fontSize:12}}>Published version. Create a revision to make changes.</Text>}
+            <View style={{gap:6}}><Text style={{color:secondary,fontSize:12}}>Title</Text><TextInput accessibilityLabel="Title" editable={!saving&&!locked} value={editor.title} onChangeText={value=>setEditor({...editor,title:value})} style={{...pill,color,minHeight:40,fontSize:13,fontWeight:'500'}}/></View>
+            <View style={{flexDirection:'row',gap:12}}>
+                <View style={{flex:1,minWidth:120,gap:6}}><Text style={{color:secondary,fontSize:12}}>PIC</Text><DeliverablePICPicker field item={editor} people={people} color={secondary} isDark={isDark} disabled={saving||locked} onChange={patch=>setEditor({...editor,...patch})}/></View>
+                <View style={{flex:1,minWidth:120,gap:6}}><Text style={{color:secondary,fontSize:12}}>Deadline</Text><PlatformDatePicker accessibilityLabel="Deadline" pill disabled={saving||locked} isDark={isDark} textColor={color} value={editor.deadline?new Date(`${editor.deadline}T12:00:00`):new Date(NaN)} onChange={date=>setEditor({...editor,deadline:`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`})} onClear={()=>setEditor({...editor,deadline:''})}/></View>
             </View>
-            {input('Title', editor.title, value => setEditor({ ...editor, title: value }))}
-            <View style={{ flexDirection: 'row', gap: 12 }}><View style={{flex:1,minWidth:120,gap:6}}><Text style={{color:secondary,fontSize:12}}>PIC</Text><DeliverablePICPicker field item={editor} people={people} color={secondary} isDark={isDark} disabled={saving||locked} onChange={patch=>setEditor({...editor,...patch})}/></View><View style={{flex:1,minWidth:120,gap:6}}><Text style={{color:secondary,fontSize:12}}>Deadline</Text><PlatformDatePicker accessibilityLabel="Deadline" pill disabled={saving||locked} isDark={isDark} textColor={color} value={editor.deadline?new Date(`${editor.deadline}T12:00:00`):new Date(NaN)} onChange={date=>setEditor({...editor,deadline:`${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`})} onClear={()=>setEditor({...editor,deadline:''})}/></View></View>
-            <View style={{gap:6}}><Text style={{color:secondary,fontSize:12}}>Priority</Text><ContextMenu title="Priority" dropdownMenuMode disabled={saving||locked} actions={['Low','Medium','High','Urgent'].map(title=>({title,selected:editor.priority===title.toLowerCase()}))} onPress={event=>setEditor({...editor,priority:(['low','medium','high','urgent'] as const)[event.nativeEvent.index]})}><View style={{...pill,minHeight:40,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}><Text style={{color:editor.priority==='urgent'?'#FF3B30':editor.priority==='high'?'#FF9500':color}}>{editor.priority?editor.priority[0].toUpperCase()+editor.priority.slice(1):'Not set'}</Text><Ionicons name="chevron-down" size={12} color={secondary}/></View></ContextMenu></View>
-            <View style={{padding:12,borderRadius:16,backgroundColor:surface,gap:10}}><View style={{flexDirection:'row',alignItems:'center',gap:8}}><Text style={{color:secondary,fontSize:12,flex:1}}>File</Text>{button(editor.url?'Replace':'Upload',()=>void uploadFile(),false,locked)}{button('Add link',()=>setLinkEditing(value=>!value),false,locked)}</View>
-                {!!editor.url&&!linkEditing&&<View style={{flexDirection:'row',alignItems:'center',gap:8}}><TouchableOpacity style={{flex:1}} onPress={()=>void Linking.openURL(editor.url)}><Text numberOfLines={1} style={{color:'#007AFF',fontSize:12}}>{editor.fileName||editor.url.split(/[?#]/)[0].split('/').pop()||'Attached file'}</Text></TouchableOpacity><TouchableOpacity accessibilityLabel="Remove file" disabled={saving||locked} onPress={()=>setEditor({...editor,url:'',fileName:undefined})}><Ionicons name="close" size={16} color={secondary}/></TouchableOpacity></View>}
-                {linkEditing&&<View style={{gap:8}}>{input('Link',editor.url,url=>setEditor({...editor,url,fileName:undefined}))}{button('Done',()=>setLinkEditing(false))}</View>}
+            <View style={{flexDirection:'row',gap:12}}>
+                <View style={{flex:1,minWidth:120,gap:6}}>
+                    <Text style={{color:secondary,fontSize:12}}>Status</Text>
+                    <ContextMenu title="Status" dropdownMenuMode disabled={locked||saving||hasDeliverableChildren(state,editor)} actions={statuses.map(value=>({title:`${value} · ${DELIVERABLE_STATUS_PROGRESS[value]}%`,selected:value===editor.status}))} onPress={event=>setEditor({...editor,status:statuses[event.nativeEvent.index]})}>
+                        <View style={{...pill,minHeight:40,flexDirection:'row',justifyContent:'space-between',alignItems:'center',opacity:(locked||saving||hasDeliverableChildren(state,editor))?0.6:1}}>
+                            <Text numberOfLines={1} style={{color,fontSize:13,fontWeight:'500',flex:1}}>{hasDeliverableChildren(state,editor)?`${Math.round(itemDeliverableProgress(state,editor))}% · Subtasks`:editor.status}</Text>
+                            {!hasDeliverableChildren(state,editor)&&!locked&&<Ionicons name="chevron-down" size={13} color={secondary} style={{marginLeft:4}}/>}
+                        </View>
+                    </ContextMenu>
+                </View>
+                <View style={{flex:1,minWidth:120,gap:6}}>
+                    <Text style={{color:secondary,fontSize:12}}>Priority</Text>
+                    <ContextMenu title="Priority" dropdownMenuMode disabled={saving||locked} actions={['Low','Medium','High','Urgent'].map(title=>({title,selected:editor.priority===title.toLowerCase()}))} onPress={event=>setEditor({...editor,priority:(['low','medium','high','urgent'] as const)[event.nativeEvent.index]})}>
+                        <View style={{...pill,minHeight:40,flexDirection:'row',justifyContent:'space-between',alignItems:'center',opacity:(saving||locked)?0.6:1}}>
+                            <Text style={{fontSize:13,fontWeight:'500',color:editor.priority==='urgent'?'#FF3B30':editor.priority==='high'?'#FF9500':color}}>{editor.priority?editor.priority[0].toUpperCase()+editor.priority.slice(1):'Not set'}</Text>
+                            <Ionicons name="chevron-down" size={13} color={secondary} style={{marginLeft:4}}/>
+                        </View>
+                    </ContextMenu>
+                </View>
             </View>
-            <View style={{gap:6}}><View style={{flexDirection:'row',alignItems:'center',justifyContent:'space-between'}}><Text style={{color:secondary,fontSize:12}}>Notes</Text><TouchableOpacity accessibilityLabel={notesExpanded?'Collapse notes':'Expand notes'} onPress={()=>setNotesExpanded(value=>!value)}><Ionicons name={notesExpanded?'contract-outline':'expand-outline'} size={14} color={secondary}/></TouchableOpacity></View><TextInput accessibilityLabel="Notes" editable={!saving&&!locked} multiline value={editor.notes} onChangeText={notes=>{setEditor({...editor,notes});if(notes.length>120||notes.split('\n').length>2)setNotesExpanded(true);}} style={{...pill,color,borderRadius:16,height:notesExpanded?120:44,textAlignVertical:'top'}}/></View>
+            {linkedModules.length>0&&<View style={{gap:6}}><Text style={{color:secondary,fontSize:12}}>Linked Module</Text><View style={{flexDirection:'row',gap:8,alignItems:'center'}}><ContextMenu dropdownMenuMode disabled={locked||saving} actions={[{title:'None'},...linkedModules.map(value=>({title:value}))]} onPress={event=>setEditor({...editor,relatedModule:event.nativeEvent.index?linkedModules[event.nativeEvent.index-1]:undefined})}><View style={{...pill,flex:1,minHeight:40,flexDirection:'row',justifyContent:'space-between',alignItems:'center'}}><Text style={{color,fontSize:13}}>{editor.relatedModule||'None'}</Text><Ionicons name="chevron-down" size={13} color={secondary}/></View></ContextMenu>{!!editor.relatedModule&&button('Open module',()=>onNavigate?.(moduleSection(editor.relatedModule)))}</View></View>}
+            <View style={{padding:14,borderRadius:16,backgroundColor:surface,gap:10}}>
+                <View style={{flexDirection:'row',alignItems:'center',gap:8}}>
+                    <Text style={{color:secondary,fontSize:12,fontWeight:'600',flex:1}}>File</Text>
+                    {button(editor.url?'Replace':'Upload',()=>void uploadFile(),false,locked)}
+                    {button('Add link',()=>setLinkEditing(value=>!value),false,locked)}
+                </View>
+                {!!editor.url&&!linkEditing&&<View style={{flexDirection:'row',alignItems:'center',gap:8,paddingHorizontal:4}}>
+                    <Feather name={editor.fileName?'file':'link'} size={14} color="#007AFF"/>
+                    <TouchableOpacity style={{flex:1}} onPress={()=>void Linking.openURL(editor.url)}>
+                        <Text numberOfLines={1} style={{color:'#007AFF',fontSize:12,fontWeight:'500'}}>{editor.fileName||editor.url}</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity accessibilityLabel="Remove file" disabled={saving||locked} onPress={()=>setEditor({...editor,url:'',fileName:undefined})}>
+                        <Ionicons name="close" size={16} color={secondary}/>
+                    </TouchableOpacity>
+                </View>}
+                {linkEditing&&<View style={{flexDirection:'row',alignItems:'center',gap:8,marginTop:4}}>
+                    <TextInput accessibilityLabel="Link" autoFocus placeholder="Paste link (https://...)" placeholderTextColor={secondary} value={editor.url} onChangeText={url=>setEditor({...editor,url,fileName:undefined})} onSubmitEditing={()=>{if(editor.url&&!/^https?:\/\//i.test(editor.url)){setEditor({...editor,url:`https://${editor.url}`,fileName:undefined});}setLinkEditing(false);}} style={{flex:1,minHeight:36,borderRadius:999,backgroundColor:isDark?'#2C2C2E':'#E5E5EA',paddingHorizontal:14,paddingVertical:6,color,fontSize:13}}/>
+                    {button('Done',()=>{if(editor.url&&!/^https?:\/\//i.test(editor.url)){setEditor({...editor,url:`https://${editor.url}`,fileName:undefined});}setLinkEditing(false);},true)}
+                </View>}
+            </View>
+            <View style={{gap:6}}>
+                <Text style={{color:secondary,fontSize:12}}>Notes</Text>
+                <TextInput accessibilityLabel="Notes" editable={!saving&&!locked} multiline scrollEnabled={false} placeholder="Add notes..." placeholderTextColor={secondary} value={editor.notes} onChangeText={notes=>setEditor({...editor,notes})} onContentSizeChange={e=>{const h=e.nativeEvent?.contentSize?.height;if(h&&h>0)setNotesHeight(Math.max(46,h));}} style={{...pill,color,borderRadius:16,minHeight:46,height:notesHeight?Math.max(46,notesHeight):undefined,textAlignVertical:'top',fontSize:13,paddingTop:12,paddingBottom:12,fieldSizing:'content'} as any}/>
+            </View>
             {documentEditing?<View style={{gap:16}}>{editor.title.toLowerCase().includes('cover')?input('Cover subtitle / Notes',editor.pageContent?.notes||'',notes=>setEditor({...editor,pageContent:{...editor.pageContent,notes}}),true):editor.title.toLowerCase().includes('contents')?<Text style={{color:secondary,fontSize:12}}>Table of contents follows the current stage items automatically.</Text>:<>{input('Document content',editor.pageContent?.description||'',description=>setEditor({...editor,pageContent:{...editor.pageContent,description}}),true)}{input('Attachments / Image URLs',editor.pageContent?.attachmentUrl||'',attachmentUrl=>setEditor({...editor,pageContent:{...editor.pageContent,attachmentUrl}}))}</>}</View>:null}
             {!documentEditing&&!linkEditing&&<DeliverablePreview key={editor.id} state={state} item={editor} project={projectInfo} isDark={isDark}/>}
-        </View>}
-    </ScrollView>:null;
-    if(mode==='work'&&documentEditing&&editor&&Platform.OS==='web')return <View style={{flex:1,minHeight:0,flexDirection:'row'}}>
-        <View style={{width:'36%',minWidth:300,maxWidth:440,borderRightWidth:1,borderColor:border,minHeight:0}}>
-            <View style={{padding:16,gap:10}}>{button('Back to details',()=>setDocumentEditing(false))}<Text style={{color:secondary,fontSize:12}}>Deliverables</Text><ScrollView style={{maxHeight:150}}>{state.items.filter(item=>item.stage===stage&&!item.excluded).map(item=><TouchableOpacity key={item.id} disabled={saving} onPress={()=>openEditor(item)} style={{paddingVertical:8,paddingHorizontal:10,borderRadius:10,backgroundColor:item.id===editor.id?surface:'transparent'}}><Text style={{color:item.id===editor.id?'#007AFF':secondary,fontSize:12}}>{item.code} · {item.title}</Text></TouchableOpacity>)}</ScrollView></View>
-            {editorPanel}
+        </ScrollView>
+        <View style={{flexDirection:'row',alignItems:'center',gap:10,paddingHorizontal:20,paddingBottom:20,paddingTop:8,backgroundColor:'transparent'}}>
+            {!documentEditing&&<TouchableOpacity accessibilityRole="button" accessibilityLabel="Open editor" disabled={saving} onPress={()=>setDocumentEditing(true)} style={{flex:1,minHeight:42,paddingVertical:10,paddingHorizontal:18,borderRadius:999,flexDirection:'row',gap:6,alignItems:'center',justifyContent:'center',backgroundColor:isDark?'#0A2038':'#E6EEFF',borderWidth:1,borderColor:'#007AFF',opacity:saving?0.45:1}}><Text style={{color:'#007AFF',fontSize:13,fontWeight:'600'}}>Open editor</Text><Feather name="arrow-up-right" size={15} color="#007AFF"/></TouchableOpacity>}
+            {locked?<TouchableOpacity accessibilityRole="button" disabled={saving} onPress={()=>{let draft:RegisterItem|undefined;void run(()=>{const next=reviseRegisterItem(state,editor.id);draft=next.items.find(item=>item.id===editor.id);return next;}).then(ok=>{if(ok&&draft)setEditor(draft);});}} style={{flex:1,minHeight:42,paddingVertical:10,paddingHorizontal:20,borderRadius:999,alignItems:'center',justifyContent:'center',backgroundColor:'#007AFF',opacity:saving?0.45:1}}><Text style={{color:'#FFFFFF',fontSize:13,fontWeight:'600'}}>Create Revision</Text></TouchableOpacity>:<ContextMenu title="Save" dropdownMenuMode disabled={saving} actions={[{title:'Save changes'},{title:'Publish',disabled:editor.status!=='Approved'}]} onPress={event=>saveEditor(event.nativeEvent.index===1)}><View style={{flex:documentEditing?1:undefined,minWidth:90,minHeight:42,paddingVertical:10,paddingHorizontal:20,borderRadius:999,backgroundColor:'#007AFF',flexDirection:'row',alignItems:'center',justifyContent:'center',gap:6,opacity:saving?0.45:1}}><Text style={{color:'#FFFFFF',fontSize:13,fontWeight:'600'}}>Save</Text><Ionicons name="chevron-down" size={12} color="#FFFFFF"/></View></ContextMenu>}
         </View>
-        <ScrollView style={{flex:1,minWidth:0}} contentContainerStyle={{padding:24}}><DeliverablePreview key={editor.id} state={state} item={editor} project={projectInfo} isDark={isDark} showPage/></ScrollView>
+    </View>:null;
+    if(mode==='work'&&documentEditing&&editor&&Platform.OS==='web')return <View style={{flex:1,minHeight:0,flexDirection:'row'}}>
+        <View style={{width:'36%',minWidth:300,maxWidth:440,borderRightWidth:1,borderColor:border,minHeight:0,flexDirection:'column'}}>
+            <View style={{padding:16,gap:10,borderBottomWidth:1,borderColor:border}}>{button('Back to details',()=>setDocumentEditing(false))}<Text style={{color:secondary,fontSize:12}}>Deliverables</Text><ScrollView style={{maxHeight:120}}>{state.items.filter(item=>item.stage===stage&&!item.excluded).map(item=><TouchableOpacity key={item.id} disabled={saving} onPress={()=>openEditor(item)} style={{paddingVertical:7,paddingHorizontal:10,borderRadius:10,backgroundColor:item.id===editor.id?surface:'transparent'}}><Text style={{color:item.id===editor.id?'#007AFF':secondary,fontSize:12}}>{item.code} · {item.title}</Text></TouchableOpacity>)}</ScrollView></View>
+            <View style={{flex:1,minHeight:0}}>{editorPanel}</View>
+        </View>
+        <ScrollView style={{flex:1,minWidth:0}} contentContainerStyle={{padding:24}}><DeliverablePreview key={editor.id} state={state} item={editor} project={projectInfo} isDark={isDark} showPage readOnly={false} onChange={content=>setEditor({...editor,pageContent:content})}/></ScrollView>
     </View>;
     if (mode === 'planning') return <View style={{ flex: 1 }}>
         {!onTitleAccessoryChange && <SegmentedControl compact animationType="timing" equalWidth style={{width:280}} segments={REGISTER_STAGES.map(item => ({id:item.code,label:item.code}))} activeSegment={stage} onSegmentChange={changeStage}/>}

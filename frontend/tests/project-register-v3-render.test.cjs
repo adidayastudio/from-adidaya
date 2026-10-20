@@ -85,6 +85,6 @@ const state={...treeState,items:[item]};
 const mock={...React,useState:initial=>{let value=typeof initial==='function'?initial():initial;if(value?.schemaVersion===3)value=state;else if(value===null)value=item;else if(value===true)value=false;return [value,()=>{}]},useEffect:()=>{},useLayoutEffect:()=>{},useMemo:callback=>callback(),useCallback:callback=>callback,useRef:initial=>({current:initial})};
 const {ProjectRegisterWorkspace:Workspace}=load('components/projects/register-v3/ProjectRegisterWorkspace.tsx',mock);
 const html=renderToString(React.createElement(Workspace,{projectId:'project',mode:'work',isDark:true}));
-for(const label of ['Open editor','Deadline','Priority','High','Notes','Expand notes','Preview','Saved document contents','Add link'])assert.ok(html.includes(label),label);
+for(const label of ['Open editor','Deadline','Priority','High','Notes','Preview','Saved document contents','Upload','Add link'])assert.ok(html.includes(label),label);
 assert.ok(html.includes('type="date"'));assert.ok(!html.includes('File / link · https://'));assert.ok(!html.includes('Notes / linked source reference'));
 });
