@@ -235,7 +235,6 @@ function validateReimbursementSubmission(payload: {
         throw new Error('Every reimbursement item must contain an actual quantity and unit price.');
     }
     if (!payload.invoice_url) throw new Error('Invoice document is required for reimbursement.');
-    if (!payload.expense_proof_url) throw new Error('Expense payment proof is required for reimbursement.');
     if (!String(payload.beneficiary_bank || '').trim() || !String(payload.beneficiary_number || '').trim() || !String(payload.beneficiary_name || '').trim()) {
         throw new Error('Complete the reimbursement destination account.');
     }

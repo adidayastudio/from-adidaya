@@ -701,47 +701,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
         );
     };
 
-    const handlePickExpenseProof = async () => {
-        Alert.alert(
-            'Upload Payment Proof',
-            'Attach proof that this expense has already been paid.',
-            [
-                {
-                    text: 'Photo Library',
-                    onPress: async () => {
-                        const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsMultipleSelection: true, quality: 0.8 });
-                        if (!res.canceled && res.assets?.length) {
-                            setExpenseProofDocuments(current => [...current, ...res.assets.map(asset => ({
-                                uri: asset.uri,
-                                name: asset.fileName || 'Payment_Proof.jpg',
-                                mimeType: asset.mimeType || 'image/jpeg',
-                            }))]);
-                        }
-                    },
-                },
-                {
-                    text: 'Files / PDF',
-                    onPress: async () => {
-                        const res = await DocumentPicker.getDocumentAsync({
-                            type: ['application/pdf', 'image/*'],
-                            copyToCacheDirectory: true,
-                            multiple: true,
-                        });
-                        if (!res.canceled && res.assets?.length) {
-                            setExpenseProofDocuments(current => [...current, ...res.assets.map(asset => ({
-                                uri: asset.uri,
-                                name: asset.name || 'Payment_Proof.pdf',
-                                mimeType: asset.mimeType || 'application/pdf',
-                            }))]);
-                        }
-                    },
-                },
-                { text: 'Cancel', style: 'cancel' },
-            ],
-        );
-    };
 
-    // Submit / Save Draft Handler
     const handleSaveOrSubmit = async (asDraft = false) => {
         if (submitInFlight.current) return;
         if (!selectedTarget) {
@@ -768,10 +728,6 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
         if (isReimburse && !asDraft && !adminEditor.enabled) {
             if (invoiceDocuments.length === 0) {
                 Alert.alert('Invoice Required', 'At least one invoice document is required for reimbursement.');
-                return;
-            }
-            if (expenseProofDocuments.length === 0) {
-                Alert.alert('Payment Proof Required', 'Attach proof that the expense has already been paid.');
                 return;
             }
             if (!bankName.trim() || !accountNumber.trim() || !accountName.trim()) {
@@ -1381,21 +1337,7 @@ export const SwiftUICreateRequestSheet: React.FC<SwiftUICreateRequestSheetProps>
                                         </Button>
                                     </VStack>
 
-                                    {isReimburse && (
-                                        <VStack alignment="leading" spacing={6}>
-                                            <SwiftUIText color={subtextColor}>Expense Payment Proof</SwiftUIText>
-                                            {expenseProofDocuments.map((file, index) => (
-                                                <HStack key={`${file.uri}-${index}`} alignment="center">
-                                                    <SwiftUIText size={13} color={textColor}>{file.name}</SwiftUIText>
-                                                    <Spacer />
-                                                    <Button systemImage="xmark.circle.fill" variant="plain" modifiers={[foregroundColor('#FF3B30')]} onPress={() => setExpenseProofDocuments(current => current.filter((_, itemIndex) => itemIndex !== index))} />
-                                                </HStack>
-                                            ))}
-                                            <Button systemImage="arrow.up.doc" variant="plain" color="#159957" onPress={handlePickExpenseProof}>
-                                                {expenseProofDocuments.length > 0 ? 'Add Payment Proof Files' : 'Attach Payment Proof Files'}
-                                            </Button>
-                                        </VStack>
-                                    )}
+
                                 </VStack>
                             )}
                         </Section>

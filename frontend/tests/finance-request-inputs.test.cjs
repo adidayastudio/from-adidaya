@@ -67,11 +67,10 @@ test('reimbursement totals include negative adjustments and decimals without cla
     ] });
     assert.equal(writes[0].payload[0].amount, 140.25);
 });
-test('reimbursement rejects non-finite values and retains invoice/proof requirements', async () => {
+test('reimbursement rejects non-finite values and retains the invoice requirement', async () => {
     const { api, writes } = financeApi();
     for (const bad of [NaN, Infinity]) await assert.rejects(api.createReimburseRequest('user', { ...payload, items: [{ name: 'Bad', qty: 1, unitPrice: bad }] }), /valid numbers/);
     await assert.rejects(api.createReimburseRequest('user', { ...payload, invoice_url: '' }), /Invoice/);
-    await assert.rejects(api.createReimburseRequest('user', { ...payload, expense_proof_url: '' }), /proof/);
     assert.equal(writes.length, 0);
 });
 test('a reimbursement draft can save zero estimates before documents are available', async () => {
@@ -170,3 +169,10 @@ for (const method of ['createPurchasingRequest', 'updatePurchasingRequest']) {
         assert.equal(api.PURCHASING_COLUMNS.includes('item_name'), false);
     });
 }
+
+test('reimbursement submission needs only the applicant invoice, with finance proof added later', async () => {
+    const { api, writes } = financeApi();
+    await api.createReimburseRequest('user', { ...payload, expense_proof_url: undefined });
+    assert.equal(writes[0].payload[0].invoice_url, 'invoice.pdf');
+    assert.equal(writes[0].payload[0].payment_proof_url, undefined);
+});

@@ -572,8 +572,8 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
             return;
         }
         if (activeTab === 'reimburse' && !asDraft && !adminEditor.enabled) {
-            if (!reimburseImages.some(file => file.documentKind === 'invoice') || !reimburseImages.some(file => file.documentKind === 'expense_proof')) {
-                showFormError('Documents Required', 'Attach one invoice and one expense payment proof.');
+            if (!reimburseImages.some(file => file.documentKind === 'invoice')) {
+                showFormError('Documents Required', 'Attach at least one invoice document.');
                 return;
             }
             if (!bankName.trim() || !accountNumber.trim() || !accountName.trim()) {
@@ -1311,7 +1311,6 @@ export const CreateRequestDrawer: React.FC<CreateRequestDrawerProps> = ({
                                     { kind: 'invoice' as const, label: 'Add image / PDF' },
                                 ] : [
                                     { kind: 'invoice' as const, label: 'Add invoice (image / PDF)' },
-                                    { kind: 'expense_proof' as const, label: 'Add payment proof (image / PDF)' },
                                 ]).map(option => (
                                     <TouchableOpacity
                                         key={option.kind}
