@@ -1142,9 +1142,9 @@ export default function FinanceScreen() {
     const getActionButtons = (item: any) => {
         if (!item) return [];
         const status = item.status || '';
-        const s_status = status.toLowerCase();
+        const s_status = String(status).trim().toLowerCase().replace(/_/g, ' ');
         const actionsArr = [];
-        const isOwner = item.created_by === user?.id;
+        const isOwner = !!user?.id && (item.user_id || item.created_by) === user.id;
         const canManageTeam = hasTeamAccess && activeScope === 'team';
 
         // Non-managers / non-approvers cannot perform actions on other people's requests
