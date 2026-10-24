@@ -1180,31 +1180,14 @@ export async function uploadCrewFileBase64(base64Data: string, fileExt: string, 
     const filePath = `${folder}/${fileName}`;
     const binaryData = decode(base64Data);
 
-    const candidateBuckets = ['finance-attachments', 'finance_attachments', 'attendance', 'from-adidaya'];
-
-    for (const bucket of candidateBuckets) {
-        for (const path of [filePath, fileName]) {
-            try {
-                const { error } = await supabase.storage
-                    .from(bucket)
-                    .upload(path, binaryData, {
-                        contentType,
-                        upsert: true,
-                    });
-
-                if (!error) {
-                    const { data: publicData } = supabase.storage
-                        .from(bucket)
-                        .getPublicUrl(path);
-
-                    if (publicData?.publicUrl) {
-                        return publicData.publicUrl;
-                    }
-                }
-            } catch (_) {}
-        }
+    const { error } = await supabase.storage.from('crew-documents').upload(filePath, binaryData, {
+        contentType,
+        upsert: false,
+    });
+    if (!error) {
+        const { data } = supabase.storage.from('crew-documents').getPublicUrl(filePath);
+        if (data?.publicUrl) return data.publicUrl;
     }
 
-    console.error("❌ Error uploading crew file: all candidate buckets failed.");
-    return `data:${contentType};base64,${base64Data}`;
+    throw new Error("Attachment upload failed. Please try again before saving the request.");
 }

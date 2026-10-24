@@ -33,3 +33,24 @@ test('the web SwiftUI adapter never loads native modules', () => {
     assert.equal(typeof context.exports.Host, 'function');
     assert.equal(typeof context.exports.Button, 'function');
 });
+test('private storage URLs are signed with the current session before retrying', async () => {
+    const calls = [];
+    const origin = 'https://storage.example';
+    const context = { exports: {}, URL, fetch: async url => {
+        calls.push(url);
+        return url.includes('/sign/')
+            ? { ok: true, headers: { get: () => 'application/pdf' }, blob: async () => ({ type: 'application/pdf', size: 10 }) }
+            : { ok: false, status: 400 };
+    }, require: name => name === './supabase' ? { ADIDAYA_SUPABASE_URL: origin, supabase: {
+        supabaseUrl: origin,
+        storage: { from: bucket => ({ createSignedUrl: async path => {
+            assert.equal(bucket, 'finance_attachments'); assert.equal(path, 'receipt.pdf');
+            return { data: { signedUrl: origin + '/storage/v1/object/sign/finance_attachments/receipt.pdf?token=test' } };
+        } }) },
+    } } : { decodeFinanceImage: async blob => blob } };
+    vm.runInNewContext(ts.transpileModule(fs.readFileSync('lib/financeAttachmentPreview.ts', 'utf8'), {
+        compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 }
+    }).outputText, context);
+    const result = await context.exports.loadFinanceAttachmentPreview(origin + '/storage/v1/object/public/finance_attachments/receipt.pdf');
+    assert.equal(result.kind, 'pdf'); assert.equal(calls.length, 2);
+});

@@ -8,3 +8,24 @@ for(const [name,mime] of [['receipt.pdf','application/pdf'],['photo.png','image/
 test('existing remote attachments are reused',async()=>{const x=load();assert.equal(await x.api.uploadCrewProofFile({name:'receipt.pdf',uri:'https://storage.example/existing.pdf'}),'https://storage.example/existing.pdf');assert.equal(x.uploads.length,0);assert.equal(x.reads.length,0);});
 test('native camera/document attachments keep the native read path',async()=>{const x=load('ios');await x.api.uploadCrewProofFile({name:'receipt.pdf',uri:'file:///receipt.pdf'});assert.equal(x.reads.length,1);assert.equal(x.uploads[0][0],'native-bytes');assert.equal(x.uploads[0][2],'application/pdf');});
 test('web read failures prevent uploads',async()=>{const x=load('web',{ok:false});await assert.rejects(x.api.uploadCrewProofFile({name:'a.pdf',uri:'blob:expired'}),/select it again/);assert.equal(x.uploads.length,0);});
+function crewUploader(error = null) {
+ const source = fs.readFileSync('lib/api/attendance.ts', 'utf8');
+ const ast = ts.createSourceFile('attendance.ts', source, ts.ScriptTarget.Latest, true);
+ const fn = ast.statements.find(n => ts.isFunctionDeclaration(n) && n.name?.text === 'uploadCrewFileBase64');
+ const buckets = [];
+ const context = { exports: {}, decode: () => new ArrayBuffer(1), supabase: { storage: { from: bucket => {
+  buckets.push(bucket);
+  return { upload: async () => ({ error }), getPublicUrl: path => ({ data: { publicUrl: 'https://storage.example/crew-documents/' + path } }) };
+ } } } };
+ vm.runInNewContext(ts.transpileModule(fn.getText(ast), { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2020 } }).outputText, context);
+ return { upload: context.exports.uploadCrewFileBase64, buckets };
+}
+test('Crew uploads use the dedicated public crew bucket', async () => {
+ const x = crewUploader(); const url = await x.upload('bytes', 'jpg', 'image/jpeg');
+ assert.match(url, /crew-documents\/reimbursements\//); assert.deepEqual(x.buckets, ['crew-documents', 'crew-documents']);
+});
+test('Crew upload failures stop saving instead of storing a fake attachment', async () => {
+ const x = crewUploader({ message: 'Bucket not found' });
+ await assert.rejects(x.upload('bytes', 'jpg', 'image/jpeg'), /upload failed/);
+ assert.deepEqual(x.buckets, ['crew-documents']);
+});
