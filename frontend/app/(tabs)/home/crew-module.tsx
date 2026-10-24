@@ -1196,7 +1196,7 @@ export default function CrewScreen() {
                     <CrewRequestsTab
                         detailContainer={isDesktopWeb ? requestDetailContainer : null}
                         onCloseDetail={() => setSelectedRequestForEdit(null)}
-                        onEditRequest={isDesktopWeb ? (req) => { setSelectedRequestForEdit(req); setRequestModalVisible(true); } : undefined}
+                        onEditRequest={(req) => { setSelectedRequestForEdit(req); setRequestModalVisible(true); }}
                         requests={requests}
                         projects={projects}
                         selectedRequestId={selectedRequestForEdit?.id}
@@ -1211,7 +1211,7 @@ export default function CrewScreen() {
                             setSelectedRequestForEdit(current =>
                                 isDesktopWeb && current?.id === req.id ? null : req
                             );
-                            if (!isDesktopWeb) {
+                            if (!isDesktopWeb && Platform.OS !== 'web') {
                                 setRequestModalVisible(true);
                             }
                         }}

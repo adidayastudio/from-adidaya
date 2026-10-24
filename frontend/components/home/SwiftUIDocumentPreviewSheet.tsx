@@ -1,3 +1,4 @@
+import { AttachmentPreview } from '../file-preview/AttachmentPreview';
 import React, { useState, useMemo } from 'react';
 import {
     Modal,
@@ -194,7 +195,9 @@ export function SwiftUIDocumentPreviewSheet({
 
                     {/* Preview Content */}
                     <View style={[styles.previewBody, isDark ? styles.previewBodyDark : styles.previewBodyLight]}>
-                        {isImage && fileUrl ? (
+                        {Platform.OS === 'web' && fileUrl ? (
+                            <AttachmentPreview url={fileUrl} />
+                        ) : isImage && fileUrl ? (
                             <Image
                                 source={{ uri: fileUrl }}
                                 style={styles.previewImage}

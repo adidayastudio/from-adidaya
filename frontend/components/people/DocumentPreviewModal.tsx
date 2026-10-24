@@ -1,3 +1,4 @@
+import { AttachmentPreview } from '../file-preview/AttachmentPreview';
 import React from 'react';
 import {
     Modal,
@@ -123,25 +124,15 @@ export const DocumentPreviewModal: React.FC<DocumentPreviewModalProps> = ({
 
                         {/* Preview Content Area */}
                         <View style={s.previewContainer}>
-                            {isImage ? (
+                            {Platform.OS === 'web' && document.file_url ? (
+                                <AttachmentPreview url={document.file_url} />
+                            ) : isImage ? (
                                 <View style={s.imageWrapper}>
                                     <Image
                                         source={{ uri: document.file_url }}
                                         style={s.imagePreview}
                                         contentFit="contain"
                                         transition={300}
-                                    />
-                                </View>
-                            ) : Platform.OS === 'web' && document.file_url ? (
-                                <View style={{ width: '100%', height: '100%', borderRadius: 16, overflow: 'hidden' }}>
-                                    <iframe
-                                        src={document.file_url}
-                                        style={{
-                                            width: '100%',
-                                            height: '100%',
-                                            border: 'none',
-                                            backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
-                                        }}
                                     />
                                 </View>
                             ) : (

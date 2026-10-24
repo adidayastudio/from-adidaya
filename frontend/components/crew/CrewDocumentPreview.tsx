@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { AttachmentPreview } from '../file-preview/AttachmentPreview';
 import { View, Text, TouchableOpacity, Modal, StyleSheet, Platform } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -139,6 +140,8 @@ export const CrewDocumentPreview: React.FC<CrewDocumentPreviewProps> = ({
                   backgroundColor: '#FFFFFF',
                 }}
               />
+            ) : Platform.OS === 'web' && url ? (
+              <AttachmentPreview url={url} />
             ) : WebView && webViewSource ? (
               <WebView source={webViewSource} style={{ flex: 1 }} originWhitelist={['*']} />
             ) : (

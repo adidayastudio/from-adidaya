@@ -578,7 +578,7 @@ export function CrewRequestsTab({
                                         </View>
 
                                         {/* Action Buttons Row */}
-                                        {!onEditRequest && <View style={s.actionRowCombined}>
+                                        {!detailContainer && <View style={s.actionRowCombined}>
                                             {/* Delete */}
                                             <TouchableOpacity
                                                 style={[
@@ -898,7 +898,7 @@ export function CrewRequestsTab({
                                     style={s.cardHeaderTouch}
                                     onPress={() => {
                                         onSelectRequest(req);
-                                        if (!onEditRequest) setExpandedRequestId(expandedRequestId === req.id ? null : req.id);
+                                        if (!detailContainer) setExpandedRequestId(expandedRequestId === req.id ? null : req.id);
                                     }}
                                     activeOpacity={0.7}
                                 >
@@ -951,7 +951,7 @@ export function CrewRequestsTab({
                                     </View>
                                 </TouchableOpacity>
 
-                                {!onEditRequest && expandedRequestId === req.id && renderRequestDetail(req)}
+                                {!detailContainer && expandedRequestId === req.id && renderRequestDetail(req)}
                             </View>
                         );
                     })}

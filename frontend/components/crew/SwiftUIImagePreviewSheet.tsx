@@ -1,4 +1,5 @@
 import React from 'react';
+import { AttachmentPreview } from '../file-preview/AttachmentPreview';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '@/context/ThemeContext';
@@ -51,11 +52,7 @@ export const SwiftUIImagePreviewSheet: React.FC<SwiftUIImagePreviewSheetProps> =
                     {/* Image */}
                     <View style={styles.previewImageContainer}>
                         {imageUrl && (
-                            <Image
-                                source={{ uri: imageUrl }}
-                                style={styles.previewImage}
-                                resizeMode="contain"
-                            />
+                            <AttachmentPreview url={imageUrl} />
                         )}
                     </View>
                 </View>

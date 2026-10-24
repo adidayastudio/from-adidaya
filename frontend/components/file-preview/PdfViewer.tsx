@@ -1,3 +1,4 @@
+import { AttachmentPreview } from './AttachmentPreview';
 import React, { useState } from 'react';
 import {
     View,
@@ -66,17 +67,7 @@ export const PdfViewer: React.FC<PdfViewerProps> = ({
     if (Platform.OS === 'web') {
         return (
             <View style={[styles.container, { backgroundColor: isDark ? '#121214' : '#F2F2F7', paddingTop, paddingBottom }]}>
-                <iframe
-                    src={`${targetUri}#toolbar=0`}
-                    title={resolution.displayName}
-                    style={{
-                        width: '100%',
-                        height: '100%',
-                        border: 'none',
-                        backgroundColor: '#FFFFFF',
-                        display: 'block',
-                    }}
-                />
+                <AttachmentPreview url={targetUri!} />
             </View>
         );
     }
