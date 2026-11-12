@@ -111,6 +111,7 @@ export default function NotificationHistoryScreen() {
 
     const getAvatarColors = (action: string, isDark: boolean) => {
         switch (action.toLowerCase()) {
+            case 'partially_paid':
             case 'paid':
                 return { bg: isDark ? 'rgba(52,199,89,0.15)' : 'rgba(52,199,89,0.12)', text: '#34C759' };
             case 'approved':
@@ -130,6 +131,8 @@ export default function NotificationHistoryScreen() {
 
     const getActionLabelAndColor = (action: string) => {
         switch (action.toLowerCase()) {
+            case 'partially_paid':
+                return { label: 'partially paid', color: '#15803D' };
             case 'paid':
                 return { label: 'paid', color: '#34C759' };
             case 'approved':

@@ -180,13 +180,21 @@ function getFinanceRequestCodes(item: any) {
     return { department, project, isProject: Boolean(item.project_id || item.project_obj || project) };
 }
 
-function getRequestFilterStatus(item: { statusTag?: string; status?: string; _paid_amount?: number }) {
+function getRequestFilterStatus(item: { statusTag?: string; status?: string; _paid_amount?: number; paid_amount?: number }) {
     const status = (item.statusTag || item.status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
     if (status === 'paid' || status === 'rejected') return status;
-    if (['approved', 'paying', 'partially_paid', 'consolidated'].includes(status) || Number(item._paid_amount) > 0) {
+    if (['approved', 'paying', 'partially_paid', 'consolidated'].includes(status) || Number(item._paid_amount) > 0 || Number(item.paid_amount) > 0) {
         return 'approved';
     }
     return 'pending';
+}
+
+function getRequestPaymentTotals(item: any, requestedAmount = Number(item.amount) || 0) {
+    const total = Math.max(0, Number(item.approved_amount ?? requestedAmount) || 0);
+    const paid = getRequestFilterStatus(item) === 'paid'
+        ? total
+        : Math.min(total, Math.max(0, Number(item.paid_amount) || 0, Number(item._paid_amount) || 0));
+    return { total, paid, remaining: Math.max(0, total - paid) };
 }
 
 function calculateSummary(items: any[], categoryIcon: string) {
@@ -199,6 +207,7 @@ function calculateSummary(items: any[], categoryIcon: string) {
     };
 
     let cashPaidAmount = 0;
+    const outstanding = { amount: 0, count: 0 };
     items.forEach(item => {
         let amount = 0;
         if (item && item.amount !== null && item.amount !== undefined) {
@@ -214,10 +223,15 @@ function calculateSummary(items: any[], categoryIcon: string) {
         const status = getRequestFilterStatus(item);
         stats[status].amount += amount;
         stats[status].count += 1;
-        cashPaidAmount += status === 'paid' ? amount : Math.min(amount, Number(item._paid_amount || 0));
+        const payment = getRequestPaymentTotals(item, amount);
+        cashPaidAmount += payment.paid;
+        if (status === 'approved' && payment.remaining > 0) {
+            outstanding.amount += payment.remaining;
+            outstanding.count += 1;
+        }
     });
 
-    return { stats, cashPaidAmount };
+    return { stats, cashPaidAmount, outstanding };
 }
 
 function calculatePettyCashSummary(pools: any[]) {
@@ -699,7 +713,8 @@ export default function FinanceScreen() {
             const reqId = params.requestId;
             const reqType = params.requestType;
             const list = reqType === 'purchasing' ? teamPurchasing : teamReimbursement;
-            const found = list.find(r => r.id === reqId);
+            const visibleList = reqType === 'purchasing' ? purchasingRequests : reimbursementRequests;
+            const found = list.find(r => r.id === reqId) || visibleList.find(r => r.id === reqId);
             if (found) {
                 if (reqType === 'purchasing' && activeSegment !== 'purchasing') {
                     setActiveSegment('purchasing');
@@ -718,7 +733,7 @@ export default function FinanceScreen() {
                 router.setParams({ requestId: undefined, requestType: undefined });
             }
         }
-    }, [params.requestId, params.requestType, teamPurchasing, teamReimbursement, activeSegment, isDesktopWeb]);
+    }, [params.requestId, params.requestType, teamPurchasing, teamReimbursement, purchasingRequests, reimbursementRequests, activeSegment, isDesktopWeb]);
 
     // Force team scope for specific modules
     useEffect(() => {
@@ -773,8 +788,8 @@ export default function FinanceScreen() {
         });
     }, [reimbursementRequests, matchesDate, selectedDepartmentCode, filterRequestMatches]);
 
-    const { stats: purchasingStats, cashPaidAmount: purchasingCashPaid } = useMemo(() => calculateSummary(filteredPurchasingForStats, 'cart.fill'), [filteredPurchasingForStats]);
-    const { stats: reimbursementStats, cashPaidAmount: reimbursementCashPaid } = useMemo(() => calculateSummary(filteredReimbursementForStats, 'doc.text.fill'), [filteredReimbursementForStats]);
+    const { stats: purchasingStats, cashPaidAmount: purchasingCashPaid, outstanding: purchasingOutstanding } = useMemo(() => calculateSummary(filteredPurchasingForStats, 'cart.fill'), [filteredPurchasingForStats]);
+    const { stats: reimbursementStats, cashPaidAmount: reimbursementCashPaid, outstanding: reimbursementOutstanding } = useMemo(() => calculateSummary(filteredReimbursementForStats, 'doc.text.fill'), [filteredReimbursementForStats]);
 
     const consolidationStats = useMemo(() => {
         const stats = {
@@ -2700,7 +2715,7 @@ export default function FinanceScreen() {
                     segment: 'reports',
                     disabled: true
                 },
-                { value: (pStats_v.pending.count + rStats_v.pending.count).toString(), label: 'Outstanding Bills', sub: formatCurrency(pStats_v.pending.amount + rStats_v.pending.amount), icon: 'cart.fill', color: '#FF9500', segment: 'purchasing' },
+                { value: (purchasingOutstanding.count + reimbursementOutstanding.count).toString(), label: 'Outstanding Bills', sub: formatCurrency(purchasingOutstanding.amount + reimbursementOutstanding.amount), icon: 'cart.fill', color: '#FF9500', segment: 'purchasing' },
                 { value: rStats_v.pending.count.toString(), label: 'Reimburse Pending', sub: formatCurrency(rStats_v.pending.amount), icon: 'doc.text.fill', color: '#FF9500', segment: 'reimbursement' },
                 { value: formatShortBalance(totalFundingBalance), label: 'Balance', sub: `${activeFundingCount} Account${activeFundingCount === 1 ? '' : 's'}`, icon: 'creditcard.fill', color: '#007AFF', segment: 'funding' },
             ];
@@ -2708,22 +2723,18 @@ export default function FinanceScreen() {
         const searchFilteredPurchasing = filteredPurchasingForStats.filter(item => matchesFinanceRequestSearch(item, q));
         const searchFilteredReimbursement = filteredReimbursementForStats.filter(item => matchesFinanceRequestSearch(item, q));
 
-        const overviewTransactions = [
-            ...filteredPurchasingForStats.map(item => ({
+        const overviewTransactions = [...filteredPurchasingForStats, ...filteredReimbursementForStats].map(item => {
+            const payment = getRequestPaymentTotals(item);
+            return {
                 date: item.date || item.created_at,
-                paidAmount: Number(item._paid_amount || (item.statusTag === 'paid' || item.status === 'Paid' ? item.amount : 0)),
-                totalAmount: Number(item.amount || 0),
-                statusTag: item.statusTag || (item.status === 'Paid' ? 'paid' : 'pending'),
+                paidAmount: payment.paid,
+                totalAmount: payment.paid + (getRequestFilterStatus(item) === 'approved' ? payment.remaining : 0),
+                statusTag: item.statusTag || 'pending',
                 status: item.status,
-            })),
-            ...filteredReimbursementForStats.map(item => ({
-                date: item.date || item.created_at,
-                paidAmount: Number(item.statusTag === 'paid' || item.status === 'Paid' ? item.amount : 0),
-                totalAmount: Number(item.amount || 0),
-                statusTag: item.statusTag || (item.status === 'Paid' ? 'paid' : 'pending'),
-                status: item.status,
-            })),
-        ];
+            };
+        });
+        const outstandingAmount = purchasingOutstanding.amount + reimbursementOutstanding.amount;
+        const outstandingCount = purchasingOutstanding.count + reimbursementOutstanding.count;
 
         return (
             <View>
@@ -2732,10 +2743,10 @@ export default function FinanceScreen() {
                     embedded={false}
                     monthLabel={dateFilterType === 'month' ? formatMonthYear(selectedMonth) : 'Current View'}
                     totalPaid={purchasingCashPaid + reimbursementCashPaid}
-                    totalCommitted={purchasingCashPaid + reimbursementCashPaid + pStats_v.pending.amount + rStats_v.pending.amount}
+                    totalCommitted={totalPaid + outstandingAmount}
                     lastMonthPaid={77000}
-                    outstandingAmount={pStats_v.pending.amount + rStats_v.pending.amount}
-                    outstandingCount={pStats_v.pending.count + rStats_v.pending.count}
+                    outstandingAmount={outstandingAmount}
+                    outstandingCount={outstandingCount}
                     reimburseAmount={rStats_v.pending.amount}
                     reimburseCount={rStats_v.pending.count}
                     transactions={overviewTransactions}

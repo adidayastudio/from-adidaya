@@ -229,6 +229,7 @@ function MobileNotificationsScreen() {
 
     const getAvatarColors = (action: string, isDark: boolean) => {
         switch (action.toLowerCase()) {
+            case 'partially_paid':
             case 'paid':
                 return { bg: isDark ? 'rgba(52,199,89,0.18)' : '#DCFCE7', text: '#15803D' };
             case 'approved':
@@ -249,6 +250,8 @@ function MobileNotificationsScreen() {
 
     const getActionLabelAndColor = (action: string) => {
         switch (action.toLowerCase()) {
+            case 'partially_paid':
+                return { label: 'partially paid:', color: '#15803D' };
             case 'paid':
                 return { label: 'marking as paid:', color: '#15803D' };
             case 'approved':

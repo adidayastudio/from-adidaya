@@ -318,44 +318,6 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
         } catch { }
     };
 
-    const handleOpenInvoice = () => {
-        if (resolvedInvoices.length === 0) return;
-        if (resolvedInvoices.length === 1) {
-            setActiveDocUrl(resolvedInvoices[0].url);
-        } else {
-            Alert.alert(
-                'Select Invoice',
-                'Please select an invoice to open:',
-                [
-                    ...resolvedInvoices.map((inv) => ({
-                        text: inv.name,
-                        onPress: () => setActiveDocUrl(inv.url)
-                    })),
-                    { text: 'Cancel', style: 'cancel' as const }
-                ]
-            );
-        }
-    };
-
-    const handleOpenProof = () => {
-        if (resolvedProofs.length === 0) return;
-        if (resolvedProofs.length === 1) {
-            setActiveDocUrl(resolvedProofs[0].url);
-        } else {
-            Alert.alert(
-                'Select Payment Proof',
-                'Please select a payment proof to open:',
-                [
-                    ...resolvedProofs.map((proof) => ({
-                        text: proof.name,
-                        onPress: () => setActiveDocUrl(proof.url)
-                    })),
-                    { text: 'Cancel', style: 'cancel' as const }
-                ]
-            );
-        }
-    };
-
     const getMimeType = (ext: string) => {
         switch (ext) {
             case 'pdf': return 'application/pdf';
@@ -478,16 +440,42 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
         }
     };
 
-    const getInvoiceCount = () => {
-        return getInvoiceList(request).length;
-    };
-
-    const getProofCount = () => {
-        return getProofList(request).length;
-    };
-
-    const invoiceCount = getInvoiceCount();
-    const proofCount = getProofCount();
+    const renderAttachments = (label: string, files: ReturnType<typeof getInvoiceList>, resolvedFiles: typeof resolvedInvoices) => (
+        <>
+            <View style={s.infoRow}>
+                <Text style={[s.infoLabel, { color: subtextColor }]}>{label}</Text>
+                <Text style={[s.infoValue, { color: subtextColor }]}>{files.length} Files</Text>
+            </View>
+            {files.length === 0 && <Text style={{ color: subtextColor, paddingBottom: 12 }}>No {label}</Text>}
+            {files.map((file, index) => {
+                const resolved = resolvedFiles.find(item => item.path === file.path);
+                const disabled = isLoadingDocs || !resolved;
+                return (
+                    <View key={file.path} style={{
+                        flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12,
+                        borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                    }}>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                            <Text style={{ color: textColor, fontSize: 14 }} numberOfLines={1}>{index + 1}. {file.name}</Text>
+                            {disabled && <Text style={{ color: subtextColor, fontSize: 11 }}>{isLoadingDocs ? 'Loading…' : 'File unavailable'}</Text>}
+                        </View>
+                        <TouchableOpacity
+                            accessibilityRole="button"
+                            accessibilityLabel={`View ${file.name}`}
+                            disabled={disabled}
+                            onPress={() => resolved && setActiveDocUrl(resolved.url)}
+                            style={[s.docBadgeBtn, {
+                                backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)',
+                                opacity: disabled ? 0.4 : 1,
+                            }]}
+                        >
+                            <Text style={[s.docBadgeText, { color: textColor }]}>View</Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+            })}
+        </>
+    );
 
     const projectCode = request.project_obj?.project_code || request.project?.project_code || request.project || 'NA';
     const projectName = request.project_obj?.project_name || request.project?.project_name || '';
@@ -809,11 +797,15 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
                         )}
 
                         {/* Documents & Proofs Card */}
-<Text style={[s.sectionTitle, { color: subtextColor, marginTop: 16 }]}>DOCUMENTS & PROOFS</Text><View style={[s.card, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}><View style={s.infoRow}><Text style={[s.infoLabel, { color: subtextColor }]}>Receipt / Invoice</Text><Text style={[s.infoValue, { color: subtextColor }]}>{getInvoiceList(request).length} Files</Text></View>
-{getInvoiceList(request).map((file, index) => { const resolved = resolvedInvoices.find(item => item.path === file.path); return <View key={file.path} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }}><View style={{ flex: 1, minWidth: 0 }}><Text style={{ color: textColor, fontSize: 14 }} numberOfLines={1}>{index + 1}. {file.name}</Text>{(isLoadingDocs || !resolved) && <Text style={{ color: subtextColor, fontSize: 11, marginTop: 4 }}>{isLoadingDocs ? 'Loading…' : 'File unavailable'}</Text>}</View><TouchableOpacity accessibilityLabel={`View ${file.name}`} disabled={isLoadingDocs || !resolved} onPress={() => resolved && setActiveDocUrl(resolved.url)} style={[s.docBadgeBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', opacity: isLoadingDocs || !resolved ? 0.4 : 1 }]}><Text style={[s.docBadgeText, { color: textColor }]}>View</Text></TouchableOpacity></View>; })}
-{!getInvoiceList(request).length && <Text style={{ color: subtextColor, paddingBottom: 12 }}>No Receipt / Invoice</Text>}<View style={[s.separator, { backgroundColor: isDark ? '#242424' : '#E5E7EB' }]} /><View style={s.infoRow}><Text style={[s.infoLabel, { color: subtextColor }]}>Payment Proof</Text><Text style={[s.infoValue, { color: subtextColor }]}>{getProofList(request).length} Files</Text></View>
-{getProofList(request).map((file, index) => { const resolved = resolvedProofs.find(item => item.path === file.path); return <View key={file.path} style={{ flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }}><View style={{ flex: 1, minWidth: 0 }}><Text style={{ color: textColor, fontSize: 14 }} numberOfLines={1}>{index + 1}. {file.name}</Text>{(isLoadingDocs || !resolved) && <Text style={{ color: subtextColor, fontSize: 11, marginTop: 4 }}>{isLoadingDocs ? 'Loading…' : 'File unavailable'}</Text>}</View><TouchableOpacity accessibilityLabel={`View ${file.name}`} disabled={isLoadingDocs || !resolved} onPress={() => resolved && setActiveDocUrl(resolved.url)} style={[s.docBadgeBtn, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', opacity: isLoadingDocs || !resolved ? 0.4 : 1 }]}><Text style={[s.docBadgeText, { color: textColor }]}>View</Text></TouchableOpacity></View>; })}
-{!getProofList(request).length && <Text style={{ color: subtextColor, paddingBottom: 12 }}>No Payment Proof</Text>}</View>
+                        <Text style={[s.sectionTitle, { color: subtextColor, marginTop: 16 }]}>DOCUMENTS & PROOFS</Text>
+                        <View style={[s.card, {
+                            backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)',
+                            borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)',
+                        }]}>
+                            {renderAttachments('Receipt / Invoice', getInvoiceList(request), resolvedInvoices)}
+                            <View style={[s.separator, { backgroundColor: isDark ? '#242424' : '#E5E7EB' }]} />
+                            {renderAttachments('Payment Proof', getProofList(request), resolvedProofs)}
+                        </View>
                         {/* Additional Notes Card */}
                         <Text style={[s.sectionTitle, { color: subtextColor, marginTop: 16 }]}>ADDITIONAL NOTES</Text>
                         <View style={[s.card, { backgroundColor: isDark ? 'rgba(255,255,255,0.03)' : 'rgba(0,0,0,0.015)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)' }]}>

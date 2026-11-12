@@ -333,9 +333,10 @@ export const NotificationsMasterDetail: React.FC<NotificationsMasterDetailProps>
 
     const getActionInfo = (action?: string) => {
         switch ((action || '').toLowerCase()) {
+            case 'partially_paid':
             case 'paid':
                 return {
-                    label: 'marking as paid:',
+                    label: action?.toLowerCase() === 'partially_paid' ? 'partially paid:' : 'marking as paid:',
                     color: '#15803D',
                     avatarBg: isDark ? 'rgba(52,199,89,0.18)' : '#DCFCE7',
                     avatarText: '#15803D',

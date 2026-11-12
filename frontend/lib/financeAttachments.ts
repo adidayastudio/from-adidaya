@@ -27,7 +27,13 @@ export function financeReceipts(request: any): FinanceAttachment[] {
     return normalizeFinanceAttachments([request?.invoices, request?.existingInvoices, request?.reimbursement_invoices, request?.invoice_url, request?.receipt_url, request?.attachment_url, request?.file_url]);
 }
 export function financeProofs(request: any): FinanceAttachment[] {
-    return normalizeFinanceAttachments([request?.payment_proof_url, request?.proof_url, request?.payment_proofs, request?.expense_proof_url], 'Payment Proof');
+    const installmentProofs = Array.isArray(request?.payment_records)
+        ? request.payment_records.map((payment: any) => payment?.proofs)
+        : [];
+    return normalizeFinanceAttachments([
+        installmentProofs, request?.payment_proof_url, request?.proof_url,
+        request?.payment_proofs, request?.expense_proof_url,
+    ], 'Payment Proof');
 }
 
 export async function resolveFinanceAttachments(
