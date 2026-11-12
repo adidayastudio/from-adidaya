@@ -253,72 +253,78 @@ function formatReferenceNumber(type: 'PO' | 'RE', project: any, requestNumber: a
     return `${type}-${projectNum}-${reqNum}`;
 }
 
+async function fetchFinancePages<T>(fetchPage: (from: number, to: number) => PromiseLike<{
+    data: T[] | null;
+    error: { message: string } | null;
+}>): Promise<T[]> {
+    const pageSize = 500;
+    const rows: T[] = [];
+    for (let offset = 0; ; ) {
+        const { data, error } = await fetchPage(offset, offset + pageSize - 1);
+        if (error) throw error;
+        if (!data?.length) return rows;
+        for (const row of data) rows.push(row);
+        // The server can return fewer rows than requested even when more remain.
+        offset += data.length;
+    }
+}
+
+async function fetchFinanceRequestHistory(
+    table: 'purchasing_requests' | 'reimbursement_requests',
+    columns: string[],
+    ownerColumn: 'created_by' | 'user_id',
+    userId: string,
+    isTeam: boolean,
+    projectId?: string,
+) {
+    for (const [index, selection] of columns.entries()) {
+        try {
+            return await fetchFinancePages<any>((from, to) => {
+                let query = supabase.from(table).select(selection)
+                    .order('created_at', { ascending: false })
+                    .order('id', { ascending: false });
+                if (projectId) query = query.eq('project_id', projectId);
+                if (!isTeam) query = query.eq(ownerColumn, userId);
+                return query.range(from, to);
+            });
+        } catch (error) {
+            if (index === columns.length - 1) throw error;
+            console.warn(`Retrying ${table} history with fallback columns:`, error);
+        }
+    }
+    return [];
+}
+
 export async function fetchPurchasingRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY', projectId?: string) {
-    let query = supabase
-        .from('purchasing_requests')
-        .select(PURCHASING_COLUMNS)
-        .order('created_at', { ascending: false })
-        .range(0, 4999); // Override Supabase default 1000-row limit
-
-    if (projectId) query = query.eq('project_id', projectId);
-    if (!isTeam) {
-        query = query.eq('created_by', userId);
-    }
-
-    let { data, error } = await query;
-    if (error) {
-        console.warn("Retrying purchasing requests with fallback query due to:", error.message || error);
-        let fallbackQuery = supabase
-            .from('purchasing_requests')
-            .select(`*, project:projects(id, project_name, project_code, project_number), items:purchasing_items(*)`)
-            .order('created_at', { ascending: false })
-            .range(0, 4999);
-        if (projectId) fallbackQuery = fallbackQuery.eq('project_id', projectId);
-        if (!isTeam) {
-            fallbackQuery = fallbackQuery.eq('created_by', userId);
-        }
-        const fallbackRes = await fallbackQuery;
-        if (fallbackRes.error) {
-            console.warn("Retrying purchasing requests with simple select * due to:", fallbackRes.error.message);
-            let simpleQuery = supabase
-                .from('purchasing_requests')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .range(0, 4999);
-            if (projectId) simpleQuery = simpleQuery.eq('project_id', projectId);
-            if (!isTeam) {
-                simpleQuery = simpleQuery.eq('created_by', userId);
-            }
-            const simpleRes = await simpleQuery;
-            data = simpleRes.data;
-            if (simpleRes.error) {
-                console.error("Failed all purchasing requests queries:", simpleRes.error);
-                if (projectId) throw simpleRes.error;
-                return [];
-            }
-        } else {
-            data = fallbackRes.data;
-        }
-    }
+    let data = await fetchFinanceRequestHistory(
+        'purchasing_requests',
+        [PURCHASING_COLUMNS, '*, project:projects(id, project_name, project_code, project_number), items:purchasing_items(*)', '*'],
+        'created_by', userId, isTeam, projectId,
+    );
 
     if (!data || data.length === 0) return [];
     // Fallback request queries omit nested invoices. Retrieve those rows separately
     // so older requests with only the first path on the parent retain every file.
     const missingInvoiceIds = data.filter((request: any) => !Array.isArray(request.invoices)).map((request: any) => request.id);
     if (missingInvoiceIds.length) {
-        const { data: invoiceRows, error: invoiceError } = await supabase.from('purchasing_invoices')
-            .select('*').in('request_id', missingInvoiceIds).order('created_at', { ascending: true }).range(0, 4999);
-        if (invoiceError) console.warn('Unable to load purchasing attachments:', invoiceError.message);
-        else {
-            const invoicesByRequest = new Map<string, any[]>();
-            for (const invoice of invoiceRows || []) {
-                const files = invoicesByRequest.get(invoice.request_id) || [];
-                files.push(invoice);
-                invoicesByRequest.set(invoice.request_id, files);
+        const invoicesByRequest = new Map<string, any[]>();
+        for (let offset = 0; offset < missingInvoiceIds.length; offset += 100) {
+            const ids = missingInvoiceIds.slice(offset, offset + 100);
+            try {
+                const invoiceRows = await fetchFinancePages<any>((from, to) => supabase.from('purchasing_invoices')
+                    .select('*').in('request_id', ids).order('created_at', { ascending: true })
+                    .order('id', { ascending: true }).range(from, to));
+                for (const invoice of invoiceRows) {
+                    const files = invoicesByRequest.get(invoice.request_id) || [];
+                    files.push(invoice);
+                    invoicesByRequest.set(invoice.request_id, files);
+                }
+            } catch (error) {
+                console.warn('Unable to load purchasing attachments:', error);
             }
-            data = data.map((request: any) => Array.isArray(request.invoices) ? request
-                : { ...request, invoices: invoicesByRequest.get(request.id) || [] });
         }
+        data = data.map(request => Array.isArray(request.invoices) ? request
+            : { ...request, invoices: invoicesByRequest.get(request.id) || [] });
     }
     // Fetch profiles manually to avoid PostgREST PGRST200 join errors
     const userIds = Array.from(new Set((data || []).map((r: any) => r.created_by).filter(Boolean)));
@@ -813,52 +819,11 @@ export async function payFinanceRequest(userId: string, id: string, type: 'purch
 
 
 export async function fetchReimburseRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY', projectId?: string) {
-    let query = supabase
-        .from('reimbursement_requests')
-        .select(REIMBURSE_COLUMNS)
-        .order('created_at', { ascending: false })
-        .range(0, 4999); // Override Supabase default 1000-row limit
-
-    if (projectId) query = query.eq('project_id', projectId);
-    if (!isTeam) {
-        query = query.eq('user_id', userId);
-    }
-
-    let { data, error } = await query;
-    if (error) {
-        console.warn("Retrying reimburse requests with fallback query due to:", error.message || error);
-        let fallbackQuery = supabase
-            .from('reimbursement_requests')
-            .select(`*, project:projects(id, project_name, project_code, project_number), items:reimbursement_items(*)`)
-            .order('created_at', { ascending: false })
-            .range(0, 4999);
-        if (projectId) fallbackQuery = fallbackQuery.eq('project_id', projectId);
-        if (!isTeam) {
-            fallbackQuery = fallbackQuery.eq('user_id', userId);
-        }
-        const fallbackRes = await fallbackQuery;
-        if (fallbackRes.error) {
-            console.warn("Retrying reimburse requests with simple select * due to:", fallbackRes.error.message);
-            let simpleQuery = supabase
-                .from('reimbursement_requests')
-                .select('*')
-                .order('created_at', { ascending: false })
-                .range(0, 4999);
-            if (projectId) simpleQuery = simpleQuery.eq('project_id', projectId);
-            if (!isTeam) {
-                simpleQuery = simpleQuery.eq('user_id', userId);
-            }
-            const simpleRes = await simpleQuery;
-            data = simpleRes.data;
-            if (simpleRes.error) {
-                console.error("Failed all reimburse requests queries:", simpleRes.error);
-                if (projectId) throw simpleRes.error;
-                return [];
-            }
-        } else {
-            data = fallbackRes.data;
-        }
-    }
+    const data = await fetchFinanceRequestHistory(
+        'reimbursement_requests',
+        [REIMBURSE_COLUMNS, '*, project:projects(id, project_name, project_code, project_number), items:reimbursement_items(*)', '*'],
+        'user_id', userId, isTeam, projectId,
+    );
 
     if (!data || data.length === 0) return [];
 
