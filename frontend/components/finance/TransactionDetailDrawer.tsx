@@ -1,6 +1,7 @@
 import { isFinanceSuperadmin } from '@/lib/financeRoles';
 import { useUserContext } from '@/context/UserProvider';
 import { FinanceAttachmentPreview } from './FinanceAttachmentPreview';
+import { loadFinanceAttachmentPreview } from '@/lib/financeAttachmentPreview';
 import { resolveFinanceUrl } from '@/lib/api/finance';
 import { financeProofs, resolveFinanceAttachments } from '@/lib/financeAttachments';
 import React, { useRef, useEffect } from 'react';
@@ -383,9 +384,8 @@ export const TransactionDetailDrawer: React.FC<TransactionDetailDrawerProps> = (
             const isImage = ['jpg', 'jpeg', 'png', 'webp', 'gif'].includes(extension);
 
             if (Platform.OS === 'web') {
-                const response = await fetch(activeDocUrl);
-                if (!response.ok) throw new Error('File could not be downloaded from the server.');
-                const url = URL.createObjectURL(await response.blob());
+                const { blob } = await loadFinanceAttachmentPreview(activeDocUrl, undefined, false);
+                const url = URL.createObjectURL(blob);
                 const anchor = document.createElement('a');
                 anchor.href = url;
                 anchor.download = filename;

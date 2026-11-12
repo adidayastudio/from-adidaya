@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Image, Linking, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Image, Platform, Text, TouchableOpacity, View } from 'react-native';
 import { useTheme } from '@/context/ThemeContext';
 import { loadFinanceAttachmentPreview } from '@/lib/financeAttachmentPreview';
 
@@ -7,6 +7,8 @@ export function AttachmentPreview({ url }: { url: string }) {
     const { resolvedTheme } = useTheme();
     const textColor = resolvedTheme === 'dark' ? '#fff' : '#1C1C1E';
     const [source, setSource] = useState('');
+    const canEmbedPdf = Platform.OS === 'web' && typeof navigator !== 'undefined'
+        && !/Android/i.test(navigator.userAgent) && navigator.pdfViewerEnabled !== false;
     const [kind, setKind] = useState('image');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -38,12 +40,12 @@ export function AttachmentPreview({ url }: { url: string }) {
             controller.abort();
             if (objectUrl) URL.revokeObjectURL(objectUrl);
         };
-    }, [url, attempt]);
+    }, [url, attempt, canEmbedPdf]);
     const failed = () => { setLoading(false); setError('Preview failed to load. Try again or download the file.'); };
     return (
         <View style={{ width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }}>
             {!error && source && (kind === 'pdf' && Platform.OS === 'web' ? (
-                <iframe title="PDF preview" src={source} onLoad={() => setLoading(false)} onError={failed}
+                <iframe key={source} title="PDF preview" src={canEmbedPdf ? source : `/pdf-preview.html#${encodeURIComponent(source)}`} onLoad={() => setLoading(false)} onError={failed}
                     style={{ width: '100%', height: '100%', border: 0, backgroundColor: '#fff' }} />
             ) : kind === 'image' ? (
                 <Image source={{ uri: source }} resizeMode="contain" style={{ width: '100%', height: '100%' }}
@@ -58,7 +60,6 @@ export function AttachmentPreview({ url }: { url: string }) {
             {!!error && <View style={{ alignItems: 'center', gap: 16, padding: 24 }}>
                 <Text style={{ color: textColor, textAlign: 'center' }}>{error}</Text>
                 <TouchableOpacity onPress={() => setAttempt(value => value + 1)}><Text style={{ color: '#66b5ff' }}>Retry</Text></TouchableOpacity>
-                <TouchableOpacity onPress={() => { void Linking.openURL(url); }}><Text style={{ color: '#66b5ff' }}>Open file directly</Text></TouchableOpacity>
             </View>}
         </View>
     );

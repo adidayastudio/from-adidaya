@@ -1,5 +1,5 @@
 import { decodeFinanceImage } from './decodeFinanceImage';
-export async function loadFinanceAttachmentPreview(url: string, signal?: AbortSignal) {
+export async function loadFinanceAttachmentPreview(url: string, signal?: AbortSignal, decodeImage = true) {
     let response = await fetch(url, { signal });
     // Private Supabase buckets cannot be read through /object/public URLs.
     // Sign the original bucket/path using the current user's storage permissions.
@@ -12,7 +12,9 @@ export async function loadFinanceAttachmentPreview(url: string, signal?: AbortSi
                 if (match) {
                     const { data, error } = await supabase.storage.from(decodeURIComponent(match[1]))
                         .createSignedUrl(decodeURIComponent(match[2]), 3600);
-                    if (!error && data?.signedUrl) response = await fetch(data.signedUrl, { signal });
+                    if (!error && data?.signedUrl) {
+                        response = await fetch(data.signedUrl, { signal });
+                    }
                 }
             }
         } catch (error) {
@@ -30,5 +32,5 @@ export async function loadFinanceAttachmentPreview(url: string, signal?: AbortSi
     const path = url.split(/[?#]/)[0].toLowerCase();
     const kind = mime.includes('application/pdf') || path.endsWith('.pdf') ? 'pdf'
         : mime.startsWith('image/') || /\.(png|jpe?g|webp|gif|heic|heif|avif)$/.test(path) ? 'image' : 'file';
-    return { blob: kind === 'image' ? await decodeFinanceImage(blob, url) : blob, kind };
+    return { blob: kind === 'image' && decodeImage ? await decodeFinanceImage(blob, url) : blob, kind };
 }

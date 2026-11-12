@@ -20,6 +20,17 @@ function cleanDotUnderscoreFiles(dir) {
 
 cleanDotUnderscoreFiles(path.join(__dirname, 'app'));
 
+// Expo serves this directory in development and copies it into web exports.
+const pdfPackage = path.dirname(require.resolve('pdfjs-dist/package.json'));
+const pdfAssets = path.join(__dirname, 'public', 'pdfjs');
+fs.mkdirSync(pdfAssets, { recursive: true });
+for (const file of ['pdf', 'pdf.worker']) {
+  fs.copyFileSync(path.join(pdfPackage, 'legacy', 'build', `${file}.min.mjs`), path.join(pdfAssets, `${file}.mjs`));
+}
+for (const entry of ['cmaps', 'iccs', 'standard_fonts', 'wasm', 'LICENSE']) {
+  fs.cpSync(path.join(pdfPackage, entry), path.join(pdfAssets, entry), { recursive: true });
+}
+
 const config = getDefaultConfig(__dirname);
 
 // Block Metro from trying to process macOS AppleDouble hidden dotfiles (._*)

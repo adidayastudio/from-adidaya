@@ -57,6 +57,7 @@
     "expo-web-browser": "~15.0.10",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",
+    "pdfjs-dist": "6.5.438",
     "native-toolbar-button": "file:./modules/native-toolbar-button",
     "react": "19.1.0",
     "react-dom": "19.1.0",

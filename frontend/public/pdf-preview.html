@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PDF preview</title>
+<style>
+  body { margin: 0; background: #f2f2f7; color: #1c1c1e; font: 14px system-ui, sans-serif; }
+  header { position: sticky; top: 0; display: flex; align-items: center; justify-content: center;
+    gap: 12px; padding: 8px; background: #fff; border-bottom: 1px solid #ddd; }
+  [hidden] { display: none !important; }
+  button { font: inherit; min-height: 36px; padding: 4px 12px; }
+  #status { text-align: center; padding: 0 12px; }
+  canvas { display: block; max-width: 100%; height: auto; margin: 0 auto; background: #fff; }
+</style>
+<header id="controls" hidden>
+  <button id="previous" type="button">Previous</button>
+  <span id="page-number" aria-live="polite"></span>
+  <button id="next" type="button">Next</button>
+</header>
+<p id="status" role="status">Loading PDF…</p>
+<canvas id="page" aria-label="PDF page" hidden></canvas>
+<script type="module">
+  const controls = document.getElementById('controls');
+  const previous = document.getElementById('previous');
+  const next = document.getElementById('next');
+  const pageNumber = document.getElementById('page-number');
+  const status = document.getElementById('status');
+  const canvas = document.getElementById('page');
+  let loadingTask;
+
+  async function start() {
+    const source = new URL(decodeURIComponent(location.hash.slice(1)));
+    if (source.protocol !== 'blob:' || source.origin !== location.origin) throw new Error('Invalid PDF source');
+    const pdfjs = await import('./pdfjs/pdf.mjs');
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL('./pdfjs/pdf.worker.mjs', location.href).href;
+    const assets = new URL('./pdfjs/', location.href);
+    loadingTask = pdfjs.getDocument({
+      url: source.href,
+      cMapUrl: new URL('cmaps/', assets).href,
+      cMapPacked: true,
+      iccUrl: new URL('iccs/', assets).href,
+      standardFontDataUrl: new URL('standard_fonts/', assets).href,
+      wasmUrl: new URL('wasm/', assets).href,
+      isEvalSupported: false,
+    });
+    const pdf = await loadingTask.promise;
+    let currentPage = 1;
+
+    async function showPage(number) {
+      previous.disabled = true;
+      next.disabled = true;
+      status.textContent = 'Loading PDF page…';
+      canvas.hidden = true;
+      currentPage = number;
+      pageNumber.textContent = `${number} / ${pdf.numPages}`;
+      try {
+        const page = await pdf.getPage(number);
+        const original = page.getViewport({ scale: 1 });
+        const scale = Math.min(2, 2048 / Math.max(original.width, original.height));
+        const viewport = page.getViewport({ scale });
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        await page.render({ canvas, canvasContext: canvas.getContext('2d'), viewport }).promise;
+        page.cleanup();
+        canvas.hidden = false;
+        status.textContent = '';
+      } catch {
+        status.textContent = 'This page could not be displayed. Use Download File to open the PDF.';
+      } finally {
+        previous.disabled = number <= 1;
+        next.disabled = number >= pdf.numPages;
+      }
+    }
+
+    controls.hidden = pdf.numPages <= 1;
+    previous.onclick = () => showPage(currentPage - 1);
+    next.onclick = () => showPage(currentPage + 1);
+    await showPage(1);
+  }
+
+  window.addEventListener('pagehide', () => { loadingTask?.destroy().catch(() => {}); }, { once: true });
+  start().catch(() => {
+    status.textContent = 'This PDF could not be displayed. Use Download File to open it.';
+  });
+</script>
