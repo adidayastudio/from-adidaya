@@ -24,7 +24,7 @@ import { TopUpModal } from '@/components/finance/TopUpModal';
 import { GlassView } from '@/components/ui/GlassView';
 import { HeaderToolbar, HeaderToolbarAction } from '@/components/ui/HeaderToolbar';
 import { WebFinderHeader } from '@/components/ui/WebFinderHeader';
-import { LiquidDatePicker } from '@/components/ui/LiquidDatePicker';
+import { LiquidDatePicker, toLocalYYYYMMDD } from '@/components/ui/LiquidDatePicker';
 import { MultiProgressRing } from '@/components/ui/MultiProgressRing';
 import { getFinanceStatusColor } from '@/lib/financeStatusPresentation';
 import { PlatformIcon } from '@/components/ui/PlatformIcon';
@@ -64,9 +64,27 @@ import ContextMenu, { ContextMenuAction } from '@/components/ui/PlatformContextM
 import Animated, { FadeInUp, useAnimatedStyle, useSharedValue, withSpring, withTiming, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
+const FINANCE_TABLE_COLUMNS = [
+    { label: 'Date', flex: 1 },
+    { label: 'Project', flex: 1 },
+    { label: 'Number', flex: 1.3 },
+    { label: 'Item', flex: 3 },
+    { label: 'Status', flex: 1.2 },
+    { label: 'Amount', flex: 1.5 },
+];
+
+const FUNDING_TABLE_COLUMNS = [
+    { label: 'Account', flex: 2 },
+    { label: 'Provider', flex: 1 },
+    { label: 'Number', flex: 1.4 },
+    { label: 'Status', flex: 1 },
+    { label: 'Balance', flex: 1.4 },
+];
+
 
 const FINANCE_SEGMENTS: Segment[] = [
     { id: 'overview', label: 'Overview', icon: 'chart.pie.fill' },
@@ -136,6 +154,41 @@ function getConsolidationPaymentProgress(consolidation: any) {
 }
 
 
+function matchesFinanceRequestSearch(item: any, query: string): boolean {
+    if (!query) return true;
+    const matches = (value: unknown) => typeof value === 'string' && value.toLowerCase().includes(query);
+    return [
+        item.title, item.description, item.project, item.project_obj?.project_name,
+        item.department_name, item.department?.name, item.department_code,
+        item.ref, item.shortRef, item.cardRef, item.status,
+    ].some(matches) || (item.items || []).some((entry: any) =>
+        [entry?.name, entry?.item_name, entry?.description].some(matches)
+    );
+}
+
+function getFinanceRequestCodes(item: any) {
+    const department = formatDepartmentCode(
+        item.department?.code || item.department_code,
+        item.department?.name || item.department_name,
+    );
+    const projectRecord = item.project_obj || item.project;
+    const legacyProject = typeof item.project === 'string' && !['UNASSIGNED', 'NA', 'N/A'].includes(item.project.toUpperCase())
+        ? formatDepartmentCode(item.project)
+        : '';
+    const project = formatDepartmentCode(projectRecord?.project_code, projectRecord?.project_name)
+        || (item.project_id || legacyProject !== department ? legacyProject : '');
+    return { department, project, isProject: Boolean(item.project_id || item.project_obj || project) };
+}
+
+function getRequestFilterStatus(item: { statusTag?: string; status?: string; _paid_amount?: number }) {
+    const status = (item.statusTag || item.status || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+    if (status === 'paid' || status === 'rejected') return status;
+    if (['approved', 'paying', 'partially_paid', 'consolidated'].includes(status) || Number(item._paid_amount) > 0) {
+        return 'approved';
+    }
+    return 'pending';
+}
+
 function calculateSummary(items: any[], categoryIcon: string) {
     const stats = {
         total: { label: 'Total Requests', amount: 0, count: 0, icon: categoryIcon, color: '#007AFF' },
@@ -145,6 +198,7 @@ function calculateSummary(items: any[], categoryIcon: string) {
         rejected: { label: 'Rejected', amount: 0, count: 0, icon: 'xmark.circle.fill', color: '#FF3B30' },
     };
 
+    let cashPaidAmount = 0;
     items.forEach(item => {
         let amount = 0;
         if (item && item.amount !== null && item.amount !== undefined) {
@@ -157,19 +211,13 @@ function calculateSummary(items: any[], categoryIcon: string) {
         stats.total.amount += amount;
         stats.total.count += 1;
 
-        const tag = item?.statusTag?.toLowerCase() as keyof typeof stats;
-        if (tag && stats[tag]) {
-            stats[tag].amount += amount;
-            stats[tag].count += 1;
-        }
-        const partiallyPaidAmount = Math.min(amount, Number(item?._paid_amount || 0));
-        if (tag !== 'paid' && partiallyPaidAmount > 0) {
-            stats.paid.amount += partiallyPaidAmount;
-            stats.paid.count += 1;
-        }
+        const status = getRequestFilterStatus(item);
+        stats[status].amount += amount;
+        stats[status].count += 1;
+        cashPaidAmount += status === 'paid' ? amount : Math.min(amount, Number(item._paid_amount || 0));
     });
 
-    return stats;
+    return { stats, cashPaidAmount };
 }
 
 function calculatePettyCashSummary(pools: any[]) {
@@ -392,6 +440,17 @@ export default function FinanceScreen() {
 
     const { width } = useWindowDimensions();
     const isDesktopWeb = Platform.OS === 'web' && width >= 768;
+    const [financeView, setFinanceView] = useState('split');
+    const [transactionSort, setTransactionSort] = useState<{ column: number; ascending: boolean } | null>(null);
+    const [fundingSort, setFundingSort] = useState<typeof transactionSort>(null);
+    const canSwitchFinanceView = ['overview', 'purchasing', 'reimbursement', 'funding', 'setup'].includes(activeSegment);
+    const isFinanceTableView = isDesktopWeb && canSwitchFinanceView && financeView === 'table';
+    const showFinanceTable = isFinanceTableView && activeSegment !== 'setup';
+    const useFullWidthSetupHeader = isFinanceTableView && activeSegment === 'setup';
+    const isFundingTable = activeSegment === 'funding';
+    const tableColumns = isFundingTable ? FUNDING_TABLE_COLUMNS : FINANCE_TABLE_COLUMNS;
+    const tableSort = isFundingTable ? fundingSort : transactionSort;
+    const setTableSort = isFundingTable ? setFundingSort : setTransactionSort;
 
     const { searchQuery, setSearchQuery, isSearchVisible, setIsSearchVisible, setContextAction } = useSearch();
 
@@ -562,61 +621,37 @@ export default function FinanceScreen() {
         ];
         const addedCodes = new Set<string>(['ALL', 'ALL_DEPTS', 'ALL_PROJECTS']);
 
-        // 1. Organization Departments
-        const deptsSource = fetchedDepartments.length > 0 ? fetchedDepartments : DEFAULT_DEPARTMENTS_LIST;
-        deptsSource.forEach((d: any) => {
-            const code = formatDepartmentCode(d.code, d.name);
-            if (!code || addedCodes.has(code)) return;
-            addedCodes.add(code);
-            const label = d.name ? `${code} · ${d.name}` : code;
-            items.push({ id: code, label });
+        const addOption = (type: 'dept' | 'project', code: string, name?: string) => {
+            const id = `${type}:${code}`;
+            if (!code || addedCodes.has(id)) return;
+            addedCodes.add(id);
+            items.push({ id, label: name ? `${code} · ${name}` : code });
+        };
+
+        const departments = fetchedDepartments.length > 0 ? fetchedDepartments : DEFAULT_DEPARTMENTS_LIST;
+        const requests = [...purchasingRequests, ...reimbursementRequests];
+        departments.forEach(department =>
+            addOption('dept', formatDepartmentCode(department.code, department.name), department.name)
+        );
+        requests.forEach(request => {
+            addOption('dept', getFinanceRequestCodes(request).department, request.department?.name || request.department_name);
         });
 
-        // 2. Departments from loaded requests
-        const allRequests = [...purchasingRequests, ...reimbursementRequests];
-        allRequests.forEach(req => {
-            const rawCode = req.department?.code || req.department_code;
-            const rawName = req.department?.name || req.department_name;
-            if (rawCode || rawName) {
-                const code = formatDepartmentCode(rawCode, rawName);
-                if (code && !addedCodes.has(code)) {
-                    addedCodes.add(code);
-                    items.push({ id: code, label: rawName ? `${code} · ${rawName}` : code });
-                }
-            }
-        });
-
-        // Keep departments in their configured number/order, then projects by project number.
         const projectStartIndex = items.length;
         const projectNumbers = new Map<string, string>();
-        const rememberProjectNumber = (project: any) => {
-            if (!project || typeof project !== 'object') return;
-            const code = formatDepartmentCode(project.project_code || project.code, project.project_name || project.name);
+        fetchedProjects.forEach(project => {
+            const name = project.project_name || project.name;
+            const code = formatDepartmentCode(project.project_code || project.code, name);
+            addOption('project', code, name);
             const number = project.project_number ?? project.number;
-            if (code && number !== undefined && number !== null && String(number).trim()) {
-                projectNumbers.set(code, String(number).trim());
-            }
-        };
-        allRequests.forEach(req => rememberProjectNumber(req.project_obj || req.project));
-        fetchedProjects.forEach(rememberProjectNumber);
-
-        // 3. Projects from DB
-        fetchedProjects.forEach((p: any) => {
-            const code = formatDepartmentCode(p.project_code || p.code, p.project_name || p.name);
-            if (!code || addedCodes.has(code)) return;
-            addedCodes.add(code);
-            const pName = p.project_name || p.name;
-            const label = pName ? `${code} · ${pName}` : code;
-            items.push({ id: code, label });
+            if (code && number != null) projectNumbers.set(`project:${code}`, String(number));
         });
-
-        // 4. Projects from loaded requests
-        allRequests.forEach(req => {
-            const projCode = formatDepartmentCode(req.project_obj?.project_code || req.project?.project_code || req.project);
-            if (projCode && projCode !== 'UNASSIGNED' && projCode !== 'NA' && !addedCodes.has(projCode)) {
-                addedCodes.add(projCode);
-                const projName = req.project_obj?.project_name || req.project?.project_name;
-                items.push({ id: projCode, label: projName ? `${projCode} · ${projName}` : projCode });
+        requests.forEach(request => {
+            const { project } = getFinanceRequestCodes(request);
+            const record = request.project_obj || request.project;
+            addOption('project', project, record?.project_name);
+            if (project && record?.project_number != null && !projectNumbers.has(`project:${project}`)) {
+                projectNumbers.set(`project:${project}`, String(record.project_number));
             }
         });
 
@@ -645,26 +680,10 @@ export default function FinanceScreen() {
     const filterRequestMatches = useCallback((item: any, filterCode: string) => {
         if (filterCode === 'ALL') return true;
 
-        const rawDept = item.department?.code || item.department_code || item.department?.name;
-        const deptCode = formatDepartmentCode(rawDept);
-        const projCode = formatDepartmentCode(item.project_obj?.project_code || item.project?.project_code || item.project);
-        const isProject = Boolean(
-            item.project_id || 
-            item.project_obj || 
-            (item.project && item.project !== 'Unassigned' && item.project !== 'NA')
-        );
-
-        if (filterCode === 'ALL_DEPTS') {
-            return Boolean(deptCode) || !isProject;
-        }
-        if (filterCode === 'ALL_PROJECTS') {
-            return isProject || Boolean(projCode);
-        }
-
-        return deptCode === filterCode 
-            || projCode === filterCode 
-            || item.project_id === filterCode 
-            || item.project === filterCode;
+        const { department, project, isProject } = getFinanceRequestCodes(item);
+        if (filterCode === 'ALL_DEPTS') return Boolean(department) || !isProject;
+        if (filterCode === 'ALL_PROJECTS') return isProject;
+        return filterCode === `dept:${department}` || filterCode === `project:${project}`;
     }, []);
 
     const selectedDepartmentDisplayLabel = useMemo(() => {
@@ -672,7 +691,7 @@ export default function FinanceScreen() {
         if (selectedDepartmentCode === 'ALL_DEPTS') return 'All Departments';
         if (selectedDepartmentCode === 'ALL_PROJECTS') return 'All Projects';
         const found = departmentFilterItems.find(it => it.id === selectedDepartmentCode);
-        return found ? found.id : selectedDepartmentCode;
+        return found?.label || selectedDepartmentCode;
     }, [selectedDepartmentCode, departmentFilterItems]);
 
     useEffect(() => {
@@ -712,20 +731,23 @@ export default function FinanceScreen() {
         return `${selectedMonth.getFullYear()}-${String(selectedMonth.getMonth() + 1).padStart(2, '0')}`;
     }, [selectedMonth]);
 
-    const matchesDate = (itemDateStr: string) => {
-        if (!itemDateStr) return false;
+    const matchesDate = useCallback((itemDate?: string) => {
         if (dateFilterType === 'all') return true;
+        if (!itemDate) return false;
+        const date = new Date(itemDate);
+        if (!Number.isFinite(date.getTime())) return false;
+        const day = /^\d{4}-\d{2}-\d{2}$/.test(itemDate) ? itemDate : toLocalYYYYMMDD(date);
         if (dateFilterType === 'range') {
-            if (!customStartDate || !customEndDate) return false;
-            const itemTime = new Date(itemDateStr).getTime();
-            const startLimit = new Date(customStartDate);
-            startLimit.setHours(0, 0, 0, 0);
-            const endLimit = new Date(customEndDate);
-            endLimit.setHours(23, 59, 59, 999);
-            return itemTime >= startLimit.getTime() && itemTime <= endLimit.getTime();
+            return !!customStartDate && !!customEndDate
+                && day >= toLocalYYYYMMDD(customStartDate) && day <= toLocalYYYYMMDD(customEndDate);
         }
-        return itemDateStr.startsWith(selectedYearMonth);
-    };
+        return day.startsWith(selectedYearMonth);
+    }, [dateFilterType, customStartDate, customEndDate, selectedYearMonth]);
+
+    const filteredConsolidations = useMemo(() => consolidations.filter(item =>
+        matchesDate(item.created_at) &&
+        (selectedDepartmentCode === 'ALL' || item.requests.some(request => filterRequestMatches(request, selectedDepartmentCode)))
+    ), [consolidations, matchesDate, selectedDepartmentCode, filterRequestMatches]);
 
     const paidAmountsByRequestId = useMemo(() => {
         const amounts = new Map<string, number>();
@@ -740,19 +762,19 @@ export default function FinanceScreen() {
     const filteredPurchasingForStats = useMemo(() => {
         return purchasingRequests.filter(item => {
             const matchesDepartment = filterRequestMatches(item, selectedDepartmentCode);
-            return matchesDepartment && matchesDate(item.date);
+            return matchesDepartment && matchesDate(item.date || item.created_at);
         }).map(item => ({ ...item, _paid_amount: paidAmountsByRequestId.get(item.id) || 0 }));
-    }, [purchasingRequests, dateFilterType, customStartDate, customEndDate, selectedYearMonth, selectedDepartmentCode, paidAmountsByRequestId, filterRequestMatches]);
+    }, [purchasingRequests, matchesDate, selectedDepartmentCode, paidAmountsByRequestId, filterRequestMatches]);
 
     const filteredReimbursementForStats = useMemo(() => {
         return reimbursementRequests.filter(item => {
             const matchesDepartment = filterRequestMatches(item, selectedDepartmentCode);
-            return matchesDepartment && matchesDate(item.date);
+            return matchesDepartment && matchesDate(item.date || item.created_at);
         });
-    }, [reimbursementRequests, dateFilterType, customStartDate, customEndDate, selectedYearMonth, selectedDepartmentCode, filterRequestMatches]);
+    }, [reimbursementRequests, matchesDate, selectedDepartmentCode, filterRequestMatches]);
 
-    const purchasingStats = useMemo(() => calculateSummary(filteredPurchasingForStats, 'cart.fill'), [filteredPurchasingForStats]);
-    const reimbursementStats = useMemo(() => calculateSummary(filteredReimbursementForStats, 'doc.text.fill'), [filteredReimbursementForStats]);
+    const { stats: purchasingStats, cashPaidAmount: purchasingCashPaid } = useMemo(() => calculateSummary(filteredPurchasingForStats, 'cart.fill'), [filteredPurchasingForStats]);
+    const { stats: reimbursementStats, cashPaidAmount: reimbursementCashPaid } = useMemo(() => calculateSummary(filteredReimbursementForStats, 'doc.text.fill'), [filteredReimbursementForStats]);
 
     const consolidationStats = useMemo(() => {
         const stats = {
@@ -762,7 +784,7 @@ export default function FinanceScreen() {
             approved: { label: 'Approved', amount: 0, count: 0, icon: 'checkmark.shield.fill', color: '#007AFF' },
             paid: { label: 'Paid', amount: 0, count: 0, icon: 'checkmark.seal.fill', color: '#34C759' },
         };
-        consolidations.forEach(c => {
+        filteredConsolidations.forEach(c => {
             stats.total.count += 1;
             stats.total.amount += c.total_amount || 0;
             const tag = (c.status?.toLowerCase() || 'draft') as keyof typeof stats;
@@ -776,7 +798,7 @@ export default function FinanceScreen() {
             }
         });
         return stats;
-    }, [consolidations]);
+    }, [filteredConsolidations]);
 
     const paymentStats = useMemo(() => {
         const stats = {
@@ -785,7 +807,7 @@ export default function FinanceScreen() {
             partiallyPaid: { label: 'Partially Paid', amount: 0, count: 0, icon: 'clock.fill', color: '#5856D6' },
             paid: { label: 'Paid', amount: 0, count: 0, icon: 'checkmark.seal.fill', color: '#34C759' },
         };
-        const payableConsolidations = consolidations.filter(c =>
+        const payableConsolidations = filteredConsolidations.filter(c =>
             c.status === 'Approved' || c.status === 'Paying' || c.status === 'Partially Paid' || c.status === 'Paid'
         );
         payableConsolidations.forEach(c => {
@@ -806,10 +828,10 @@ export default function FinanceScreen() {
             }
         });
         return stats;
-    }, [consolidations]);
+    }, [filteredConsolidations]);
 
     const pulseData = useMemo(() => {
-        const totalPaid = purchasingStats.paid.amount + reimbursementStats.paid.amount;
+        const totalPaid = purchasingCashPaid + reimbursementCashPaid;
         const currentBalance = fundingSources.reduce((sum, source) => sum + (source.balance || 0), 0);
 
         const approvedPurchases = purchasingRequests
@@ -866,7 +888,7 @@ export default function FinanceScreen() {
             currentBalance,
             dates
         };
-    }, [purchasingRequests, reimbursementRequests, fundingSources, purchasingStats, reimbursementStats]);
+    }, [purchasingRequests, reimbursementRequests, fundingSources, purchasingCashPaid, reimbursementCashPaid]);
 
     const matchedTransactions = useMemo(() => {
         if (!selectedSource) return [];
@@ -1320,6 +1342,95 @@ export default function FinanceScreen() {
         }
     }, [actionTarget, actionModalType, deleteRequest, updateRequestStatus]);
 
+    const getFinanceTableValues = (item: any) => [
+        item.date,
+        item.project_obj?.project_code || item.project,
+        item.cardRef || item.shortRef || item.ref,
+        item.title || item.description || 'Request',
+        item.status,
+        item.amount,
+    ];
+
+    const getFundingTableValues = (source: any) => [
+        source.name || 'Account',
+        source.provider,
+        source.account_number,
+        source.is_active === false ? 'Inactive' : 'Active',
+        source.balance ?? 0,
+    ];
+
+    const sortFinanceTableItems = <T,>(items: T[], getValues = getFinanceTableValues) => {
+        if (!showFinanceTable || (activeSegment === 'purchasing' && isConsolidationSelectionMode) || !tableSort) return items;
+        const { column, ascending } = tableSort;
+        const label = tableColumns[column].label;
+        const sortValue = (item: T) => {
+            const value = getValues(item)[column];
+            if (value == null || value === '') return null;
+            if (label === 'Date' || label === 'Amount' || label === 'Balance') {
+                const number = label === 'Date' ? new Date(value).getTime() : Number(value);
+                return Number.isFinite(number) ? number : null;
+            }
+            return String(value);
+        };
+
+        return items.map(item => ({ item, value: sortValue(item) })).sort((a, b) => {
+            if (a.value === null) return b.value === null ? 0 : 1;
+            if (b.value === null) return -1;
+            const order = typeof a.value === 'number' && typeof b.value === 'number'
+                ? a.value - b.value
+                : String(a.value).localeCompare(String(b.value), undefined, { numeric: true, sensitivity: 'base' });
+            return ascending ? order : -order;
+        }).map(({ item }) => item);
+    };
+
+    const renderFinanceTableRow = (values?: (string | undefined)[]) => (
+        <View style={[s.financeTableRow, { borderBottomColor: isDark ? '#2C2C2E' : '#DCDCE1' }]}>
+            {tableColumns.map(({ label, flex }, index) => {
+                const alignRight = label === 'Amount' || label === 'Balance';
+                const activeSort = tableSort?.column === index ? tableSort : null;
+                const cellStyle = { flex, minWidth: 0 };
+                if (!values) {
+                    return (
+                        <TouchableOpacity
+                            key={label}
+                            accessibilityRole="button"
+                            accessibilityLabel={activeSort
+                                ? `${label}, sorted ${activeSort.ascending ? 'ascending' : 'descending'}`
+                                : `Sort by ${label}`}
+                            onPress={() => setTableSort(current => ({
+                                column: index,
+                                ascending: current?.column === index ? !current.ascending : true,
+                            }))}
+                            style={[cellStyle, {
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: alignRight ? 'flex-end' : 'flex-start',
+                                gap: 4,
+                            }]}
+                        >
+                            <Text numberOfLines={1} style={{ flexShrink: 1, fontWeight: '600', color: subtextColor }}>{label}</Text>
+                            <MaterialCommunityIcons
+                                name={activeSort ? (activeSort.ascending ? 'chevron-up' : 'chevron-down') : 'unfold-more-horizontal'}
+                                size={14}
+                                color={activeSort ? textColor : subtextColor}
+                            />
+                        </TouchableOpacity>
+                    );
+                }
+
+                return (
+                    <Text key={label} numberOfLines={1} style={[cellStyle, {
+                        textAlign: alignRight ? 'right' : 'left',
+                        fontWeight: label === 'Item' || alignRight ? '600' : '400',
+                        color: label === 'Status' && !isFundingTable ? getFinanceStatusColor(values[index], isDark) : textColor,
+                    }]}>
+                        {values[index] || '—'}
+                    </Text>
+                );
+            })}
+        </View>
+    );
+
     const renderActivityItem = (item: any, moduleType: 'purchasing' | 'reimbursement', showActions = true) => {
         const availableActions = getActionButtons(item);
         const actionsList = showActions ? availableActions.filter(action => action.id !== 'delete') : [];
@@ -1364,6 +1475,28 @@ export default function FinanceScreen() {
                 setShowRequestDetail(true);
             }
         };
+
+        if (showFinanceTable && (activeSegment !== 'purchasing' || !isConsolidationSelectionMode)) {
+            return (
+                <ContextMenu
+                    actions={contextMenuActions}
+                    disabled={!contextMenuActions.length}
+                    onPress={(event) => {
+                        const action = availableActions[event.nativeEvent.index];
+                        if (action) openFinanceAction(action.id, item, moduleType);
+                    }}
+                >
+                    <TouchableOpacity accessibilityRole="button" onPress={handlePress}>
+                        {renderFinanceTableRow(getFinanceTableValues(item).map((value, index) => {
+                            const { label } = FINANCE_TABLE_COLUMNS[index];
+                            if (label === 'Date') return formatCardDate(value);
+                            if (label === 'Amount' && typeof value === 'number') return formatCurrency(value);
+                            return value;
+                        }))}
+                    </TouchableOpacity>
+                </ContextMenu>
+            );
+        }
 
         const priority = item.priority?.toLowerCase();
 
@@ -1514,20 +1647,8 @@ export default function FinanceScreen() {
         );
     };
 
-    const handlePrevMonth = () => {
-        setSelectedMonth(prev => {
-            const d = new Date(prev);
-            d.setMonth(d.getMonth() - 1);
-            return d;
-        });
-    };
-
-    const handleNextMonth = () => {
-        setSelectedMonth(prev => {
-            const d = new Date(prev);
-            d.setMonth(d.getMonth() + 1);
-            return d;
-        });
+    const shiftMonth = (offset: number) => {
+        setSelectedMonth(previous => new Date(previous.getFullYear(), previous.getMonth() + offset, 1));
     };
 
     const formatCardDate = (dateStr: string) => {
@@ -1583,41 +1704,14 @@ export default function FinanceScreen() {
         }
     };
 
-    const showDateFilterActionSheet = () => {
-        const options = ['This Month', 'All Time', 'Select Custom Range...', 'Cancel'];
-        const cancelButtonIndex = 3;
-
-        if (Platform.OS === 'ios') {
-            ActionSheetIOS.showActionSheetWithOptions(
-                {
-                    options,
-                    cancelButtonIndex,
-                    title: 'Filter Date',
-                    userInterfaceStyle: isDark ? 'dark' : 'light',
-                },
-                (buttonIndex) => {
-                    if (buttonIndex === 0) {
-                        setDateFilterType('month');
-                    } else if (buttonIndex === 1) {
-                        setDateFilterType('all');
-                    } else if (buttonIndex === 2) {
-                        setPickerPhase('start');
-                    }
-                }
-            );
-        } else {
-            Alert.alert(
-                'Filter Date',
-                'Choose a date filter option:',
-                [
-                    { text: 'This Month', onPress: () => setDateFilterType('month') },
-                    { text: 'All Time', onPress: () => setDateFilterType('all') },
-                    { text: 'Select Custom Range...', onPress: () => setPickerPhase('start') },
-                    { text: 'Cancel', style: 'cancel' }
-                ]
-            );
-        }
-    };
+    const dateFilterActions = [
+        { title: 'This Month', selected: dateFilterType === 'month', select: () => {
+            setSelectedMonth(new Date());
+            setDateFilterType('month');
+        } },
+        { title: 'All Time', selected: dateFilterType === 'all', select: () => setDateFilterType('all') },
+        { title: 'Select Custom Range…', selected: dateFilterType === 'range', select: () => setPickerPhase('start') },
+    ];
 
     const renderControlRow = () => {
         return (
@@ -1631,28 +1725,33 @@ export default function FinanceScreen() {
                         }
                     ]}>
                         <TouchableOpacity
-                            onPress={handlePrevMonth}
+                            onPress={() => shiftMonth(-1)}
                             style={[s.chevronTouch, dateFilterType !== 'month' && { opacity: 0 }]}
                             disabled={dateFilterType !== 'month'}
                         >
                             <PlatformIcon name="chevron.left" size={14} tintColor={textColor} />
                         </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={showDateFilterActionSheet}
-                            style={[s.controlPillCenter, { flex: 1, height: '100%' }]}
+                        <ContextMenu
+                            title="Filter Date"
+                            actions={dateFilterActions}
+                            dropdownMenuMode
+                            style={{ flex: 1, height: '100%' }}
+                            onPress={event => dateFilterActions[event.nativeEvent.index]?.select()}
                         >
-                            <Text style={[s.controlPillText, { color: textColor }]} numberOfLines={1}>
-                                {dateFilterType === 'month'
-                                    ? formatMonthYear(selectedMonth)
-                                    : dateFilterType === 'all'
-                                        ? 'All Time'
-                                        : customStartDate && customEndDate
-                                            ? formatRangeText(customStartDate, customEndDate)
-                                            : 'Select Range'}
-                            </Text>
-                        </TouchableOpacity>
+                            <View style={[s.controlPillCenter, { flex: 1, height: '100%' }]}>
+                                <Text style={[s.controlPillText, { color: textColor }]} numberOfLines={1}>
+                                    {dateFilterType === 'month'
+                                        ? formatMonthYear(selectedMonth)
+                                        : dateFilterType === 'all'
+                                            ? 'All Time'
+                                            : customStartDate && customEndDate
+                                                ? formatRangeText(customStartDate, customEndDate)
+                                                : 'Select Range'}
+                                </Text>
+                            </View>
+                        </ContextMenu>
                         <TouchableOpacity
-                            onPress={handleNextMonth}
+                            onPress={() => shiftMonth(1)}
                             style={[s.chevronTouch, dateFilterType !== 'month' && { opacity: 0 }]}
                             disabled={dateFilterType !== 'month'}
                         >
@@ -1699,7 +1798,11 @@ export default function FinanceScreen() {
                     </ContextMenu>
 
                     <TouchableOpacity
-                        onPress={() => setIsSearchVisible(!isSearchVisible)}
+                        accessibilityLabel={isSearchVisible ? 'Hide search' : 'Search'}
+                        onPress={() => {
+                            if (isSearchVisible) setSearchQuery('');
+                            setIsSearchVisible(!isSearchVisible);
+                        }}
                         style={[
                             s.searchButtonPill,
                             {
@@ -1725,7 +1828,8 @@ export default function FinanceScreen() {
                     >
                         <PlatformIcon name="magnifyingglass" size={16} tintColor={subtextColor} style={{ marginRight: 8 }} />
                         <TextInput
-                            placeholder="Search requests..."
+                            autoFocus
+                            placeholder="Search requests and items..."
                             placeholderTextColor={isDark ? '#666' : '#999'}
                             style={[s.inlineSearchInput, { color: textColor }]}
                             value={searchQuery}
@@ -1937,7 +2041,11 @@ export default function FinanceScreen() {
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                        onPress={() => setIsSearchVisible(!isSearchVisible)}
+                        accessibilityLabel={isSearchVisible ? 'Hide search' : 'Search'}
+                        onPress={() => {
+                            if (isSearchVisible) setSearchQuery('');
+                            setIsSearchVisible(!isSearchVisible);
+                        }}
                         style={[
                             s.searchButtonPill,
                             {
@@ -2049,7 +2157,24 @@ export default function FinanceScreen() {
                 {renderFundingControlRow()}
 
                 <View style={s.activityList}>
-                    {displayedSources.length > 0 ? (
+                    {showFinanceTable && displayedSources.length > 0 ? (
+                        <>
+                            {renderFinanceTableRow()}
+                            {sortFinanceTableItems(displayedSources, getFundingTableValues).map(source => {
+                                const values = getFundingTableValues(source);
+                                values[4] = formatCurrency(Number(values[4]));
+                                return (
+                                    <TouchableOpacity
+                                        key={source.id}
+                                        accessibilityRole="button"
+                                        onPress={() => setSelectedSource(source)}
+                                    >
+                                        {renderFinanceTableRow(values)}
+                                    </TouchableOpacity>
+                                );
+                            })}
+                        </>
+                    ) : displayedSources.length > 0 ? (
                         displayedSources.map((source) => {
                             const providerColor = getProviderColor(source.provider);
                             const isInactive = source.is_active === false;
@@ -2230,7 +2355,7 @@ export default function FinanceScreen() {
                     textColor={textColor}
                     subtextColor={subtextColor}
                     selectedModuleId={isDesktopWeb ? selectedSetupModule : undefined}
-                    onSelectModule={isDesktopWeb ? (id) => setSelectedSetupModule(id) : undefined}
+                    onSelectModule={isDesktopWeb ? setSelectedSetupModule : undefined}
                 />
             );
         }
@@ -2260,11 +2385,11 @@ export default function FinanceScreen() {
             const showSubNavigation = activeScope === 'team' && hasTeamAccess;
 
             if (showSubNavigation && activeWorkflowTab === 'consolidation' && isPurchasingConEnabled) {
-                const searchFilteredConsolidations = consolidations.filter(item => {
+                const searchFilteredConsolidations = filteredConsolidations.filter(item => {
                     return !q ||
                         item.document_number.toLowerCase().includes(q) ||
                         item.status.toLowerCase().includes(q) ||
-                        item.requests.some((r: any) => (r.ref && r.ref.toLowerCase().includes(q)) || (r.title && r.title.toLowerCase().includes(q)));
+                        item.requests.some(request => matchesFinanceRequestSearch(request, q));
                 });
                 const filteredConsolidationsArr = searchFilteredConsolidations.filter(item =>
                     filterStatus === 'total'
@@ -2316,7 +2441,7 @@ export default function FinanceScreen() {
 
             if (showSubNavigation && activeWorkflowTab === 'payment') {
                 if (isPurchasingConEnabled) {
-                    const payableConsolidations = consolidations.filter(c =>
+                    const payableConsolidations = filteredConsolidations.filter(c =>
                         c.status === 'Approved' || c.status === 'Paying' || c.status === 'Partially Paid' || c.status === 'Paid'
                     );
                     const searchFilteredPayable = payableConsolidations.filter(item => {
@@ -2331,7 +2456,7 @@ export default function FinanceScreen() {
                         return matchesStatus && (!q ||
                             item.document_number.toLowerCase().includes(q) ||
                             item.status.toLowerCase().includes(q) ||
-                            item.requests.some((r: any) => (r.ref && r.ref.toLowerCase().includes(q)) || (r.title && r.title.toLowerCase().includes(q))));
+                            item.requests.some(request => matchesFinanceRequestSearch(request, q)));
                     });
 
                     return (
@@ -2377,15 +2502,13 @@ export default function FinanceScreen() {
                         </View>
                     );
                 } else {
-                    const payableRequests = filteredPurchasingForStats.filter(item => {
-                        const matchesStatus = filterStatus === 'total'
-                            ? (item.statusTag === 'approved' || item.statusTag === 'paid')
-                            : (filterStatus === 'paid' ? item.statusTag === 'paid' : item.statusTag === filterStatus);
-                        return matchesStatus && (!q ||
-                            item.title.toLowerCase().includes(q) ||
-                            (item.project && item.project.toLowerCase().includes(q)) ||
-                            (item.ref && item.ref.toLowerCase().includes(q)) ||
-                            (item.status && item.status.toLowerCase().includes(q)));
+                    const paymentItems = filteredPurchasingForStats.filter(item => {
+                        const status = getRequestFilterStatus(item);
+                        return status === 'approved' || status === 'paid';
+                    });
+                    const payableRequests = paymentItems.filter(item => {
+                        const matchesStatus = filterStatus === 'total' || getRequestFilterStatus(item) === filterStatus;
+                        return matchesStatus && matchesFinanceRequestSearch(item, q);
                     });
 
                     return (
@@ -2401,13 +2524,16 @@ export default function FinanceScreen() {
                                     }}
                                 />
                             </View>
-                            {renderFilterCards(purchasingStats)}
+                            {renderFilterCards(calculateSummary(paymentItems, 'cart.fill').stats)}
                             {renderControlRow()}
                             <View style={s.activityList}>
                                 {payableRequests.length > 0 ? (
-                                    payableRequests.map((item: any) => (
-                                        <View key={item.id}>{renderActivityItem(item, 'purchasing')}</View>
-                                    ))
+                                    <>
+                                        {showFinanceTable && !isConsolidationSelectionMode && renderFinanceTableRow()}
+                                        {sortFinanceTableItems(payableRequests).map((item: any) => (
+                                            <View key={item.id}>{renderActivityItem(item, 'purchasing')}</View>
+                                        ))}
+                                    </>
                                 ) : (
                                     <EmptyState segment="Purchasing" filter={filterStatus} />
                                 )}
@@ -2417,15 +2543,9 @@ export default function FinanceScreen() {
                 }
             }
 
-            const searchFiltered = filteredPurchasingForStats.filter(item => {
-                return !q ||
-                    item.title.toLowerCase().includes(q) ||
-                    (item.project && item.project.toLowerCase().includes(q)) ||
-                    (item.ref && item.ref.toLowerCase().includes(q)) ||
-                    (item.status && item.status.toLowerCase().includes(q));
-            });
+            const searchFiltered = filteredPurchasingForStats.filter(item => matchesFinanceRequestSearch(item, q));
             const filteredItemsArr = searchFiltered.filter(item => filterStatus === 'total'
-                || (filterStatus === 'paid' ? item.statusTag === 'paid' || Number(item._paid_amount || 0) > 0 : (item as any).statusTag === filterStatus));
+                || getRequestFilterStatus(item) === filterStatus);
 
             return (
                 <View style={s.subModuleContainer}>
@@ -2497,9 +2617,12 @@ export default function FinanceScreen() {
 
                     <View style={s.activityList}>
                         {filteredItemsArr.length > 0 ? (
-                            filteredItemsArr.map((item: any) => (
-                                <View key={item.id}>{renderActivityItem(item, 'purchasing')}</View>
-                            ))
+                            <>
+                                {showFinanceTable && !isConsolidationSelectionMode && renderFinanceTableRow()}
+                                {sortFinanceTableItems(filteredItemsArr).map((item: any) => (
+                                    <View key={item.id}>{renderActivityItem(item, 'purchasing')}</View>
+                                ))}
+                            </>
                         ) : (
                             <EmptyState segment="Purchasing" filter={filterStatus} />
                         )}
@@ -2509,19 +2632,15 @@ export default function FinanceScreen() {
         }
         if (activeSegment === 'reimbursement') {
             const showSubNavigation = activeScope === 'team' && hasTeamAccess;
-            const workflowFiltered = filteredReimbursementForStats.filter(item => {
-                if (!showSubNavigation || activeWorkflowTab === 'request') return true;
-                if (activeWorkflowTab === 'consolidation' && isReimbConEnabled) return item.statusTag === 'approved';
-                return item.statusTag === 'approved' || item.statusTag === 'paid';
-            });
-            const searchFiltered = workflowFiltered.filter(item => {
-                return !q ||
-                    item.title.toLowerCase().includes(q) ||
-                    (item.project && item.project.toLowerCase().includes(q)) ||
-                    (item.ref && item.ref.toLowerCase().includes(q)) ||
-                    (item.status && item.status.toLowerCase().includes(q));
-            });
-            const filteredItemsArr = searchFiltered.filter(item => filterStatus === 'total' || (item as any).statusTag === filterStatus);
+            const workflowFiltered = !showSubNavigation || activeWorkflowTab === 'request'
+                ? filteredReimbursementForStats
+                : filteredReimbursementForStats.filter(item => {
+                    const status = getRequestFilterStatus(item);
+                    if (activeWorkflowTab === 'consolidation' && isReimbConEnabled) return status === 'approved';
+                    return status === 'approved' || status === 'paid';
+                });
+            const searchFiltered = workflowFiltered.filter(item => matchesFinanceRequestSearch(item, q));
+            const filteredItemsArr = searchFiltered.filter(item => filterStatus === 'total' || getRequestFilterStatus(item) === filterStatus);
             return (
                 <View style={s.subModuleContainer}>
                     {showSubNavigation && (
@@ -2533,13 +2652,18 @@ export default function FinanceScreen() {
                             />
                         </View>
                     )}
-                    {renderFilterCards(reimbursementStats)}
+                    {renderFilterCards(workflowFiltered === filteredReimbursementForStats
+                        ? reimbursementStats
+                        : calculateSummary(workflowFiltered, 'doc.text.fill').stats)}
                     {renderControlRow()}
                     <View style={s.activityList}>
                         {filteredItemsArr.length > 0 ? (
-                            filteredItemsArr.map((item: any) => (
-                                <View key={item.id}>{renderActivityItem(item, 'reimbursement')}</View>
-                            ))
+                            <>
+                                {showFinanceTable && renderFinanceTableRow()}
+                                {sortFinanceTableItems(filteredItemsArr).map((item: any) => (
+                                    <View key={item.id}>{renderActivityItem(item, 'reimbursement')}</View>
+                                ))}
+                            </>
                         ) : (
                             <EmptyState segment="Reimbursement" filter={filterStatus} />
                         )}
@@ -2550,7 +2674,7 @@ export default function FinanceScreen() {
 
         const pStats_v = purchasingStats;
         const rStats_v = reimbursementStats;
-        const totalPaid = pStats_v.paid.amount + rStats_v.paid.amount;
+        const totalPaid = purchasingCashPaid + reimbursementCashPaid;
         const baseline = 350000000;
         const trendVal = baseline > 0 ? Math.round((totalPaid / baseline) * 100) : 0;
         const isNormalVal = trendVal >= 80 && trendVal <= 110;
@@ -2569,7 +2693,7 @@ export default function FinanceScreen() {
                     value: `+${trendVal}%`,
                     valueStyle: isNormalVal ? 'positive' : 'negative',
                     label: dateFilterType === 'month' ? 'Total Paid (Month)' : 'Total Paid',
-                    sub: formatCurrency(pStats_v.paid.amount + rStats_v.paid.amount),
+                    sub: formatCurrency(purchasingCashPaid + reimbursementCashPaid),
                     subValueStyle: 'bold',
                     icon: 'checkmark.circle.fill',
                     color: '#34C759',
@@ -2581,20 +2705,8 @@ export default function FinanceScreen() {
                 { value: formatShortBalance(totalFundingBalance), label: 'Balance', sub: `${activeFundingCount} Account${activeFundingCount === 1 ? '' : 's'}`, icon: 'creditcard.fill', color: '#007AFF', segment: 'funding' },
             ];
 
-        const searchFilteredPurchasing = purchasingRequests.filter(item => {
-            return !q ||
-                item.title.toLowerCase().includes(q) ||
-                (item.project && item.project.toLowerCase().includes(q)) ||
-                (item.ref && item.ref.toLowerCase().includes(q)) ||
-                (item.status && item.status.toLowerCase().includes(q));
-        });
-        const searchFilteredReimbursement = reimbursementRequests.filter(item => {
-            return !q ||
-                item.title.toLowerCase().includes(q) ||
-                (item.project && item.project.toLowerCase().includes(q)) ||
-                (item.ref && item.ref.toLowerCase().includes(q)) ||
-                (item.status && item.status.toLowerCase().includes(q));
-        });
+        const searchFilteredPurchasing = filteredPurchasingForStats.filter(item => matchesFinanceRequestSearch(item, q));
+        const searchFilteredReimbursement = filteredReimbursementForStats.filter(item => matchesFinanceRequestSearch(item, q));
 
         const overviewTransactions = [
             ...filteredPurchasingForStats.map(item => ({
@@ -2619,8 +2731,8 @@ export default function FinanceScreen() {
                 <FinanceHeroOverviewCard
                     embedded={false}
                     monthLabel={dateFilterType === 'month' ? formatMonthYear(selectedMonth) : 'Current View'}
-                    totalPaid={pStats_v.paid.amount + rStats_v.paid.amount}
-                    totalCommitted={pStats_v.paid.amount + rStats_v.paid.amount + pStats_v.pending.amount + rStats_v.pending.amount}
+                    totalPaid={purchasingCashPaid + reimbursementCashPaid}
+                    totalCommitted={purchasingCashPaid + reimbursementCashPaid + pStats_v.pending.amount + rStats_v.pending.amount}
                     lastMonthPaid={77000}
                     outstandingAmount={pStats_v.pending.amount + rStats_v.pending.amount}
                     outstandingCount={pStats_v.pending.count + rStats_v.pending.count}
@@ -2664,7 +2776,12 @@ export default function FinanceScreen() {
                     </TouchableOpacity>
                     <View style={s.activityList}>
                         {searchFilteredPurchasing.length > 0 ? (
-                            searchFilteredPurchasing.slice(0, 3).map((item: any) => (<View key={item.id}>{renderActivityItem(item, 'purchasing', false)}</View>))
+                            <>
+                                {showFinanceTable && renderFinanceTableRow()}
+                                {sortFinanceTableItems(searchFilteredPurchasing.slice(0, 3)).map(item => (
+                                    <View key={item.id}>{renderActivityItem(item, 'purchasing', false)}</View>
+                                ))}
+                            </>
                         ) : (
                             <View style={[s.emptyRecentCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.025)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
                                 <Text style={[s.emptyRecentText, { color: subtextColor }]}>No recent purchasing requests</Text>
@@ -2678,7 +2795,12 @@ export default function FinanceScreen() {
                     </TouchableOpacity>
                     <View style={s.activityList}>
                         {searchFilteredReimbursement.length > 0 ? (
-                            searchFilteredReimbursement.slice(0, 3).map((item: any) => (<View key={item.id}>{renderActivityItem(item, 'reimbursement', false)}</View>))
+                            <>
+                                {showFinanceTable && renderFinanceTableRow()}
+                                {sortFinanceTableItems(searchFilteredReimbursement.slice(0, 3)).map(item => (
+                                    <View key={item.id}>{renderActivityItem(item, 'reimbursement', false)}</View>
+                                ))}
+                            </>
                         ) : (
                             <View style={[s.emptyRecentCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : 'rgba(0,0,0,0.025)', borderColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
                                 <Text style={[s.emptyRecentText, { color: subtextColor }]}>No recent reimbursement claims</Text>
@@ -2742,6 +2864,82 @@ export default function FinanceScreen() {
     const pStats_v = purchasingStats;
     const rStats_v = reimbursementStats;
 
+    const desktopFinanceHeader = isDesktopWeb ? (
+        <View style={s.splitListHeader}>
+            <View style={s.splitListHeaderTitleRow}>
+                <Text style={[s.splitListHeaderTitle, { color: textColor }]}>Finance</Text>
+                {isAuthenticated && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {canSwitchFinanceView && (
+                            <TouchableOpacity
+                                accessibilityRole="button"
+                                accessibilityLabel={isFinanceTableView ? 'Switch to Side by Side' : 'Switch to Table View'}
+                                onPress={() => setFinanceView(isFinanceTableView ? 'split' : 'table')}
+                                style={[s.headerActionCircle, {
+                                    backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+                                    borderWidth: isDark ? 0 : 1,
+                                    borderColor: 'rgba(0,0,0,0.08)',
+                                }]}
+                            >
+                                <MaterialCommunityIcons name={isFinanceTableView ? 'table' : 'view-split-vertical'} size={17} color={textColor} />
+                            </TouchableOpacity>
+                        )}
+                        {hasTeamAccess && activeSegment !== 'petty_cash' && activeSegment !== 'funding' && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    const nextScope = activeScope === 'me' ? 'team' : 'me';
+                                    if (nextScope === 'me' && (activeSegment === 'setup' || activeSegment === 'funding' || activeSegment === 'petty_cash')) {
+                                        setActiveSegment('overview');
+                                    }
+                                    setActiveScope(nextScope);
+                                }}
+                                style={[
+                                    s.headerActionCircle,
+                                    {
+                                        backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
+                                        borderWidth: isDark ? 0 : 1,
+                                        borderColor: isDark ? 'transparent' : 'rgba(0,0,0,0.08)',
+                                    }
+                                ]}
+                            >
+                                <PlatformIcon
+                                    name={activeScope === 'me' ? 'person.fill' : 'person.2.fill'}
+                                    size={16}
+                                    tintColor={textColor}
+                                />
+                            </TouchableOpacity>
+                        )}
+                        {activeSegment !== 'setup' && (
+                            <ContextMenu
+                                dropdownMenuMode={true}
+                                actions={financeAddMenuActions}
+                                onPress={handleFinanceAddMenuPress}
+                            >
+                                <TouchableOpacity
+                                    style={[s.headerActionCircle, { backgroundColor: '#159957' }]}
+                                    activeOpacity={0.8}
+                                >
+                                    <Ionicons name="add" size={18} color="#FFFFFF" />
+                                </TouchableOpacity>
+                            </ContextMenu>
+                        )}
+                    </View>
+                )}
+            </View>
+
+            {/* Filter Segmented Control */}
+            <View style={{ marginTop: 12 }}>
+                <SegmentedControl
+                    fullWidth
+                    style={{ width: '100%' }}
+                    segments={filteredFinanceSegments}
+                    activeSegment={activeSegment}
+                    onSegmentChange={(id) => setActiveSegment(id as any)}
+                />
+            </View>
+        </View>
+    ) : null;
+
     return (
         <>
             <Stack.Screen options={{
@@ -2788,189 +2986,134 @@ export default function FinanceScreen() {
             )}
 
             {isDesktopWeb ? (
-                <View style={[s.splitRoot, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}>
-                    {/* Left Pane (flex: 1.1) */}
-                    <View style={[s.splitLeftPane, { borderRightColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}>
-                        {/* Header with Title + Action Buttons */}
-                        <View style={s.splitListHeader}>
-                            <View style={s.splitListHeaderTitleRow}>
-                                <Text style={[s.splitListHeaderTitle, { color: textColor }]}>Finance</Text>
-                                {isAuthenticated && (
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                                        {hasTeamAccess && activeSegment !== 'petty_cash' && activeSegment !== 'funding' && (
-                                            <TouchableOpacity
-                                                onPress={() => {
-                                                    const nextScope = activeScope === 'me' ? 'team' : 'me';
-                                                    if (nextScope === 'me' && (activeSegment === 'setup' || activeSegment === 'funding' || activeSegment === 'petty_cash')) {
-                                                        setActiveSegment('overview');
-                                                    }
-                                                    setActiveScope(nextScope);
-                                                }}
-                                                style={[
-                                                    s.headerActionCircle,
-                                                    {
-                                                        backgroundColor: isDark ? '#2C2C2E' : '#FFFFFF',
-                                                        borderWidth: isDark ? 0 : 1,
-                                                        borderColor: isDark ? 'transparent' : 'rgba(0,0,0,0.08)',
-                                                    }
-                                                ]}
-                                            >
-                                                <PlatformIcon
-                                                    name={activeScope === 'me' ? 'person.fill' : 'person.2.fill'}
-                                                    size={16}
-                                                    tintColor={textColor}
-                                                />
-                                            </TouchableOpacity>
-                                        )}
-                                        {activeSegment !== 'setup' && (
-                                            <ContextMenu
-                                                dropdownMenuMode={true}
-                                                actions={financeAddMenuActions}
-                                                onPress={handleFinanceAddMenuPress}
-                                            >
-                                                <TouchableOpacity
-                                                    style={[s.headerActionCircle, { backgroundColor: '#159957' }]}
-                                                    activeOpacity={0.8}
-                                                >
-                                                    <Ionicons name="add" size={18} color="#FFFFFF" />
-                                                </TouchableOpacity>
-                                            </ContextMenu>
-                                        )}
-                                    </View>
-                                )}
-                            </View>
+                <View style={{ flex: 1, backgroundColor: isDark ? '#000000' : '#F2F2F7' }}>
+                    {useFullWidthSetupHeader && desktopFinanceHeader}
+                    <View style={s.splitRoot}>
+                        {/* Left Pane (flex: 1.1) */}
+                        <View style={[s.splitLeftPane, showFinanceTable && s.financeTablePane, { borderRightColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.08)', backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}>
+                            {!useFullWidthSetupHeader && desktopFinanceHeader}
 
-                            {/* Filter Segmented Control */}
-                            <View style={{ marginTop: 12 }}>
-                                <SegmentedControl
-                                    fullWidth
-                                    style={{ width: '100%' }}
-                                    segments={filteredFinanceSegments}
-                                    activeSegment={activeSegment}
-                                    onSegmentChange={(id) => setActiveSegment(id as any)}
-                                />
-                            </View>
+                            <ScrollView
+                                style={s.splitListScroll}
+                                contentContainerStyle={{
+                                    paddingHorizontal: activeSegment === 'setup' ? 0 : 20,
+                                    paddingTop: activeSegment === 'setup' ? 0 : 8,
+                                    paddingBottom: 60,
+                                }}
+                                showsVerticalScrollIndicator={true}
+                                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFF' : '#000'} />}
+                                keyboardShouldPersistTaps="handled"
+                            >
+                                <Pressable style={{ flex: 1 }} onPress={() => setExpandedId(null)}>
+                                    {renderContent()}
+                                </Pressable>
+                            </ScrollView>
                         </View>
 
-                        <ScrollView
-                            style={s.splitListScroll}
-                            contentContainerStyle={{
-                                paddingHorizontal: activeSegment === 'setup' ? 0 : 20,
-                                paddingTop: activeSegment === 'setup' ? 0 : 8,
-                                paddingBottom: 60,
-                            }}
-                            showsVerticalScrollIndicator={true}
-                            refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={isDark ? '#FFF' : '#000'} />}
-                            keyboardShouldPersistTaps="handled"
-                        >
-                            <Pressable style={{ flex: 1 }} onPress={() => setExpandedId(null)}>
-                                {renderContent()}
-                            </Pressable>
-                        </ScrollView>
-                    </View>
-
-                    {/* Right Pane (flex: 2) */}
-                    <View style={[s.splitRightPane, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}>
-                        {showCreateRequest ? (
-                            <SwiftUICreateRequestSheet
-                                key={`desktop-create-req-${createRequestType}-${editRequest?.id || 'new'}`}
-                                isOpened={true}
-                                onClose={() => {
-                                    setShowCreateRequest(false);
-                                    setEditRequest(null);
-                                }}
-                                initialType={createRequestType}
-                                locked={createRequestLocked}
-                                editRequest={editRequest}
-                                isEmbedded={true}
-                            />
-                        ) : (showAddFunding || !!editingSource) ? (
-                            <SwiftUIAddFundingSourceSheet
-                                key={`desktop-add-funding-${editingSource?.id || 'new'}`}
-                                isOpened={true}
-                                onClose={() => { setShowAddFunding(false); setEditingSource(null); }}
-                                source={editingSource}
-                                isEmbedded={true}
-                            />
-                        ) : (showPayModal && !!payTarget) ? (
-                            <FinancePayModal
-                                key={`desktop-pay-${payTarget.item?.id || 'pay'}`}
-                                visible={true}
-                                onClose={() => {
-                                    setShowPayModal(false);
-                                    setPayTarget(null);
-                                }}
-                                request={payTarget.item || null}
-                                fundingSources={fundingSources}
-                                onConfirm={handlePayConfirm}
-                                isEmbedded={true}
-                            />
-                        ) : activeSegment === 'setup' ? (
-                            <FinanceSetupDetailPane
-                                key={`desktop-setup-${selectedSetupModule}`}
-                                moduleId={selectedSetupModule}
-                                isDark={isDark}
-                                textColor={textColor}
-                                subtextColor={subtextColor}
-                            />
-                        ) : selectedRequest ? (
-                            <SwiftUITransactionDetailSheet
-                                key={`desktop-req-${selectedRequest.id}-${requestDetailPresentationKey}`}
-                                isOpened={true}
-                                onClose={() => { setSelectedRequest(null); setExpandedId(null); }}
-                                request={selectedRequest}
-                                actions={getActionButtons(selectedRequest).filter(action => action.id !== 'delete')}
-                                onAction={(actionId, req) => openFinanceAction(actionId, req, selectedRequest?.moduleType || 'purchasing')}
-                                isEmbedded={true}
-                            />
-                        ) : selectedSource ? (
-                            <SwiftUIFundingDetailSheet
-                                key={`desktop-src-${selectedSource.id}`}
-                                isOpened={true}
-                                onClose={() => setSelectedSource(null)}
-                                source={selectedSource}
-                                matchedTransactions={matchedTransactions}
-                                onEdit={(src) => { setSelectedSource(null); setEditingSource(src); }}
-                                isEmbedded={true}
-                            />
-                        ) : (
-                            <View style={s.desktopEmptyPane}>
-                                <View style={[s.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
-                                    <PlatformIcon
-                                        name={activeSegment === 'funding' ? 'creditcard.fill' : (activeSegment === 'reimbursement' ? 'doc.text.fill' : 'cart.fill')}
-                                        size={36}
-                                        tintColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'}
-                                    />
-                                </View>
-                                <Text style={[s.desktopEmptyTitle, { color: textColor }]}>
-                                    {activeSegment === 'funding' ? 'Select Funding Source' : 'Select Transaction'}
-                                </Text>
-                                <Text style={[s.desktopEmptySubtitle, { color: subtextColor }]}>
-                                    {activeSegment === 'funding'
-                                        ? 'Choose an account or funding source to view its balance, linked disbursements, and account information.'
-                                        : 'Choose a purchasing or reimbursement request from the list to view its approval chain, financial records, and attachments.'}
-                                </Text>
-                                <TouchableOpacity
-                                    onPress={() => {
-                                        if (activeSegment === 'funding') {
-                                            setSelectedSource(null);
-                                            setEditingSource(null);
-                                            setShowAddFunding(true);
-                                        } else {
-                                            setSelectedRequest(null);
-                                            setCreateRequestType(activeSegment === 'reimbursement' ? 'reimburse' : 'purchase');
-                                            setCreateRequestLocked(false);
+                        {(!showFinanceTable || showCreateRequest || showAddFunding || !!editingSource || (showPayModal && !!payTarget)) && (
+                            <View style={[showFinanceTable ? s.financeTableActionPane : s.splitRightPane, { backgroundColor: isDark ? '#000000' : '#F2F2F7' }]}>
+                                {showCreateRequest ? (
+                                    <SwiftUICreateRequestSheet
+                                        key={`desktop-create-req-${createRequestType}-${editRequest?.id || 'new'}`}
+                                        isOpened={true}
+                                        onClose={() => {
+                                            setShowCreateRequest(false);
                                             setEditRequest(null);
-                                            setShowCreateRequest(true);
-                                        }
-                                    }}
-                                    style={[s.desktopEmptyBtn, { backgroundColor: '#159957' }]}
-                                >
-                                    <Ionicons name="add" size={18} color="#FFFFFF" />
-                                    <Text style={s.desktopEmptyBtnText}>
-                                        {activeSegment === 'funding' ? 'Add Funding Source' : 'New Request'}
-                                    </Text>
-                                </TouchableOpacity>
+                                        }}
+                                        initialType={createRequestType}
+                                        locked={createRequestLocked}
+                                        editRequest={editRequest}
+                                        isEmbedded={true}
+                                    />
+                                ) : (showAddFunding || !!editingSource) ? (
+                                    <SwiftUIAddFundingSourceSheet
+                                        key={`desktop-add-funding-${editingSource?.id || 'new'}`}
+                                        isOpened={true}
+                                        onClose={() => { setShowAddFunding(false); setEditingSource(null); }}
+                                        source={editingSource}
+                                        isEmbedded={true}
+                                    />
+                                ) : (showPayModal && !!payTarget) ? (
+                                    <FinancePayModal
+                                        key={`desktop-pay-${payTarget.item?.id || 'pay'}`}
+                                        visible={true}
+                                        onClose={() => {
+                                            setShowPayModal(false);
+                                            setPayTarget(null);
+                                        }}
+                                        request={payTarget.item || null}
+                                        fundingSources={fundingSources}
+                                        onConfirm={handlePayConfirm}
+                                        isEmbedded={true}
+                                    />
+                                ) : activeSegment === 'setup' ? (
+                                    <FinanceSetupDetailPane
+                                        key={`desktop-setup-${selectedSetupModule}`}
+                                        moduleId={selectedSetupModule}
+                                        isDark={isDark}
+                                        textColor={textColor}
+                                        subtextColor={subtextColor}
+                                    />
+                                ) : selectedRequest ? (
+                                    <SwiftUITransactionDetailSheet
+                                        key={`desktop-req-${selectedRequest.id}-${requestDetailPresentationKey}`}
+                                        isOpened={true}
+                                        onClose={() => { setSelectedRequest(null); setExpandedId(null); }}
+                                        request={selectedRequest}
+                                        actions={getActionButtons(selectedRequest).filter(action => action.id !== 'delete')}
+                                        onAction={(actionId, req) => openFinanceAction(actionId, req, selectedRequest?.moduleType || 'purchasing')}
+                                        isEmbedded={true}
+                                    />
+                                ) : selectedSource ? (
+                                    <SwiftUIFundingDetailSheet
+                                        key={`desktop-src-${selectedSource.id}`}
+                                        isOpened={true}
+                                        onClose={() => setSelectedSource(null)}
+                                        source={selectedSource}
+                                        matchedTransactions={matchedTransactions}
+                                        onEdit={(src) => { setSelectedSource(null); setEditingSource(src); }}
+                                        isEmbedded={true}
+                                    />
+                                ) : (
+                                    <View style={s.desktopEmptyPane}>
+                                        <View style={[s.desktopEmptyIconCircle, { backgroundColor: isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)' }]}>
+                                            <PlatformIcon
+                                                name={activeSegment === 'funding' ? 'creditcard.fill' : (activeSegment === 'reimbursement' ? 'doc.text.fill' : 'cart.fill')}
+                                                size={36}
+                                                tintColor={isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.25)'}
+                                            />
+                                        </View>
+                                        <Text style={[s.desktopEmptyTitle, { color: textColor }]}>
+                                            {activeSegment === 'funding' ? 'Select Funding Source' : 'Select Transaction'}
+                                        </Text>
+                                        <Text style={[s.desktopEmptySubtitle, { color: subtextColor }]}>
+                                            {activeSegment === 'funding'
+                                                ? 'Choose an account or funding source to view its balance, linked disbursements, and account information.'
+                                                : 'Choose a purchasing or reimbursement request from the list to view its approval chain, financial records, and attachments.'}
+                                        </Text>
+                                        <TouchableOpacity
+                                            onPress={() => {
+                                                if (activeSegment === 'funding') {
+                                                    setSelectedSource(null);
+                                                    setEditingSource(null);
+                                                    setShowAddFunding(true);
+                                                } else {
+                                                    setSelectedRequest(null);
+                                                    setCreateRequestType(activeSegment === 'reimbursement' ? 'reimburse' : 'purchase');
+                                                    setCreateRequestLocked(false);
+                                                    setEditRequest(null);
+                                                    setShowCreateRequest(true);
+                                                }
+                                            }}
+                                            style={[s.desktopEmptyBtn, { backgroundColor: '#159957' }]}
+                                        >
+                                            <Ionicons name="add" size={18} color="#FFFFFF" />
+                                            <Text style={s.desktopEmptyBtnText}>
+                                                {activeSegment === 'funding' ? 'Add Funding Source' : 'New Request'}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    </View>
+                                )}
                             </View>
                         )}
                     </View>
@@ -3091,8 +3234,16 @@ export default function FinanceScreen() {
 
             <SwiftUITransactionDetailSheet
                 key={`request-detail-${requestDetailPresentationKey}`}
-                isOpened={!isDesktopWeb && showRequestDetail}
-                onClose={() => setShowRequestDetail(false)}
+                isOpened={showFinanceTable
+                    ? !!selectedRequest && !showCreateRequest && !showPayModal
+                    : !isDesktopWeb && showRequestDetail}
+                onClose={() => {
+                    setShowRequestDetail(false);
+                    if (showFinanceTable) {
+                        setSelectedRequest(null);
+                        setExpandedId(null);
+                    }
+                }}
                 request={selectedRequest}
                 actions={selectedRequest ? getActionButtons(selectedRequest).filter(action => action.id !== 'delete') : []}
                 onAction={(actionId, req) => openFinanceAction(actionId, req, selectedRequest?.moduleType || 'purchasing')}
@@ -3113,7 +3264,7 @@ export default function FinanceScreen() {
                 source={editingSource}
             />
             <SwiftUIFundingDetailSheet
-                isOpened={!!selectedSource}
+                isOpened={(!isDesktopWeb || showFinanceTable) && !!selectedSource}
                 onClose={() => setSelectedSource(null)}
                 source={selectedSource}
                 matchedTransactions={matchedTransactions}
@@ -3270,9 +3421,9 @@ export default function FinanceScreen() {
                 visible={pickerPhase === 'start'}
                 title="Select Start Date"
                 onClose={() => setPickerPhase(current => current === 'start' ? 'none' : current)}
-                currentDate={customStartDate ? customStartDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                currentDate={toLocalYYYYMMDD(customStartDate || new Date())}
                 onSelect={(dateString) => {
-                    setTempStartDate(new Date(dateString));
+                    setTempStartDate(new Date(`${dateString}T00:00:00`));
                     setPickerPhase('end');
                 }}
             />
@@ -3281,10 +3432,10 @@ export default function FinanceScreen() {
                 visible={pickerPhase === 'end'}
                 title="Select End Date"
                 onClose={() => setPickerPhase(current => current === 'end' ? 'none' : current)}
-                currentDate={tempStartDate ? tempStartDate.toISOString().split('T')[0] : new Date().toISOString().split('T')[0]}
+                currentDate={toLocalYYYYMMDD(tempStartDate || new Date())}
                 onSelect={(dateString) => {
                     if (tempStartDate) {
-                        const endD = new Date(dateString);
+                        const endD = new Date(`${dateString}T00:00:00`);
                         if (endD < tempStartDate) {
                             setCustomStartDate(endD);
                             setCustomEndDate(tempStartDate);
@@ -3647,7 +3798,7 @@ const s = StyleSheet.create({
     splitRoot: {
         flex: 1,
         flexDirection: 'row',
-        height: '100%',
+        minHeight: 0,
         overflow: 'hidden',
     },
     splitLeftPane: {
@@ -3656,6 +3807,16 @@ const s = StyleSheet.create({
         borderRightWidth: StyleSheet.hairlineWidth,
         display: 'flex',
         flexDirection: 'column',
+    },
+    financeTablePane: { flexGrow: 1, flexBasis: 0, width: '100%', maxWidth: '100%', borderRightWidth: 0 },
+    financeTableActionPane: { ...StyleSheet.absoluteFillObject },
+    financeTableRow: {
+        minHeight: 44,
+        paddingHorizontal: 12,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        borderBottomWidth: StyleSheet.hairlineWidth,
     },
     splitListHeader: { ...DESKTOP_PANEL_HEADER },
     splitListHeaderTitleRow: { ...DESKTOP_PANEL_TITLE_ROW },
