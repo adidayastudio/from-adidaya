@@ -230,10 +230,11 @@ export function isRequestEligibleForConsolidation(
  */
 export async function fetchPurchasingConsolidations(
     userId: string,
-    isTeam: boolean = true
+    isTeam: boolean = true,
+    requests?: any[],
 ): Promise<PurchasingConsolidationItem[]> {
     const [allRequests, documentRules, approvalMatrix, auditLogs] = await Promise.all([
-        fetchPurchasingRequests(userId, true),
+        requests ?? fetchPurchasingRequests(userId, true),
         getFinanceDocumentRules(),
         getFinanceApprovalMatrixSettings(),
         fetchFinanceAuditLogs(),

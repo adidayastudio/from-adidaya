@@ -276,6 +276,7 @@ async function fetchFinanceRequestHistory(
     userId: string,
     isTeam: boolean,
     projectId?: string,
+    fromDate?: string,
 ) {
     for (const [index, selection] of columns.entries()) {
         try {
@@ -283,6 +284,7 @@ async function fetchFinanceRequestHistory(
                 let query = supabase.from(table).select(selection)
                     .order('created_at', { ascending: false })
                     .order('id', { ascending: false });
+                if (fromDate) query = query.gte('date', fromDate);
                 if (projectId) query = query.eq('project_id', projectId);
                 if (!isTeam) query = query.eq(ownerColumn, userId);
                 return query.range(from, to);
@@ -295,11 +297,11 @@ async function fetchFinanceRequestHistory(
     return [];
 }
 
-export async function fetchPurchasingRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY', projectId?: string) {
+export async function fetchPurchasingRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY', projectId?: string, fromDate?: string) {
     let data = await fetchFinanceRequestHistory(
         'purchasing_requests',
         [PURCHASING_COLUMNS, '*, project:projects(id, project_name, project_code, project_number), items:purchasing_items(*)', '*'],
-        'created_by', userId, isTeam, projectId,
+        'created_by', userId, isTeam, projectId, fromDate,
     );
 
     if (!data || data.length === 0) return [];
@@ -818,11 +820,11 @@ export async function payFinanceRequest(userId: string, id: string, type: 'purch
 }
 
 
-export async function fetchReimburseRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY', projectId?: string) {
+export async function fetchReimburseRequests(userId: string, isTeam: boolean, orgPrefix: string = 'ADY', projectId?: string, fromDate?: string) {
     const data = await fetchFinanceRequestHistory(
         'reimbursement_requests',
         [REIMBURSE_COLUMNS, '*, project:projects(id, project_name, project_code, project_number), items:reimbursement_items(*)', '*'],
-        'user_id', userId, isTeam, projectId,
+        'user_id', userId, isTeam, projectId, fromDate,
     );
 
     if (!data || data.length === 0) return [];

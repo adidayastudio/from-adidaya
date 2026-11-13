@@ -59,7 +59,7 @@ import { useIsFocused } from '@react-navigation/native';
 import * as Haptics from 'expo-haptics';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ActionSheetIOS, Alert, Dimensions, Modal, Platform, Pressable, StatusBar as RNStatusBar, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
+import { ActionSheetIOS, ActivityIndicator, Alert, Dimensions, Modal, Platform, Pressable, StatusBar as RNStatusBar, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from 'react-native';
 import ContextMenu, { ContextMenuAction } from '@/components/ui/PlatformContextMenu';
 import Animated, { FadeInUp, useAnimatedStyle, useSharedValue, withSpring, withTiming, Easing } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -370,6 +370,10 @@ export default function FinanceScreen() {
         isConsolidationEnabled,
         hasTeamAccess,
         refreshData,
+        isLoading,
+        historyReady,
+        hasFinanceData,
+        loadError,
         updateRequestStatus,
         deleteRequest,
         payRequest,
@@ -2835,6 +2839,17 @@ export default function FinanceScreen() {
                 />
             );
         }
+        const usesRequestHistory = ['overview', 'purchasing', 'reimbursement'].includes(activeSegment);
+        const now = new Date();
+        const needsOlderHistory = dateFilterType !== 'month'
+            || selectedMonth.getFullYear() !== now.getFullYear()
+            || selectedMonth.getMonth() !== now.getMonth();
+        if (usesRequestHistory) {
+            const waitingForData = !hasFinanceData || (!historyReady && needsOlderHistory);
+            return waitingForData
+                ? (activeSegment !== 'overview' && renderControlRow())
+                : renderBody();
+        }
         const iconName = filteredFinanceSegments.find(seg => seg.id === activeSegment)?.icon || 'creditcard.fill';
         const scopeLabel = activeScope === 'me' ? 'Personal' : 'Team';
         const whitelistedSegments = ['overview', 'purchasing', 'reimbursement', 'petty_cash', 'funding', 'reports', 'setup'];
@@ -2859,6 +2874,18 @@ export default function FinanceScreen() {
         return renderBody();
     };
 
+    const financeLoading = isLoading || (!hasFinanceData && !loadError);
+    const [showFinanceLoaded, setShowFinanceLoaded] = useState(false);
+    useEffect(() => {
+        if (financeLoading || loadError || !historyReady) {
+            setShowFinanceLoaded(false);
+            return;
+        }
+        setShowFinanceLoaded(true);
+        const timeout = setTimeout(() => setShowFinanceLoaded(false), 1600);
+        return () => clearTimeout(timeout);
+    }, [financeLoading, loadError, historyReady]);
+
     // Gate the entire Finance surface, including detail panes and every modal.
     // The gate takes effect in the logout render, before cleanup effects run.
     if (!isAuthenticated || !user) {
@@ -2875,12 +2902,33 @@ export default function FinanceScreen() {
     const pStats_v = purchasingStats;
     const rStats_v = reimbursementStats;
 
+    const financeLoadStatus = (
+        <View style={s.headerLoadingIndicator}>
+            {financeLoading ? (
+                <ActivityIndicator size="small" color="#159957" accessibilityLabel="Loading Finance" />
+            ) : loadError ? (
+                <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel="Reload Finance"
+                    accessibilityHint={loadError}
+                    hitSlop={8}
+                    onPress={() => void refreshData()}
+                >
+                    <Ionicons name="reload" size={16} color={textColor} />
+                </TouchableOpacity>
+            ) : showFinanceLoaded ? (
+                <Ionicons name="checkmark-circle" size={19} color="#159957" accessibilityLabel="Finance data loaded" />
+            ) : null}
+        </View>
+    );
+
     const desktopFinanceHeader = isDesktopWeb ? (
         <View style={s.splitListHeader}>
             <View style={s.splitListHeaderTitleRow}>
                 <Text style={[s.splitListHeaderTitle, { color: textColor }]}>Finance</Text>
                 {isAuthenticated && (
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {financeLoadStatus}
                         {canSwitchFinanceView && (
                             <TouchableOpacity
                                 accessibilityRole="button"
@@ -2968,15 +3016,18 @@ export default function FinanceScreen() {
                     : { backgroundColor: isDark ? '#000000' : '#F2F2F7' },
                 headerLargeTitleStyle: { fontSize: 28, color: textColor, fontWeight: '700' },
                 headerTitleStyle: { color: textColor, fontWeight: '700' },
-                headerRight: (isAuthenticated && actions.length > 0) ? () => (
-                    <HeaderToolbar
+                headerRight: isAuthenticated ? () => (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                        {financeLoadStatus}
+                        <HeaderToolbar
                         actions={actions}
                         isDark={isDark}
                         textColor={textColor}
                         maxDirectActions={3}
                         primaryActionBgColor="#159957"
                         primaryActionColor="#159957"
-                    />
+                        />
+                    </View>
                 ) : undefined,
             }} />
 
@@ -2987,11 +3038,14 @@ export default function FinanceScreen() {
                     actions={isAuthenticated ? actions : undefined}
                     primaryActionBgColor="#159957"
                     centerComponent={
-                        <SegmentedControl
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, flexShrink: 1 }}>
+                            {financeLoadStatus}
+                            <SegmentedControl
                             segments={filteredFinanceSegments}
                             activeSegment={activeSegment}
                             onSegmentChange={(id) => setActiveSegment(id as any)}
-                        />
+                            />
+                        </View>
                     }
                 />
             )}
@@ -3833,6 +3887,7 @@ const s = StyleSheet.create({
     splitListHeaderTitleRow: { ...DESKTOP_PANEL_TITLE_ROW },
     splitListHeaderTitle: { ...DESKTOP_PANEL_TITLE },
     headerActionCircle: { ...DESKTOP_PANEL_ACTION },
+    headerLoadingIndicator: { width: 20, alignItems: 'center', justifyContent: 'center' },
     splitListScroll: {
         flex: 1,
         height: '100%',

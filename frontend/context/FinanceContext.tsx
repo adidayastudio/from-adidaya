@@ -39,7 +39,7 @@ import {
     PurchasingConsolidationItem,
     PaymentBatchPayload,
 } from '../lib/api/financeConsolidation';
-import { getFinanceDocumentRules, saveFinanceDocumentRules, FinanceDocumentRulesSettings, DEFAULT_FINANCE_DOCUMENT_RULES, getFinanceApprovalMatrixSettings } from '../lib/api/financeSetup';
+import { getFinanceDocumentRules, saveFinanceDocumentRules, FinanceDocumentRulesSettings, DEFAULT_FINANCE_DOCUMENT_RULES } from '../lib/api/financeSetup';
 
 export type Scope = 'me' | 'team';
 export type PurchasingWorkflowSubtab = 'request' | 'consolidation' | 'payment';
@@ -64,6 +64,9 @@ export interface FinanceContextType {
     isFinanceApprover: boolean;
     hasTeamAccess: boolean;
     isLoading: boolean;
+    historyReady: boolean;
+    loadError: string | null;
+    hasFinanceData: boolean;
     refreshData: () => Promise<void>;
     addPurchasingRequest: (payload: PurchasingRequest) => Promise<any>;
     addReimburseRequest: (payload: ReimburseRequest) => Promise<any>;
@@ -119,6 +122,10 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const [fundingSources, setFundingSources] = useState<any[]>([]);
     const [documentRules, setDocumentRules] = useState<FinanceDocumentRulesSettings>(DEFAULT_FINANCE_DOCUMENT_RULES);
     const [isLoading, setIsLoading] = useState(false);
+    const [historyReady, setHistoryReady] = useState(false);
+    const historyReadyRef = useRef(false);
+    const [hasFinanceData, setHasFinanceData] = useState(false);
+    const [loadError, setLoadError] = useState<string | null>(null);
 
     useEffect(() => {
         let isMounted = true;
@@ -156,90 +163,87 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     const fetchGeneration = useRef(0);
     useEffect(() => {
-        fetchGeneration.current++; setMePurchasing([]); setMeReimbursement([]); setTeamPurchasing([]); setTeamReimbursement([]); setConsolidations([]); setFundingSources([]); setPettyCashPools([]); setHasCloudConsolidation(false);
+        fetchGeneration.current++; historyReadyRef.current = false; setHistoryReady(false); setHasFinanceData(false); setLoadError(null); setMePurchasing([]); setMeReimbursement([]); setTeamPurchasing([]); setTeamReimbursement([]); setConsolidations([]); setFundingSources([]); setPettyCashPools([]); setHasCloudConsolidation(false);
         return () => { fetchGeneration.current++; };
     }, [user?.id]);
     const refreshData = useCallback(async (background = false) => {
         const run = ++fetchGeneration.current;
         if (!user) { setIsLoading(false); return; }
-        if (!background) setIsLoading(true);
+        setIsLoading(true);
+        setLoadError(null);
+        const team = canAccessFinanceTeam(profile?.role);
+        setIsFinanceApprover(team);
+        const isCurrent = () => run === fetchGeneration.current;
+        const withTimeout = async <T,>(operation: PromiseLike<T>, timeout = 20000): Promise<T> => {
+            let timer: ReturnType<typeof setTimeout> | undefined;
+            try {
+                return await Promise.race([operation, new Promise<never>((_, reject) => {
+                    timer = setTimeout(() => reject(new Error('Finance data took too long to load. Check your connection and retry.')), timeout);
+                })]);
+            } finally {
+                if (timer) clearTimeout(timer);
+            }
+        };
+        const fetchRequests = (fromDate?: string) => withTimeout(Promise.all([
+            fetchPurchasingRequests(user.id, team, orgPrefix, undefined, fromDate),
+            fetchReimburseRequests(user.id, team, orgPrefix, undefined, fromDate),
+        ]), fromDate ? 6000 : 20000);
+        const publishRequests = ([purchases, reimbursements]: Awaited<ReturnType<typeof fetchRequests>>) => {
+            if (!isCurrent()) return;
+            setTeamPurchasing(team ? purchases : []);
+            setTeamReimbursement(team ? reimbursements : []);
+            setMePurchasing(team ? purchases.filter(item => item.created_by === user.id) : purchases);
+            setMeReimbursement(team ? reimbursements.filter(item => item.user_id === user.id) : reimbursements);
+            setHasFinanceData(true);
+        };
+        const reportError = (error: unknown, fallback: string) => {
+            console.error(fallback, error);
+            const detail = error && typeof error === 'object' && 'message' in error
+                ? String(error.message) : '';
+            const message = /failed to fetch|network request failed|load failed|networkerror/i.test(detail)
+                ? 'Could not reach Finance. Check your connection and retry.'
+                : error instanceof Error ? error.message : fallback;
+            if (isCurrent()) setLoadError(previous => previous || message);
+        };
+
+        const auxiliary = Promise.allSettled([
+            withTimeout(fetchFundingSources()).then(rows => { if (isCurrent()) setFundingSources(rows); }),
+            withTimeout(fetchPettyCashPools()).then(rows => { if (isCurrent()) setPettyCashPools(rows); }),
+            withTimeout(getFinanceDocumentRules(activeTenant?.id)).then(rules => { if (isCurrent()) setDocumentRules(rules); }),
+        ]);
         try {
-            const results = await Promise.allSettled([
-                fetchPurchasingRequests(user.id, false, orgPrefix),
-                canAccessFinanceTeam(profile?.role) ? fetchPurchasingRequests(user.id, true, orgPrefix) : Promise.resolve([]),
-                fetchReimburseRequests(user.id, false, orgPrefix),
-                canAccessFinanceTeam(profile?.role) ? fetchReimburseRequests(user.id, true, orgPrefix) : Promise.resolve([]),
-                fetchFundingSources(),
-                fetchPettyCashPools(),
-                canAccessFinanceTeam(profile?.role) ? fetchPurchasingConsolidations(user.id, true) : Promise.resolve([]),
-                getFinanceDocumentRules(activeTenant?.id),
-                getFinanceApprovalMatrixSettings(),
-                supabase.from('purchasing_consolidations').select('id').limit(0),
-            ]);
-
-            if (run !== fetchGeneration.current) return;
-            const cloudReady = results[9].status === 'fulfilled' && !results[9].value.error;
-            setHasCloudConsolidation(cloudReady);
-            const myPurchases = results[0].status === 'fulfilled' ? results[0].value : [];
-            const teamPurchases = results[1].status === 'fulfilled' ? results[1].value : [];
-            const myReimburse = results[2].status === 'fulfilled' ? results[2].value : [];
-            const teamReimburse = results[3].status === 'fulfilled' ? results[3].value : [];
-            const sources = results[4].status === 'fulfilled' ? results[4].value : [];
-            const pools = results[5].status === 'fulfilled' ? results[5].value : [];
-            const fetchedConsolidations = results[6].status === 'fulfilled' ? results[6].value : [];
-            const docRules = results[7].status === 'fulfilled' ? results[7].value : null;
-            const approvalMatrix = results[8].status === 'fulfilled' ? results[8].value : null;
-
-            // Check if current user is listed in any approval matrix chain
-            let foundInMatrix = false;
-            if (approvalMatrix && user) {
-                const userFullName = (profile?.full_name || '').toLowerCase().trim();
-                const userNickname = (profile?.nickname || '').toLowerCase().trim();
-                const userEmail = (user.email || '').toLowerCase().trim();
-                const userRole = (profile?.role || '').toLowerCase().trim();
-
-                const isLevelMatching = (level: any) => {
-                    if (!level) return false;
-                    if (level.userId && level.userId === user.id) return true;
-                    if (level.personName) {
-                        const pName = String(level.personName).toLowerCase().trim();
-                        if (userFullName && pName === userFullName) return true;
-                        if (userNickname && pName === userNickname) return true;
-                        if (userEmail && pName === userEmail) return true;
-                    }
-                    if (level.positionTitle) {
-                        const posTitle = String(level.positionTitle).toLowerCase().trim();
-                        if (userRole && posTitle === userRole) return true;
-                        if ((userRole === 'admin' || userRole === 'administrator') && (posTitle === 'administrator' || posTitle === 'admin')) return true;
-                    }
-                    return false;
-                };
-
-                for (const config of Object.values(approvalMatrix)) {
-                    if (config.globalChain?.some(isLevelMatching)) {
-                        foundInMatrix = true;
-                        break;
-                    }
-                    if (config.departmentGroups?.some((group: any) => group.chain?.some(isLevelMatching))) {
-                        foundInMatrix = true;
-                        break;
-                    }
+            if (!background && !historyReadyRef.current) {
+                const now = new Date();
+                const fromDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+                try {
+                    publishRequests(await fetchRequests(fromDate));
+                } catch (error) {
+                    if (isCurrent()) console.warn('Unable to load recent Finance requests:', error);
                 }
             }
-            setIsFinanceApprover(canAccessFinanceTeam(profile?.role));
+            if (!isCurrent()) return;
+            const requests = await fetchRequests();
+            publishRequests(requests);
+            if (!isCurrent()) return;
+            historyReadyRef.current = true;
+            setHistoryReady(true);
 
-            if (results[0].status === 'fulfilled') setMePurchasing(myPurchases);
-            if (results[1].status === 'fulfilled') setTeamPurchasing(teamPurchases);
-            if (results[2].status === 'fulfilled') setMeReimbursement(myReimburse);
-            if (results[3].status === 'fulfilled') setTeamReimbursement(teamReimburse);
-            if (results[4].status === 'fulfilled') setFundingSources(sources);
-            if (results[5].status === 'fulfilled') setPettyCashPools(pools);
-            setConsolidations(cloudReady ? fetchedConsolidations : []);
-            if (docRules) setDocumentRules(docRules);
+            if (team) {
+                const cloud = await withTimeout(supabase.from('purchasing_consolidations').select('id').limit(0));
+                if (isCurrent()) setHasCloudConsolidation(!cloud.error);
+                if (!cloud.error && isCurrent()) {
+                    const rows = await withTimeout(fetchPurchasingConsolidations(user.id, true, requests[0]));
+                    if (isCurrent()) setConsolidations(rows);
+                }
+            }
         } catch (error) {
-            console.error("Failed to load finance data:", error);
+            reportError(error, 'Could not load Finance data. Please retry.');
         } finally {
-            if (run === fetchGeneration.current) setIsLoading(false);
+            const results = await auxiliary;
+            if (results.some(result => result.status === 'rejected')) {
+                reportError(results.find(result => result.status === 'rejected')?.reason, 'Some Finance data could not load. Please retry.');
+            }
+            if (isCurrent()) setIsLoading(false);
         }
     }, [user, profile, orgPrefix, activeTenant?.id]);
 
@@ -535,6 +539,9 @@ export const FinanceProvider: React.FC<{ children: React.ReactNode }> = ({ child
             isFinanceApprover,
             hasTeamAccess,
             isLoading,
+            historyReady,
+            hasFinanceData,
+            loadError,
             refreshData,
             addPurchasingRequest,
             addReimburseRequest,
@@ -583,6 +590,9 @@ const DEFAULT_FINANCE_CONTEXT: FinanceContextType = {
     isFinanceApprover: false,
     hasTeamAccess: false,
     isLoading: false,
+    historyReady: false,
+    hasFinanceData: false,
+    loadError: null,
     refreshData: async () => {},
     addPurchasingRequest: async () => null,
     addReimburseRequest: async () => null,
